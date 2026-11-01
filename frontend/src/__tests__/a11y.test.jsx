@@ -23,11 +23,11 @@ describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
     await waitFor(() => expect(calls.some(c => c.path === '/health')).toBe(true))
     const user = userEvent.setup()
     const primary = within(screen.getByRole('navigation', { name: lang === 'ar' ? 'التنقل الرئيسي' : 'Primary navigation' }))
-    const action = en === 'Trip planner'
+    const action = _name === 'Trip planner'
       ? screen.getByRole('button', { name: lang === 'ar' ? 'خطط لرحلتك' : 'Plan a trip' })
       : primary.getByRole('button', { name: [en, ar][i] })
     await user.click(action)
-    if (en === 'Trip planner') {   // audit the page with a generated result too
+    if (_name === 'Trip planner') {   // audit the page with a generated result too
       await user.click(screen.getByRole('button', { name: lang === 'en' ? 'Generate my itinerary' : 'أنشئ جدولي' }))
       await screen.findByText(lang === 'en' ? 'English disclaimer' : 'إخلاء مسؤولية بالعربية')
     }
