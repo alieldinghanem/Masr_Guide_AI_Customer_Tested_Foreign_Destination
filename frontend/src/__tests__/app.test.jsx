@@ -14,7 +14,12 @@ const setup = async opts => {
   await waitFor(() => expect(calls.some(c => c.path === '/places')).toBe(true))
   return { calls, user }
 }
-const nav = (name) => screen.getByRole('button', { name })
+const nav = name => {
+  const arabic = document.documentElement.lang === 'ar'
+  const primary = within(screen.getByRole('navigation', { name: arabic ? 'التنقل الرئيسي' : 'Primary navigation' }))
+  const quick = within(screen.getByRole('navigation', { name: arabic ? 'التنقل السريع' : 'Quick navigation' }))
+  return primary.queryByRole('button', { name }) || quick.queryByRole('button', { name }) || screen.getAllByRole('button', { name })[0]
+}
 
 describe('startup', () => {
   it('shows a localised error when the backend is unreachable', async () => {
@@ -52,7 +57,8 @@ describe('navigation and language', () => {
 describe('Discover', () => {
   it('filters by Arabic or English text and shows localised details', async () => {
     const { user } = await setup()
-    await user.click(nav('Explore'))
+    await user.click(nav('Recommendations'))
+    await user.click((await screen.findAllByRole('button', { name: 'Explore places' }))[0])
     expect(screen.getByText('3 places')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Search places'), 'الكرنك')
     expect(screen.getByText('1 places')).toBeInTheDocument()
@@ -63,7 +69,8 @@ describe('Discover', () => {
 
   it('shows Arabic names and hides English-only tips in Arabic mode', async () => {
     const { user } = await setup({ lang: 'ar' })
-    await user.click(nav('اكتشف'))
+    await user.click(nav('الترشيحات'))
+    await user.click((await screen.findAllByRole('button', { name: 'استكشف المعالم' }))[0])
     expect((await screen.findAllByText('معبد الكرنك')).length).toBeGreaterThan(0)
     expect(screen.queryByText(/Visit early/)).not.toBeInTheDocument()
   })
