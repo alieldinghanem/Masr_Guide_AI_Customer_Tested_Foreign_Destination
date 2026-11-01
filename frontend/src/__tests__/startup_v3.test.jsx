@@ -33,10 +33,11 @@ describe('TravelTech discovery MVP', () => {
 
   it('saves an attraction locally and it stays visible under Saved places', async () => {
     const user=await renderApp()
-    await user.click(screen.getByRole('button',{name:'Explore'}))
+    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button',{name:'Recommendations'}))
+    await user.click((await screen.findAllByRole('button',{name:'Explore places'}))[0])
     await user.click(screen.getByRole('button',{name:'Save place'}))
     expect(JSON.parse(localStorage.getItem('masr-guide-saved-places-v3'))).toHaveLength(1)
-    await user.click(screen.getByRole('button',{name:'Saved places'}))
+    await user.click(within(screen.getByRole('banner')).getByRole('button',{name:'Saved places'}))
     expect(screen.getByText('1 saved places')).toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:'Remove'}))
     expect(JSON.parse(localStorage.getItem('masr-guide-saved-places-v3'))).toHaveLength(0)
@@ -44,8 +45,8 @@ describe('TravelTech discovery MVP', () => {
 
   it('filters discovery by experience theme', async () => {
     const user = await renderApp()
-    await user.click(screen.getByRole('button',{name:'Travel Tips'}))
-    await user.click(screen.getAllByRole('button',{name:'Explore places'})[0])
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button',{name:'Experiences'}))
+    await user.click((await screen.findAllByRole('button',{name:'Explore places'}))[0])
     expect(window.location.hash).toBe('#/explore')
     expect(screen.getByRole('combobox',{name:'Filter interest'})).not.toHaveValue('__all__')
   })
