@@ -1,7 +1,7 @@
 import React from 'react'
 import axe from 'axe-core'
 import { describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../App'
 import { mockApi } from './fixtures'
@@ -22,7 +22,11 @@ describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
     render(<App />)
     await waitFor(() => expect(calls.some(c => c.path === '/health')).toBe(true))
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: [en, ar][i] }))
+    const primary = within(screen.getByRole('navigation', { name: lang === 'ar' ? 'التنقل الرئيسي' : 'Primary navigation' }))
+    const action = en === 'Trip planner'
+      ? screen.getByRole('button', { name: lang === 'ar' ? 'خطط لرحلتك' : 'Plan a trip' })
+      : primary.getByRole('button', { name: [en, ar][i] })
+    await user.click(action)
     if (en === 'Trip planner') {   // audit the page with a generated result too
       await user.click(screen.getByRole('button', { name: lang === 'en' ? 'Generate my itinerary' : 'أنشئ جدولي' }))
       await screen.findByText(lang === 'en' ? 'English disclaimer' : 'إخلاء مسؤولية بالعربية')
