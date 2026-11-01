@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../App'
 import { mockApi } from './fixtures'
@@ -31,12 +31,12 @@ describe('hash routing', () => {
   it('updates the URL on navigation and supports the browser back button', async () => {
     const user = await boot()
     await user.click(screen.getByRole('button', { name: 'Explore' }))
-    expect(window.location.hash).toBe('#/explore')
+    expect(window.location.hash).toBe('#/destinations')
     await user.click(screen.getByRole('button', { name: 'Chat' }))
     expect(window.location.hash).toBe('#/home')
     window.history.back()
-    await waitFor(() => expect(window.location.hash).toBe('#/explore'))
-    expect(await screen.findByRole('heading', { level: 1, name: /Places worth/ })).toBeInTheDocument()
+    await waitFor(() => expect(window.location.hash).toBe('#/destinations'))
+    expect(await screen.findByRole('heading', { level: 1, name: /Find your next/ })).toBeInTheDocument()
   })
 
   it('marks the active page for assistive technology', async () => {
@@ -51,9 +51,10 @@ describe('Discover state', () => {
   it('a place opened from elsewhere is visible even if Discover had a conflicting filter', async () => {
     const user = await boot()
     await user.click(screen.getByRole('button', { name: 'Explore' }))
+    await user.click((await screen.findAllByRole('button', { name: 'Explore places' }))[0])
     await user.type(screen.getByLabelText('Search places'), 'dahab')
     expect(screen.getByText('1 places')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'AI Chat' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI Chat' }))
     await user.click(screen.getByRole('button', { name: 'Historical Places' }))
     await user.click(await screen.findByRole('button', { name: /View details/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Karnak Temple Complex' })).toBeInTheDocument()
