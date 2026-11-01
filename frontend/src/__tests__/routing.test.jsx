@@ -43,7 +43,7 @@ describe('hash routing', () => {
     const user = await boot()
     await user.click(screen.getByRole('button', { name: 'Explore' }))
     expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'AI Chat' })).not.toHaveAttribute('aria-current')
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI Chat' })).not.toHaveAttribute('aria-current')
   })
 })
 
@@ -56,7 +56,7 @@ describe('Discover state', () => {
     expect(screen.getByText('1 places')).toBeInTheDocument()
     await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI Chat' }))
     await user.click(screen.getByRole('button', { name: 'Historical Places' }))
-    await user.click(await screen.findByRole('button', { name: /View details/ }))
+    await user.click((await screen.findAllByRole('button', { name: /View details/ }))[0])
     expect(await screen.findByRole('heading', { level: 2, name: 'Karnak Temple Complex' })).toBeInTheDocument()
     expect(screen.getByLabelText('Search places')).toHaveValue('')
   })
