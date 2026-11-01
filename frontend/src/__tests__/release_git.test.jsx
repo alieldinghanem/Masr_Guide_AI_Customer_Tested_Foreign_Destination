@@ -30,7 +30,12 @@ describe('GitHub release fixes', () => {
     fail = false
     await user.click(retry)
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry connection' })).not.toBeInTheDocument())
-    expect(originalFetch).toHaveBeenCalledTimes(6)
+    // Initial metadata requests are retried; discovery metadata also loads after success.
+    const paths = originalFetch.mock.calls.map(([url]) => String(url))
+    for (const key of ['/cities', '/places', '/health']) {
+      expect(paths.filter(path => path.endsWith(key))).toHaveLength(2)
+    }
+    expect(paths).toHaveLength(9)
   })
 
   it('clears the chat when requested', async () => {
