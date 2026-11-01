@@ -1,0 +1,7 @@
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["F", "E9", "B"]
+ignore = ["B008"]  # FastAPI Depends()/Query() defaults

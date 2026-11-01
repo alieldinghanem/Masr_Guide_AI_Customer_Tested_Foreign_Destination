@@ -1,0 +1,318 @@
+"""Extra bilingual content for each catalogue place.
+
+Facts here are deliberately general and conservative. Opening hours, ticket prices, access
+rules and closures are intentionally NOT stored: they change and must be verified on the
+official venue site (see `source_url` on every place).
+
+Fields per place:
+  name_ar     Arabic display name
+  summary_ar  1-2 sentence Arabic summary (used by the offline guide and the Arabic UI)
+  details     2-3 extra English sentences used as additional retrieval/LLM context
+  tip         short, general (non-time-sensitive) visiting tip
+  tip_ar      the same tip in Arabic
+"""
+
+CITY_AR = {
+    "Giza": "الجيزة", "Cairo": "القاهرة", "Luxor": "الأقصر", "Aswan": "أسوان",
+    "Abu Simbel": "أبو سمبل", "Alexandria": "الإسكندرية", "Sharm El Sheikh": "شرم الشيخ",
+    "Hurghada": "الغردقة", "Siwa": "سيوة", "Fayoum": "الفيوم",
+    "Saint Catherine": "سانت كاترين", "Dahab": "دهب",
+}
+
+INTEREST_AR = {
+    "history": "التاريخ", "culture": "الثقافة", "museums": "المتاحف", "nature": "الطبيعة",
+    "beaches": "الشواطئ", "adventure": "المغامرة", "food": "الطعام والأسواق", "family": "مناسب للعائلة",
+}
+
+EXTRA = {
+    'museum-of-islamic-art': {"name_ar": 'متحف الفن الإسلامي', "summary_ar": 'متحف بالقاهرة يعرض تاريخ الفنون والحرف والقطع الأثرية المرتبطة بالحضارة الإسلامية.', "details": 'A museum visit focused on Islamic decorative arts and material culture. Exhibitions and entry conditions may change.', "tip": 'Check the official museum website before visiting.', "tip_ar": 'تحقق من الموقع الرسمي قبل الزيارة.'},
+    'gayer-anderson-museum': {"name_ar": 'متحف جاير أندرسون', "summary_ar": 'بيتان تاريخيان من العهد العثماني بجوار جامع ابن طولون، يقدمان صورة عن العمارة والحياة المنزلية القديمة.', "details": 'The museum comprises historic houses and collections near Ibn Tulun Mosque. They can be paired on a walking itinerary.', "tip": 'Consider visiting Ibn Tulun Mosque nearby on the same outing.', "tip_ar": 'اجمع زيارته مع مسجد ابن طولون لو الوقت يسمح.'},
+    'sultan-hassan-mosque': {"name_ar": 'مسجد ومدرسة السلطان حسن', "summary_ar": 'من أشهر مباني العمارة المملوكية في القاهرة، بجوار مسجد الرفاعي.', "details": 'The Mamluk complex stands opposite Al-Rifai Mosque and near the Citadel. Check visitor access and shared ticket arrangements.', "tip": 'Al-Rifai Mosque is immediately adjacent and may share ticket arrangements.', "tip_ar": 'يمكن زيارة مسجد الرفاعي في نفس الجولة.'},
+    'al-rifai-mosque': {"name_ar": 'مسجد الرفاعي', "summary_ar": 'مسجد تاريخي بالقاهرة يضم مدافن ملكية، يقع بجوار مسجد السلطان حسن.', "details": 'Its architecture and royal tombs are closely associated with modern Egyptian history. Visiting arrangements can be linked to the neighbouring Sultan Hassan complex.', "tip": 'Ask about shared admission arrangements with Sultan Hassan Mosque.', "tip_ar": 'استعلم عن التذكرة المجمعة مع مسجد السلطان حسن.'},
+    'manial-palace-museum': {"name_ar": 'متحف قصر المنيل', "summary_ar": 'مجمع قصر وحدائق تاريخية للأمير محمد علي في منطقة المنيل بالقاهرة.', "details": 'The museum includes palace buildings, gardens and collections. It is distinct from the downtown museum circuit.', "tip": 'Allow enough time to explore the complex and check visiting hours.', "tip_ar": 'خصص له وقتاً مناسباً وتحقق من ساعات الزيارة.'},
+    'baron-empain-palace': {"name_ar": 'قصر البارون إمبان', "summary_ar": 'قصر مميز في حي مصر الجديدة مشهور بعمارته الفريدة وبقصة نشأة الحي.', "details": 'The Heliopolis landmark has unusual early twentieth-century architecture. Admission areas can vary by ticket type.', "tip": 'Verify access and ticket categories on the official page.', "tip_ar": 'راجع مناطق الزيارة والتذاكر الرسمية.'},
+    'ibn-tulun-mosque': {"name_ar": 'جامع أحمد بن طولون', "summary_ar": 'أحد أقدم المساجد الباقية في القاهرة، معروف بفنائه الواسع وعمارته.', "details": 'A prominent historic mosque listed among major Historic Cairo monuments by UNESCO. It is near the Gayer-Anderson Museum.', "tip": 'Respect prayer times and mosque visiting etiquette.', "tip_ar": 'احترم أوقات الصلاة وآداب زيارة دور العبادة.'},
+    'al-azhar-mosque': {"name_ar": 'الجامع الأزهر', "summary_ar": 'جامع تاريخي في القاهرة الإسلامية مرتبط بالتعليم الديني والحياة الثقافية للمدينة.', "details": 'Al-Azhar Mosque is a major landmark in UNESCO-listed Historic Cairo. As an active religious venue, access depends on local rules.', "tip": 'Observe local rules for visiting an active mosque.', "tip_ar": 'احترم مواعيد الصلاة وقواعد الزيارة.'},
+    'nilometer-roda': {"name_ar": 'مقياس النيل بالروضة', "summary_ar": 'أثر تاريخي استخدم لقياس مستوى مياه النيل في جزيرة الروضة بالقاهرة.', "details": 'The historic Nilometer records the long history of understanding the Nile flood. Check whether and when it is open to visitors.', "tip": 'Check visitor access independently before travelling there.', "tip_ar": 'تحقق من إمكانية الدخول قبل الانطلاق.'},
+    'al-hakim-mosque': {"name_ar": 'جامع الحاكم بأمر الله', "summary_ar": 'مسجد تاريخي في القاهرة الفاطمية ضمن نطاق القاهرة التاريخية.', "details": 'An important Fatimid-era mosque and part of the Historic Cairo landscape. Visiting etiquette applies.', "tip": 'Respect mosque etiquette and current visiting rules.', "tip_ar": 'احترم قواعد زيارة المساجد ومواعيد الصلاة.'},
+    "giza-pyramids": {
+        "name_ar": "أهرامات الجيزة",
+        "summary_ar": "هضبة الجيزة تضم أهرامات خوفو وخفرع ومنقرع والمعالم الأثرية المحيطة بها، وهي من أشهر المواقع الأثرية في العالم.",
+        "details": "The Great Pyramid of Khufu dates to Egypt's Fourth Dynasty, roughly 4,500 years ago, and was the tallest human-made structure for many centuries. The site is part of the UNESCO listing for Memphis and its Necropolis. The plateau is large and mostly open desert, so a visit involves a lot of walking in the sun.",
+        "tip": "Going early in the day usually means cooler temperatures and smaller crowds; bring water and sun protection.",
+        "tip_ar": "الأفضل الذهاب مبكراً لتفادي الحر والزحام؛ أحضر ماءً وواقياً من الشمس.",
+    },
+    "great-sphinx": {
+        "name_ar": "أبو الهول",
+        "summary_ar": "تمثال ضخم منحوت من الحجر الجيري بجسم أسد ورأس إنسان، يقف على هضبة الجيزة بجوار الأهرامات.",
+        "details": "The Sphinx is carved directly out of the limestone bedrock and is commonly attributed to the reign of Khafre. It is around 70 metres long. It is usually visited together with the pyramids, in the same area.",
+        "tip": "It pairs naturally with the pyramids, so plan both for the same morning rather than separate trips.",
+        "tip_ar": "يُزار عادةً مع الأهرامات في نفس المكان، فخطط لهما في صباح واحد.",
+    },
+    "grand-egyptian-museum": {
+        "name_ar": "المتحف المصري الكبير",
+        "summary_ar": "متحف أثري ضخم قرب أهرامات الجيزة مخصص للتراث المصري القديم.",
+        "details": "The museum is built close to the pyramids and is designed to display a very large collection of ancient Egyptian artefacts, including objects associated with Tutankhamun. Its size means a full visit takes several hours. Which galleries are open can change, so check the official site.",
+        "tip": "Leave a generous half day, and check the official website for which galleries and ticket types are currently available.",
+        "tip_ar": "خصص نصف يوم على الأقل، وتحقق من الموقع الرسمي لمعرفة القاعات والتذاكر المتاحة حالياً.",
+    },
+    "saqqara": {
+        "name_ar": "سقارة - هرم زوسر المدرج",
+        "summary_ar": "هرم زوسر المدرج جزء من جبانة سقارة القديمة الواسعة جنوب القاهرة.",
+        "details": "The Step Pyramid of Djoser, from the Third Dynasty, is often described as one of the earliest large stone monuments in the world and is associated with the architect Imhotep. Saqqara lies about 30 km south of the Giza plateau, so it needs its own travel time. The necropolis has many other tombs and pyramids.",
+        "tip": "It is a separate excursion from the Giza plateau; allow transport time and consider a guide for the less-signposted tombs.",
+        "tip_ar": "رحلة منفصلة عن هضبة الجيزة؛ احسب وقت الانتقال وفكّر في مرشد للمقابر الأقل وضوحاً.",
+    },
+    "citadel": {
+        "name_ar": "قلعة صلاح الدين",
+        "summary_ar": "قلعة من العصور الوسطى تطل على القاهرة وتضم مباني ومساجد من فترات تاريخية لاحقة.",
+        "details": "Construction began in the 12th century under Saladin. The Mosque of Muhammad Ali, built in the 19th century in Ottoman style, dominates the skyline of the complex. The citadel also offers wide views over Cairo and houses several museums.",
+        "tip": "Combine it with nearby Islamic Cairo sites; the views are especially nice in clearer weather.",
+        "tip_ar": "اجمعها مع معالم القاهرة الإسلامية القريبة؛ والإطلالة أجمل في الطقس الصافي.",
+    },
+    "egyptian-museum-tahrir": {
+        "name_ar": "المتحف المصري بالتحرير",
+        "summary_ar": "متحف تاريخي في وسط القاهرة يضم مجموعة كبيرة من الآثار المصرية القديمة.",
+        "details": "The museum has occupied its pink neoclassical building on Tahrir Square since the early 20th century and holds a very large number of antiquities. Collections and displays have been changing as objects move to newer museums, so it is worth checking what is currently on show.",
+        "tip": "Check the official site before going, because exhibits have been moving between museums.",
+        "tip_ar": "راجع الموقع الرسمي قبل الذهاب لأن بعض المعروضات تنتقل بين المتاحف.",
+    },
+    "nmec": {
+        "name_ar": "المتحف القومي للحضارة المصرية",
+        "summary_ar": "يعرض تاريخ الحضارة المصرية عبر العصور ويضم قاعة المومياوات الملكية.",
+        "details": "The museum is in the Fustat area of Cairo, near Ain El-Sira lake. Its Royal Mummies Hall displays mummies of several ancient Egyptian rulers. The main galleries follow Egyptian civilization from prehistory through to the modern era.",
+        "tip": "Good for a calmer, air-conditioned visit; pair it with Coptic Cairo, which is nearby.",
+        "tip_ar": "مناسب لزيارة هادئة داخل مكان مكيّف؛ ويمكن ضمه إلى زيارة مصر القديمة القريبة.",
+    },
+    "khan-el-khalili": {
+        "name_ar": "خان الخليلي",
+        "summary_ar": "سوق تقليدي في قلب القاهرة التاريخية، معروف بالمحلات والحرف اليدوية والأزقة الحيوية.",
+        "details": "The bazaar dates back to the 14th century and sits in the historic Islamic Cairo district next to Al-Azhar Mosque. Shops sell crafts, spices, lanterns, jewellery and souvenirs, and there are traditional cafés and restaurants among the lanes. Prices are usually negotiated.",
+        "tip": "Evenings are lively; compare prices between shops and agree on a price before buying.",
+        "tip_ar": "المساء حيوي؛ قارن الأسعار بين المحلات واتفق على السعر قبل الشراء.",
+    },
+    "al-azhar-park": {
+        "name_ar": "حديقة الأزهر",
+        "summary_ar": "حديقة حضرية منسقة توفر مساحات مفتوحة وإطلالات على القاهرة التاريخية.",
+        "details": "The park opened in the mid-2000s and was developed with the Aga Khan Trust for Culture on the site of a former rubbish mound. It sits at the edge of historic Cairo and has viewpoints, gardens and restaurants. It is a good place to rest between sightseeing days.",
+        "tip": "A relaxed stop in late afternoon, especially for families who want open space.",
+        "tip_ar": "محطة مريحة في أواخر العصر، خاصة للعائلات التي تبحث عن مساحة مفتوحة.",
+    },
+    "coptic-cairo": {
+        "name_ar": "مصر القديمة (القاهرة القبطية)",
+        "summary_ar": "منطقة تاريخية في مصر القديمة تضم معالم دينية مسيحية مهمة.",
+        "details": "The area is home to the Hanging Church, the Church of Saints Sergius and Bacchus and the Coptic Museum, as well as the Ben Ezra Synagogue nearby. It sits within the ancient Fortress of Babylon area. Modest dress is appreciated at religious sites.",
+        "tip": "Dress modestly for the churches; it is compact and walkable, so it works well as a half-day.",
+        "tip_ar": "ارتدِ ملابس محتشمة داخل الكنائس؛ المنطقة صغيرة ويمكن المشي فيها خلال نصف يوم.",
+    },
+    "karnak": {
+        "name_ar": "معبد الكرنك",
+        "summary_ar": "مجمع معابد مصري قديم ضخم، وجزء من موقع طيبة القديمة المدرج في قائمة اليونسكو.",
+        "details": "Karnak was built and expanded over roughly two thousand years by many pharaohs. Its Great Hypostyle Hall contains a forest of 134 huge columns. The complex was dedicated mainly to the god Amun and is linked in antiquity to Luxor Temple by an avenue of sphinxes.",
+        "tip": "Visit early or late in the day to avoid the strongest heat; the complex is large, so wear comfortable shoes.",
+        "tip_ar": "اذهب مبكراً أو قرب الغروب لتفادي أشد حرارة، وارتدِ حذاءً مريحاً لأن المجمع كبير.",
+    },
+    "luxor-temple": {
+        "name_ar": "معبد الأقصر",
+        "summary_ar": "معبد كبير على الضفة الشرقية للنيل، كان مرتبطاً بمعبد الكرنك في العصور القديمة.",
+        "details": "The temple was built mainly under Amenhotep III and Ramesses II and stands in the middle of modern Luxor city. It is often visited in the evening when it is lit up. It was connected to Karnak by a ceremonial avenue of sphinxes.",
+        "tip": "Many visitors go in the evening for the lighting; check current opening hours on the official site.",
+        "tip_ar": "يزوره كثيرون مساءً للإضاءة؛ تحقق من مواعيد الفتح الحالية من الموقع الرسمي.",
+    },
+    "valley-of-kings": {
+        "name_ar": "وادي الملوك",
+        "summary_ar": "وادٍ للمدافن الملكية على الضفة الغربية للأقصر يضم مقابر فراعنة الدولة الحديثة.",
+        "details": "Dozens of royal tombs were cut into the rock here during the New Kingdom, including the tomb of Tutankhamun discovered in 1922. Tomb walls are decorated with scenes from funerary texts. Entry usually covers a limited number of tombs, with some tombs needing extra tickets.",
+        "tip": "Go early to beat the heat, and check which tombs are open and which need extra tickets.",
+        "tip_ar": "اذهب مبكراً لتفادي الحر، وتحقق من المقابر المفتوحة وما يحتاج تذاكر إضافية.",
+    },
+    "hatshepsut": {
+        "name_ar": "معبد حتشبسوت",
+        "summary_ar": "معبد جنائزي مدرّج لافت في الدير البحري مخصص للملكة حتشبسوت.",
+        "details": "The temple was built into the cliffs at Deir el-Bahari for Queen Hatshepsut of the 18th Dynasty. Its colonnaded terraces are one of the best-known pieces of ancient Egyptian architecture. It is on the west bank, close to the Valley of the Kings.",
+        "tip": "Easy to combine with the Valley of the Kings and the Colossi of Memnon on a west-bank day.",
+        "tip_ar": "يسهل ضمه مع وادي الملوك وتمثالي ممنون في يوم واحد على البر الغربي.",
+    },
+    "colossi-memnon": {
+        "name_ar": "تمثالا ممنون",
+        "summary_ar": "تمثالان حجريان ضخمان مرتبطان بمعبد أمنحتب الثالث الجنائزي.",
+        "details": "The two seated statues represent Amenhotep III and stand on the west bank of the Nile near Luxor. They are a short stop rather than a full visit, and are usually included on west-bank itineraries.",
+        "tip": "A quick photo stop on the way to or from the other west-bank sites.",
+        "tip_ar": "وقفة قصيرة للتصوير في الطريق من وإلى مواقع البر الغربي.",
+    },
+    "philae": {
+        "name_ar": "معبد فيلة",
+        "summary_ar": "مجمع معابد على جزيرة مخصص أساساً للإلهة إيزيس، نُقل ضمن حملة إنقاذ آثار النوبة.",
+        "details": "The temple complex was dismantled and rebuilt on higher ground on Agilkia Island when the Aswan High Dam threatened to submerge it. Visitors reach it by short boat ride. It is dedicated mainly to the goddess Isis.",
+        "tip": "The boat ride is part of the experience; soft light in the morning or late afternoon suits photos.",
+        "tip_ar": "رحلة القارب جزء من التجربة؛ والضوء الأجمل صباحاً أو قبيل الغروب.",
+    },
+    "aswan-high-dam": {
+        "name_ar": "السد العالي",
+        "summary_ar": "سد حديث ضخم على النيل ارتبط بتكوين بحيرة ناصر.",
+        "details": "The dam was built in the 1960s and created Lake Nasser, one of the largest artificial lakes in the world. It changed the flow of the Nile and led to the relocation of several ancient monuments such as Abu Simbel and Philae. It is usually a short stop.",
+        "tip": "A short viewpoint stop, often combined with the Philae boat trip.",
+        "tip_ar": "وقفة قصيرة لمشاهدة المنظر، وغالباً تُدمج مع رحلة قارب معبد فيلة.",
+    },
+    "nubian-museum": {
+        "name_ar": "المتحف النوبي",
+        "summary_ar": "متحف يعرض آثار النوبة وفنونها وتراثها.",
+        "details": "The museum in Aswan presents the history and culture of Nubia from prehistory to the modern era, and documents the Nubian monuments rescued when Lake Nasser formed. It has a garden area with outdoor exhibits.",
+        "tip": "A good, calmer stop in the middle of the day when it is hot outside.",
+        "tip_ar": "محطة هادئة مناسبة لمنتصف اليوم عندما يشتد الحر في الخارج.",
+    },
+    "elephantine-island": {
+        "name_ar": "جزيرة الفنتين",
+        "summary_ar": "جزيرة نيلية بها بقايا أثرية ومجتمعات سكنية قرب وسط أسوان.",
+        "details": "The island lies in the Nile opposite central Aswan, reached by a short boat ride. It has ancient remains, including a Nilometer used to measure the river's level, and traditional Nubian villages.",
+        "tip": "Take a local boat across and allow time to wander the village lanes.",
+        "tip_ar": "استقل مركباً محلياً للعبور، وخصص وقتاً للتجول في أزقة القرية.",
+    },
+    "abu-simbel": {
+        "name_ar": "معبدا أبو سمبل",
+        "summary_ar": "معبدان منحوتان في الصخر بُنيا في عهد رمسيس الثاني، وقد نُقلا لإنقاذهما من الغرق.",
+        "details": "The Great Temple of Ramesses II and a smaller temple for Queen Nefertari were relocated in the 1960s to avoid flooding by Lake Nasser. Twice a year, around 22 February and 22 October, the sun is said to illuminate the inner sanctuary. The site is far south of Aswan, roughly three hours by road.",
+        "tip": "Most visitors go on an early-morning excursion from Aswan; plan the long transfer in advance.",
+        "tip_ar": "يذهب معظم الزوار في رحلة صباحية مبكرة من أسوان؛ خطط للانتقال الطويل مسبقاً.",
+    },
+    "bibliotheca-alexandrina": {
+        "name_ar": "مكتبة الإسكندرية",
+        "summary_ar": "مركز ثقافي ومكتبة معاصرة قرب موقع مكتبة الإسكندرية القديمة الشهيرة.",
+        "details": "The modern library opened in 2002 and is known for its large disc-shaped building. It includes reading halls, museums and exhibition spaces, and a planetarium. It is on the Corniche in Alexandria.",
+        "tip": "Check which museums and exhibitions are open on the day you plan to visit.",
+        "tip_ar": "تحقق من المتاحف والمعارض المفتوحة في يوم زيارتك.",
+    },
+    "qaitbay": {
+        "name_ar": "قلعة قايتباي",
+        "summary_ar": "حصن ساحلي من القرن الخامس عشر بُني عند الميناء الشرقي للإسكندرية.",
+        "details": "The fortress was built in the late 15th century by Sultan Qaitbay on the site traditionally associated with the ancient Pharos lighthouse. It stands at the tip of a peninsula with sea views.",
+        "tip": "Sea breeze and sunset views make late afternoon pleasant.",
+        "tip_ar": "نسيم البحر وإطلالة الغروب يجعلان آخر النهار وقتاً لطيفاً للزيارة.",
+    },
+    "montaza-gardens": {
+        "name_ar": "حدائق المنتزه",
+        "summary_ar": "حدائق قصر على شاطئ البحر في شرق الإسكندرية معروفة بمساحاتها المنسقة.",
+        "details": "The gardens surround a royal palace complex built in the late 19th and early 20th centuries on the Mediterranean coast. They include lawns, palm trees and a small beach. The palace buildings themselves may have restricted access.",
+        "tip": "Good for a relaxed afternoon and family picnics; check access rules for the palace buildings.",
+        "tip_ar": "مناسبة لعصرية هادئة ونزهات العائلة؛ وتحقق من قواعد دخول مباني القصر.",
+    },
+    "catacombs-kom-shoqafa": {
+        "name_ar": "كتاكومب كوم الشقافة",
+        "summary_ar": "مجمع مدافن تحت الأرض من العصر الروماني يعكس تأثيرات مصرية ويونانية ورومانية.",
+        "details": "The catacombs date to roughly the 2nd century CE and were discovered in 1900. Their decorations mix Egyptian, Greek and Roman styles. The tomb levels are reached by a spiral staircase.",
+        "tip": "It involves stairs and narrow passages, so it is less suitable for those with mobility difficulties.",
+        "tip_ar": "فيها درج وممرات ضيقة، لذا قد لا تناسب من لديهم صعوبة في الحركة.",
+    },
+    "ras-mohammed": {
+        "name_ar": "محمية رأس محمد",
+        "summary_ar": "منطقة ساحلية محمية على البحر الأحمر معروفة بالشعاب المرجانية والتنوع البحري.",
+        "details": "The park is at the southern tip of the Sinai Peninsula, near Sharm El Sheikh. It is known for coral reefs and marine life, and is popular for snorkelling and diving. Park rules protect the reefs, so follow the guidance of local operators.",
+        "tip": "Respect reef-protection rules; book snorkelling or diving through reputable, licensed operators.",
+        "tip_ar": "احترم قواعد حماية الشعاب، واحجز الغطس أو السنوركلينج عبر منظمين مرخّصين.",
+    },
+    "naama-bay": {
+        "name_ar": "خليج نعمة",
+        "summary_ar": "منطقة شاطئية وسياحية في شرم الشيخ بها مطاعم على البحر ومرافق ترفيهية.",
+        "details": "Naama Bay is the central tourist district of Sharm El Sheikh, with a seafront promenade, restaurants, hotels and shops. It is easy to combine with beach time and an evening meal.",
+        "tip": "Busy in the evenings; good for easy walking, dining and beach access.",
+        "tip_ar": "مزدحم مساءً؛ جيد للمشي والطعام والوصول إلى الشاطئ.",
+    },
+    "soho-square": {
+        "name_ar": "سوهو سكوير",
+        "summary_ar": "ساحة حديثة للتسوق والترفيه بالقرب من خليج القرش في شرم الشيخ.",
+        "details": "The square is a modern entertainment complex with restaurants, cafés, shops and shows, mainly visited in the evening. It is more of a leisure stop than a cultural site.",
+        "tip": "Better for the evening; confirm which attractions are running before you go.",
+        "tip_ar": "الأفضل مساءً؛ وتأكد من الفعاليات العاملة قبل الذهاب.",
+    },
+    "giftun-island": {
+        "name_ar": "جزر الجفتون",
+        "summary_ar": "جزر على البحر الأحمر قبالة الغردقة معروفة بالشواطئ والرحلات البحرية.",
+        "details": "The Giftun islands are a protected area reached by boat from Hurghada, and are popular for snorkelling and beach days. Trips are arranged through local boat operators and usually take most of the day.",
+        "tip": "Trips need separate booking; choose a licensed operator and bring sun protection.",
+        "tip_ar": "تحتاج الرحلات إلى حجز منفصل؛ اختر منظماً مرخصاً وخذ واقياً من الشمس.",
+    },
+    "hurghada-marina": {
+        "name_ar": "مارينا الغردقة",
+        "summary_ar": "كورنيش مائي به مطاعم وقوارب ومرافق للزوار.",
+        "details": "The marina is a waterside promenade with restaurants and cafés and boats docked along the quay. It is a convenient stop for a meal and an evening walk.",
+        "tip": "A relaxed evening stop with plenty of dining choices.",
+        "tip_ar": "محطة مسائية هادئة فيها خيارات كثيرة للطعام.",
+    },
+    "el-gouna": {
+        "name_ar": "الجونة",
+        "summary_ar": "مدينة منتجعات مخططة على البحر الأحمر شمال الغردقة بها بحيرات صناعية وأنشطة ترفيهية.",
+        "details": "El Gouna is a purpose-built resort town with lagoons, canals, beaches, restaurants and water sports such as kitesurfing. It lies roughly 25 km north of Hurghada.",
+        "tip": "Allow time to move around the town; it is best for beach, water sports and dining rather than ancient sites.",
+        "tip_ar": "خصص وقتاً للتنقل داخل المدينة؛ أفضل للشاطئ والرياضات المائية والطعام لا للمواقع الأثرية.",
+    },
+    "siwa-fortress": {
+        "name_ar": "قلعة شالي",
+        "summary_ar": "مستوطنة تاريخية من الطوب اللبن في قلب واحة سيوة.",
+        "details": "Shali is built largely from kershef, a mix of salt and clay, and was a fortified settlement above the town of Siwa. Parts of it have crumbled over the years, especially after heavy rain. It offers views over the town and palm groves.",
+        "tip": "Climb it near sunset for views over the oasis.",
+        "tip_ar": "اصعد إليها قرب الغروب لمشاهدة الواحة من أعلى.",
+    },
+    "siwa-salt-lakes": {
+        "name_ar": "بحيرات الملح في سيوة",
+        "summary_ar": "برك ملحية حول واحة سيوة تشتهر بألوانها ومناظرها المميزة.",
+        "details": "The salt lakes around Siwa are fringed by salt formations and palm trees. Many visitors combine them with a swim in one of the area's pools or springs and a desert excursion.",
+        "tip": "Pair with other Siwa sights on one day; bring sun protection and water.",
+        "tip_ar": "اجمعها مع معالم سيوة الأخرى في يوم واحد، وخذ ماءً وواقياً من الشمس.",
+    },
+    "oracle-temple": {
+        "name_ar": "معبد الوحي",
+        "summary_ar": "ملاذ قديم للوحي في واحة سيوة مرتبط بالإله آمون.",
+        "details": "The temple of the oracle at Aghurmi is traditionally linked to Alexander the Great's visit to Siwa in the 4th century BCE. It stands on a rocky hill with views over the oasis.",
+        "tip": "A short visit, easily combined with Shali Fortress on the same trip.",
+        "tip_ar": "زيارة قصيرة يسهل ضمها مع قلعة شالي في الرحلة نفسها.",
+    },
+    "wadi-el-hitan": {
+        "name_ar": "وادي الحيتان",
+        "summary_ar": "موقع أحفوري مدرج في قائمة اليونسكو مشهور ببقايا الحيتان المبكرة في الصحراء الغربية.",
+        "details": "The 'Valley of the Whales' preserves fossils of early whales that lived about 40 million years ago, when the area was covered by sea. It was listed by UNESCO in 2005. It is in the desert, so access is by road.",
+        "tip": "Take plenty of water, go in cooler hours, and plan the transfer from Cairo or Fayoum.",
+        "tip_ar": "خذ ماءً كافياً، واذهب في الساعات الأبرد، وخطط للانتقال من القاهرة أو الفيوم.",
+    },
+    "qarun-lake": {
+        "name_ar": "بحيرة قارون",
+        "summary_ar": "بحيرة كبيرة في منخفض الفيوم تحيط بها مناظر صحراوية.",
+        "details": "Lake Qarun is a large saline lake in the Fayoum depression, known for birdlife and for the desert scenery around it. It is a popular day-trip destination from Cairo.",
+        "tip": "Good for a quiet nature stop; combine it with other Fayoum sites on a single day.",
+        "tip_ar": "مناسبة لوقفة هادئة مع الطبيعة؛ ويمكن ضمها لمعالم الفيوم الأخرى في يوم واحد.",
+    },
+    "tunis-village": {
+        "name_ar": "قرية تونس",
+        "summary_ar": "قرية على الساحل في الفيوم تشتهر بورش الفخار والحرف المحلية.",
+        "details": "The village overlooks Lake Qarun and is known for pottery workshops, art studios and small cafés. It attracts visitors looking for crafts and a quieter atmosphere.",
+        "tip": "Allow time to browse the workshops; it works as a relaxed stop on a Fayoum day.",
+        "tip_ar": "خصص وقتاً لتصفح الورش؛ محطة مريحة ضمن يوم في الفيوم.",
+    },
+    "st-catherine-monastery": {
+        "name_ar": "دير سانت كاترين",
+        "summary_ar": "دير مسيحي قديم عند سفح جبل سيناء، وجزء من موقع تراث عالمي لليونسكو.",
+        "details": "Founded in the 6th century, the monastery is among the oldest continuously inhabited Christian monasteries and holds an important library of manuscripts. It sits in a mountain valley at the foot of Mount Sinai.",
+        "tip": "Opening times for visitors are limited; check them before you arrive and dress modestly.",
+        "tip_ar": "أوقات زيارة الدير محدودة، فتحقق منها قبل الوصول وارتدِ ملابس محتشمة.",
+    },
+    "mount-sinai": {
+        "name_ar": "جبل موسى",
+        "summary_ar": "جبل في جنوب سيناء يزوره المتسلقون والحجاج، وقد يشترط التسلق مع مرشد.",
+        "details": "Mount Sinai (Jabal Musa) rises to roughly 2,285 metres. Many visitors climb at night to reach the summit for sunrise, using either a long camel path or the stepped path. Conditions can be cold, so warm clothing is important.",
+        "tip": "Bring warm layers and a headlamp for a night climb, and arrange a local guide as required.",
+        "tip_ar": "أحضر ملابس دافئة وكشافاً للرأس لتسلق الليل، ورتّب مرشداً محلياً كما يلزم.",
+    },
+    "blue-hole-dahab": {
+        "name_ar": "الحفرة الزرقاء - دهب",
+        "summary_ar": "موقع غوص شهير على البحر الأحمر قرب دهب، والغوص العميق فيه خطر ويتطلب إرشاداً معتمداً.",
+        "details": "The Blue Hole is a deep sinkhole just offshore, known as a dive site and also visited by snorkellers at the shallow edge. Deep diving here is dangerous and should only be done with certified guidance.",
+        "tip": "Stay within your certification level; snorkelling in the shallows is the safer option for most visitors.",
+        "tip_ar": "التزم بحدود شهادة الغوص الخاصة بك؛ والسنوركلينج في المياه الضحلة أكثر أماناً لمعظم الزوار.",
+    },
+    "dahab-lagoon": {
+        "name_ar": "لاجون دهب",
+        "summary_ar": "لاجون ساحلي ضحل قرب دهب معروف بالاسترخاء على الشاطئ ورياضات الرياح.",
+        "details": "The lagoon has shallow, calm water and steady winds, which makes it popular for windsurfing and kitesurfing as well as for relaxing by the water. Several schools offer lessons.",
+        "tip": "A good, calm spot for beginners learning wind sports with a school.",
+        "tip_ar": "مكان هادئ مناسب للمبتدئين في رياضات الرياح مع مدرسة معتمدة.",
+    },
+}

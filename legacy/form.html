@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plan Your Visit</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)),
+                  url('bg.jpg');
+      background-size: cover;
+      color: #fff;
+    }
+
+    .form-container {
+      max-width: 700px;
+      margin: 60px auto;
+      background: rgba(0,0,0,0.7);
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(255,193,7,0.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #ffc107;
+      margin-bottom: 10px;
+    }
+
+    p {
+      text-align: center;
+      color: #ddd;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin: 20px 0 8px;
+      font-weight: bold;
+    }
+
+    select, input[type="checkbox"], input[type="radio"] {
+      margin-right: 10px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .options {
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 30px;
+      padding: 14px;
+      background: #ffc107;
+      color: #000;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #ffb300;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h1>Plan Your Smart Visit</h1>
+    <p>Let AI create a personalized museum experience for you</p>
+
+    <form>
+      <label>How much time do you have?</label>
+      <select>
+        <option>Less than 1 hour</option>
+        <option>1 – 2 hours</option>
+        <option>2 – 4 hours</option>
+        <option>Full day</option>
+      </select>
+
+      <label>What are you most interested in?</label>
+      <div class="options">
+        <input type="checkbox"> Pharaohs & Kings<br>
+        <input type="checkbox"> Daily Life in Ancient Egypt<br>
+        <input type="checkbox"> Statues & Monuments<br>
+        <input type="checkbox"> Religious Artifacts<br>
+      </div>
+
+      <label>Are you visiting with children?</label>
+      <div class="options">
+        <input type="radio" name="kids"> Yes  
+        <input type="radio" name="kids"> No
+      </div>
+
+      <label>Preferred language</label>
+      <select>
+        <option>English</option>
+        <option>Arabic</option>
+        <option>French</option>
+      </select>
+
+      <label>How would you like the experience?</label>
+      <div class="options">
+        <input type="radio" name="style"> Quick & Highlights  
+        <input type="radio" name="style"> Balanced  
+        <input type="radio" name="style"> Deep & Detailed
+      </div>
+    <form>
+  <button type="button" class="btn" onclick="window.location.href='plan.html'">
+    Generate My Smart Visit Plan
+  </button>
+</form>
+
+
+<!-- 
+      <button class="btn">Generate My Smart Visit Plan</button> -->
+    </form>
+  </div>
+
+</body>
+</html>

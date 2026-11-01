@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-31",
+  "source": "Masr_Guide_AI_FullStack_ChatFirst_Reviewed_2026-10-31.zip",
+  "checked": {
+    "backend_pytest": "372/372 PASS",
+    "chat_offline": "52/52 PASS",
+    "frontend_node_contracts": "21/21 PASS",
+    "http_customer_smoke": "10/10 PASS",
+    "http_customer_journey": "11/11 PASS",
+    "http_deep_chat": "15/15 PASS",
+    "planner_invariants": "18000/18000 PASS",
+    "adversarial": "36/36 PASS",
+    "mock_provider_http": "27/27 PASS"
+  },
+  "blocked": {
+    "frontend_npm_ci": "EAI_AGAIN registry.npmjs.org",
+    "react_build": "BLOCKED - npm dependencies missing",
+    "browser_mobile_e2e": "BLOCKED - no compiled build",
+    "gemini_live": "NOT EXECUTED - no key",
+    "production": "NOT DEPLOYED"
+  },
+  "release_approved": false
+}

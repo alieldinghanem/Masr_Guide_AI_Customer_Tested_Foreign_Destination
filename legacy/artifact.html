@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Artifact Details | GEM</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0b0b;
+      color: #fff;
+    }
+
+    header {
+      background: #000;
+      padding: 15px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h2 {
+      color: #ffc107;
+      margin: 0;
+    }
+
+    header a {
+      color: #fff;
+      margin-left: 20px;
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #ffc107;
+      margin-bottom: 20px;
+    }
+
+    img {
+      width: 100%;
+      max-width: 400px;
+      display: block;
+      margin: 0 auto 20px;
+      border-radius: 12px;
+      border: 3px solid #ffc107;
+    }
+
+    .story {
+      background: #151515;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      background: #ffc107;
+      color: #000;
+      font-weight: bold;
+      text-decoration: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: #ffb300;
+    }
+
+    select {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      margin-right: 10px;
+    }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h2>EgyptAI Tour</h2>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="form.html">Plan Your Visit</a>
+    <a href="plan.html">Visit Plan</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <h1>Golden Mask of Tutankhamun</h1>
+
+
+  <img src="ph2.jpeg" alt="Golden Mask of Tutankhamun">
+
+
+  <div class="story">
+    This golden mask belonged to King Tutankhamun and symbolizes eternal life in Ancient Egypt.
+    EgyptAI generates a short story highlighting its history, symbolism, and secrets for each visitor.
+  </div>
+
+  
+  <div class="controls">
+    <label for="language">Choose Language:</label>
+    <select id="language">
+      <option>English</option>
+      <option>Arabic</option>
+      <option>French</option>
+    </select>
+  </div>
+
+ 
+  <div class="controls" style="margin-top: 30px;">
+    <a href="plan.html" class="btn">Back to Plan</a>
+    <a href="artifact2.html" class="btn">Next Artifact</a>
+  </div>
+
+</div>
+
+</body>
+</html>
