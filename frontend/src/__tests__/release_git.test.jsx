@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../App'
 import { mockApi } from './fixtures'
+import { MESSAGES } from '../messages'
 
 const boot = async opts => {
   const calls = mockApi(opts)
@@ -14,6 +15,22 @@ const boot = async opts => {
 }
 
 describe('GitHub release fixes', () => {
+  it('keeps offline chat notices visitor-facing in English and Arabic', async () => {
+    for (const lang of ['en', 'ar']) {
+      for (const mode of ['offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'unsupported-destination', 'trip-saved', 'needs-authentication']) {
+        expect(MESSAGES[lang][`guide.welcome.${mode}`]).toBeTruthy()
+      }
+      expect(MESSAGES[lang]['guide.welcome.offline-preview']).not.toMatch(/API key|مفتاح API/)
+    }
+    const { user } = await boot({ chat: { answer: 'Welcome to Egypt!', mode: 'local-assistant', sources: [] } })
+    await user.click(screen.getByRole('button', { name: 'Chat' }))
+    await user.type(screen.getByLabelText('Ask the tour guide'), 'Hello')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    await screen.findByText('Welcome to Egypt!')
+    expect(screen.getByText(MESSAGES.en['guide.welcome.local-assistant'])).toBeInTheDocument()
+    expect(screen.queryByText('guide.welcome.local-assistant')).not.toBeInTheDocument()
+  })
+
   it('allows retry after a failed initial metadata request', async () => {
     let fail = true
     const originalFetch = vi.fn(async (url) => {
