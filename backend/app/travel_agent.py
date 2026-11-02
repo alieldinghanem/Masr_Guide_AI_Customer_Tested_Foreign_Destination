@@ -66,7 +66,7 @@ _NON_EGYPT_DESTINATIONS = {
 def _explicit_non_egypt_destination(message: str) -> list[str]:
     text = message.lower()
     return sorted({name for alias, name in _NON_EGYPT_DESTINATIONS.items()
-                   if re.search(r'(?<!\w)(?:و)?' + re.escape(alias) + r'(?!\w)', text)})
+                   if re.search(r'(?<!\w)(?:و)?(?:ل)?' + re.escape(alias) + r'(?!\w)', text)})
 
 
 _BEACH = ('beach', 'sea', 'red sea', 'coast', 'snorkel', 'diving', 'بحر', 'شاطئ', 'شواطئ', 'غوص', 'سباحة', 'mer', 'plage', 'hurghada', 'الغردقة', 'الغردقه', 'للغردقة', 'للغردقه', 'sharm', 'شرم الشيخ', 'dahab', 'دهب')
