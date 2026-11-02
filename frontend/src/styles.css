@@ -531,3 +531,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   pointer-events: none;
 }
 .v3-destination-index, .v3-destination-location { z-index: 2; }
+
+/* Unverified or unavailable landmark image: attractive neutral cover rather
+   than a different attraction incorrectly labelled as this place. */
+.mg-editorial-no-image { display:block; background:linear-gradient(145deg,#c98557,#f6d9ad); }
+.mg-place-photo .mg-editorial-no-image { width:100%; height:100%; }
+.v6-landmark-photo .mg-editorial-no-image,
+.v6-destination-card .mg-editorial-no-image,
+.v6-experience-card .mg-editorial-no-image,
+.v3-destination-visual .mg-editorial-no-image,
+.v3-experience-art .mg-editorial-no-image,
+.v6-editorial-visual .mg-editorial-no-image { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+.v3-experience-art { isolation:isolate; }
+.v3-experience-art .v6-cover-image { z-index:0; }
+.v3-experience-art:has(.v6-cover-image)::after { z-index:1; pointer-events:none; }
+.v3-experience-art > span:not(.mg-editorial-no-image) { z-index:2; position:relative; }
