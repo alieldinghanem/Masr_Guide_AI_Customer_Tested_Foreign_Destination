@@ -95,7 +95,7 @@ def test_react(browser, label, width, height):
         expect(page.locator('.msg.assistant')).to_have_count(1, timeout=25000)
         prompt.fill('I am visiting Egypt for two weeks: first week for history in Cairo and Luxor, second week for Red Sea beaches in Hurghada')
         page.get_by_role('button', name='Send message').click()
-        expect(page.locator('.consult-day')).to_have_count(14, timeout=25000)
+        expect(page.locator('.consult-days > .consult-day')).to_have_count(14, timeout=25000)
         print(f'PASS {label}: offline chat and conversational 14-day plan')
 
         # Navigation should preserve conversation in an active browser session.
