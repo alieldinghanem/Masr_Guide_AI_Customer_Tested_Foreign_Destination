@@ -59,6 +59,26 @@ def test_react(browser, label, width, height):
         page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded')
         expect(page.locator('.mg-category-grid .mg-place-card').first).to_be_visible(timeout=15000)
         expect(page.locator('.mg-category-grid .mg-place-card')).to_have_count(31, timeout=15000)
+        # Real Chromium geometry (not jsdom): mobile cards must be readable,
+        # one per row, with a generous image and 44px touch targets.
+        if width <= 620:
+            for phone_width in (360, 390, 430):
+                page.set_viewport_size({'width': phone_width, 'height': height})
+                cards = page.locator('.mg-category-grid .mg-place-card')
+                first = cards.nth(0).bounding_box()
+                second = cards.nth(1).bounding_box()
+                image = cards.nth(0).locator('.mg-place-photo').bounding_box()
+                assert first and second and image, 'Mobile photo cards must have layout boxes'
+                assert abs(first['x'] - second['x']) < 2, f'Cards not single-column at {phone_width}px'
+                assert second['y'] > first['y'], f'Cards overlap at {phone_width}px'
+                assert image['height'] >= 170, f'Photo cropped into a narrow strip at {phone_width}px'
+                action = cards.nth(0).locator('.mg-place-actions button').last.bounding_box()
+                assert action and action['width'] >= 44 and action['height'] >= 44, 'Touch target too small'
+                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), f'Horizontal overflow at {phone_width}px'
+            focus = page.locator('.mg-place-card').filter(has_text='Mosque of Ahmad Ibn Tulun')
+            expect(focus.locator('img')).to_have_css('object-position', '50% 67%')
+            page.set_viewport_size({'width': width, 'height': height})
+            print('PASS mobile imagery: 360/390/430px single column, crop, tap targets and overflow')
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
         expect(page.locator('.mg-category-grid .mg-place-card')).to_have_count(7, timeout=15000)
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
