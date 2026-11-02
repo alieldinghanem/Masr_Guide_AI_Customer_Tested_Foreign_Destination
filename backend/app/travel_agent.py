@@ -923,6 +923,9 @@ def consult_travel(request):
                      f"{p.days} days — {', '.join(p.cities)}" for p in checked.phases]
             answer = ('عدلت توزيع الرحلة بناءً على الأيام والمدن التي حددتها. التعديل في هذه الجلسة فقط؛ استخدم حفظ الرحلة لتسجيله في حسابك.\n' if request.language == 'Arabic' else
                       'I rebuilt the itinerary using your exact city-day allocation. This is only in your current session until you save it to your account.\n') + '\n'.join(parts)
+            if _budget_usd(message) is not None:
+                answer += (f'\nسجّلت ميزانيتك: {checked.budget_usd:,} دولار. الخطة استرشادية ولا تؤكد تكلفة الإقامة والنقل.' if request.language == 'Arabic' else
+                           f'\nBudget noted: USD {checked.budget_usd:,}. This itinerary does not verify hotel or transfer costs.')
             return _with_verified_dialogue(request, message, {'answer': answer, 'mode': 'local-planner', 'sources': itinerary.get('sources', []),
                     'trip_state': checked.model_dump(), 'itinerary': itinerary})
         transfer = _explicit_day_transfer(state, message, available)
