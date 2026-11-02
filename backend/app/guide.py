@@ -221,8 +221,9 @@ def local_cairo_day_reply(message: str, language: str):
     or a claim of verified evening venue hours. Never mutates an itinerary.
     """
     folded = _fold(message)
-    cairo = 'القاهره' in folded or re.search(r'\bcairo\b', folded)
-    heritage = any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
+    citadel_named = 'قلعه صلاح الدين' in folded or 'citadel of saladin' in folded
+    cairo = 'القاهره' in folded or re.search(r'\bcairo\b', folded) or citadel_named
+    heritage = citadel_named or any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
     evening = any(x in folded for x in ('بالليل', 'بليل', 'مساء', 'بالليل', 'evening', 'tonight', 'night'))
     if not (cairo and heritage and evening):
         return None
@@ -237,6 +238,26 @@ def local_cairo_day_reply(message: str, language: str):
          'city': p['city'], 'id': p['id'], 'url': p['source_url']}
         for i, p in enumerate(places, 1)
     ]
+    # A visitor can combine a named-place question with an evening outing.
+    # Answer both parts from catalogue entries without asserting night access
+    # to the attraction or changing an itinerary.
+    outing = any(x in folded for x in ('فسحه', 'خروجه', 'اتمشي', 'تمشي', 'مكان',
+                                       'outing', 'walk', 'where to go'))
+    if citadel_named and outing:
+        if language == 'Arabic':
+            answer = (f"{citadel['name_ar']}: {citadel['summary_ar']} [1] "
+                      f"وبالليل ممكن تتمشى في {bazaar['name_ar']}؛ {bazaar['summary_ar']} [2] "
+                      'ده اقتراح لخروجة، مش تأكيد إن القلعة مفتوحة مساءً أو إن أي مكان محجوز. '
+                      'راجع المواعيد قبل ما تروح.')
+        elif language == 'French':
+            answer = (f"{citadel['name']} : {citadel['description']} [1] "
+                      f"Pour la soirée, une promenade à {bazaar['name']} est une autre idée [2]. "
+                      "Vérifiez les horaires ; je ne confirme pas une visite nocturne de la citadelle.")
+        else:
+            answer = (f"{citadel['name']}: {citadel['description']} [1] "
+                      f"For an evening outing, consider walking around {bazaar['name']} [2]. "
+                      'Check current hours; this does not confirm night access to the Citadel.')
+        return {'answer': answer, 'mode': 'offline-preview', 'sources': sources}
     if language == 'Arabic':
         answer = (
             'تمام، نقدر نخصص يوم إضافي للقاهرة: خلال النهار أرشح لك قلعة صلاح الدين '
@@ -273,23 +294,21 @@ def offline_answer(places, language):
             return (
                 "أنا معاك في تخطيط زيارتك لمصر. قولّي مدة الرحلة، مين مسافر معاك، "
                 "واهتماماتك مثل الآثار أو المتاحف أو البحر أو الأكل، وأي مدن أو ميزانية "
-                "في بالك، وأنا أساعدك تبدأ خطة قابلة للتعديل. "
-                "المحادثة الذكية الكاملة تحتاج تفعيل مزود الذكاء الاصطناعي على الخادم."
+                "في بالك، وأنا أساعدك تبدأ خطة قابلة للتعديل."
             )
-        parts = [f"{p['name_ar']} ({CITY_AR.get(p['city'], p['city'])}): {p['summary_ar']}" for p in places]
-        return "وضع معاينة بدون LLM — معلومات مختارة من دليلنا المحلي:\n\n" + "\n\n".join(parts)
+        parts = [f"[{i}] {p['name_ar']} ({CITY_AR.get(p['city'], p['city'])}): {p['summary_ar']}"
+                 for i, p in enumerate(places, 1)]
+        return "من دليل الأماكن عندنا:\n\n" + "\n\n".join(parts)
     if not places:
         if language == "French":
             return ("Je peux vous aider à préparer votre voyage en Égypte. Indiquez la durée, les voyageurs, "
-                    "vos intérêts, les villes et votre budget éventuel. La conversation IA complète nécessite "
-                    "l’activation du fournisseur sur le serveur.")
+                    "vos intérêts, les villes et votre budget éventuel.")
         return ("I can help you start an editable Egypt trip plan. Share the duration, travellers, interests, "
-                "cities and any budget you have in mind. Full open-ended AI conversation requires an enabled "
-                "provider on the server.")
-    note = ("Offline knowledge preview (not an LLM response; descriptions are in English). "
-            if language == "French" else "Offline knowledge preview (not an LLM response). ")
-    return note + "An AI provider must be configured on the server for conversational answers.\n\n" + "\n\n".join(
-        f"{p['name']} — {p['description']} {p['details']}" for p in places)
+                "cities and any budget you have in mind.")
+    note = ("Extraits de notre guide local (descriptions en anglais) :\n\n"
+            if language == "French" else "From our local Egypt guide:\n\n")
+    return note + "\n\n".join(
+        f"[{i}] {p['name']} — {p['description']} {p['details']}" for i, p in enumerate(places, 1))
 
 
 def _safe_provider_fallback(language: str, places, references):

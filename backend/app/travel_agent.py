@@ -837,7 +837,9 @@ def consult_travel(request):
                          {canonical for alias, canonical in _CITY_ALIASES.items()
                           if canonical not in available and re.search(r'(?<!\w)' + re.escape(alias) + r'(?!\w)', lowered)})
     # A plain tourism question such as 'أريد زيارة الأهرامات' is not a request for a multi-day itinerary.
-    plan_words = (total_days(message) is not None or bool(_explicit_city_allocations(message, available))
+    two_day_city_stay = bool(not state and len(cities) == 1 and
+                             re.search(r'(?<!\w)(?:يومين|يومان)(?!\w)', lowered))
+    plan_words = (total_days(message) is not None or two_day_city_stay or bool(_explicit_city_allocations(message, available))
                   or any(x in lowered for x in ('plan', 'itinerary', 'trip', 'holiday', 'برنامج', 'رحلة', 'خطط', 'خطة', 'خطه', 'تخطيط', 'voyage')))
     from .conversation_router import payment_sensitive
     if (payment_sensitive(message) or
@@ -1114,6 +1116,8 @@ def consult_travel(request):
         updated = state
     else:
         days = total_days(message)
+        if days is None and two_day_city_stay:
+            days = 2
         explicit_city_days = _explicit_city_allocations(message, available)
         # If all cities have an explicit number of days, do not let generic
         # attraction-density scoring rewrite the visitor's allocations.

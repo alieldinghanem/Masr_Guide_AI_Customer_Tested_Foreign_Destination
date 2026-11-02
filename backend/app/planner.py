@@ -174,17 +174,19 @@ def build_plan(request):
     ordered = optimise_order(request.cities, centres) if getattr(request, "optimize_route", False) else list(request.cities)
 
     max_minutes = PACE_LIMITS[request.pace]
-    # Allocate at least one full day per destination. Keep each destination's days
+    # Give each named city at least two days on a long enough multi-city stay;
+    # one day in a major city can be consumed by the transfer alone. Keep days
     # contiguous so the itinerary does not bounce back and forth between cities.
     # Extra days are assigned to destinations with the greatest remaining activity
     # capacity, using only local catalog estimates (not live transport data).
-    allocations = {city: 1 for city in ordered}
+    minimum = 2 if len(ordered) > 1 and request.days >= 3 * len(ordered) else 1
+    allocations = {city: minimum for city in ordered}
     places_by_city = {
         city: [p for p in places if p["city"] == city
                and (not request.family or p["family_friendly"])]
         for city in ordered
     }
-    for _ in range(request.days - len(ordered)):
+    for _ in range(request.days - minimum * len(ordered)):
         def opportunity(city):
             planned_minutes = sum(p["visit_minutes"] + 30 for p in places_by_city[city])
             capacity_days = planned_minutes / max_minutes
