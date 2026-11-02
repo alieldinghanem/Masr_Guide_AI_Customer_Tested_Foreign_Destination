@@ -3,7 +3,9 @@ import { api } from '../api'
 import { isValidItinerary } from '../tripValidation'
 
 async function request(path, method = 'GET', payload, token, ifMatch) {
-  return api(path, { method, body: payload, token, ifMatch })
+  // Browsers reject a request body on GET/HEAD; omitted body must stay undefined.
+  const hasBody = method !== 'GET' && method !== 'HEAD' && payload != null
+  return api(path, { method, ...(hasBody ? { body: payload } : {}), token, ifMatch })
 }
 
 const SESSION = 'masr-account-session-v4'
