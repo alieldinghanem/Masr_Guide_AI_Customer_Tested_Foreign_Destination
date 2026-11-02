@@ -55,7 +55,8 @@ def test_chat_offline_transparency(client):
     assert r.status_code==200
     d=r.json()
     assert d['mode']=='offline-preview'
-    assert 'not an LLM' in d['answer']
+    assert d['answer'].startswith('From our local Egypt guide:')
+    assert 'AI provider must be configured' not in d['answer']
     assert d['sources'] and all(x['url'].startswith('https://') for x in d['sources'])
 
 def test_arabic_retrieval(client):
