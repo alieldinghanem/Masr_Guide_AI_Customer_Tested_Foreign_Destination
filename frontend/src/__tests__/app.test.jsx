@@ -190,6 +190,8 @@ describe('AI consultant v2', () => {
     expect(await screen.findByText('Your editable Egypt itinerary')).toBeInTheDocument()
     expect(screen.getByText(/Day 1 — Giza/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /\[1\] Karnak Temple Complex/ })).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('لغة الرد'), 'Arabic')
+    expect(screen.getByRole('link', { name: /\[1\] Karnak Temple Complex/ })).toBeInTheDocument()
   })
 
   it('shows Arabic city and source names when an Arabic message switches the response language', async () => {
