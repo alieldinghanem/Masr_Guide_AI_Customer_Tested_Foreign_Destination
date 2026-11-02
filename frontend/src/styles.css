@@ -521,3 +521,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .mg-footer-more>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .mg-footer-more button{text-align:start;min-height:36px}
 }
+
+/* Photo cards: the earlier negative stacking index placed valid photos
+   behind the destination gradient, leaving visibly empty coloured panels. */
+.v3-destination-visual { isolation: isolate; }
+.v3-destination-visual .v6-cover-image { z-index: 0; }
+.v3-destination-visual:has(.v6-cover-image)::after {
+  z-index: 1;
+  pointer-events: none;
+}
+.v3-destination-index, .v3-destination-location { z-index: 2; }
