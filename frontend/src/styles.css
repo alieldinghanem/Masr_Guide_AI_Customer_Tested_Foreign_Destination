@@ -546,3 +546,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .v3-experience-art .v6-cover-image { z-index:0; }
 .v3-experience-art:has(.v6-cover-image)::after { z-index:1; pointer-events:none; }
 .v3-experience-art > span:not(.mg-editorial-no-image) { z-index:2; position:relative; }
+
+/* Photos on cards must sit above card backgrounds and below editorial labels. */
+.v6-destination-card .v6-cover-image,
+.v6-experience-card .v6-cover-image,
+.v6-landmark-photo .v6-cover-image,
+.v6-editorial-visual .v6-cover-image { z-index:0; }
+.v6-destination-card::after,.v6-experience-card::after { z-index:1;pointer-events:none; }
+.v6-destination-card .v6-card-top,.v6-destination-card .v6-card-content,
+.v6-experience-card .v6-experience-content { z-index:2;position:absolute; }
+.v6-landmark-photo > span:not(.mg-editorial-no-image) { z-index:2; }
+.v6-editorial-visual::after { z-index:1;pointer-events:none; }
+.v6-editorial-visual>span:not(.mg-editorial-no-image){z-index:2;}
