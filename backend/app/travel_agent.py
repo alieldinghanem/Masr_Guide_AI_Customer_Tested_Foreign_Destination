@@ -841,7 +841,7 @@ def consult_travel(request):
             )
             return {
                 **local_idea,
-                'answer': local_idea['answer'] + '\\n\\n' + question,
+                'answer': local_idea['answer'] + '\n\n' + question,
                 'mode': 'needs-clarification',
                 'trip_state': state,
                 'itinerary': None,
