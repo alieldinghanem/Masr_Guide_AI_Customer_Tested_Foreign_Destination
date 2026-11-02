@@ -312,11 +312,31 @@ def _apply_relative_extension(state: dict, amount: int, city: str | None) -> dic
     """Extend without taking or redistributing any existing city days."""
     if amount < 1 or state['days'] + amount > 30 or city is None:
         return None
-    index = next((i for i, phase in enumerate(state['phases'])
-                  if phase['cities'] == [city]), None)
-    if index is None:
+    matches = [i for i, phase in enumerate(state['phases']) if city in phase['cities']]
+    if len(matches) != 1:
         return None
+    index = matches[0]
     updated = deepcopy(state)
+    phase = updated['phases'][index]
+    if len(phase['cities']) > 1:
+        # Freeze the planner's current per-city allocation before extending a
+        # shared phase. Increasing its total directly could move another city's
+        # days when the planner distributes the new total.
+        if len(updated['phases']) - 1 + len(phase['cities']) > 5:
+            return None
+        current = build_plan(PlanRequest(
+            cities=phase['cities'], days=phase['days'], interests=phase['interests'],
+            pace=state['pace'], family=state['family'], optimize_route=False,
+            language='en',
+        ))['day_allocation']
+        separate = []
+        for name in phase['cities']:
+            segment = deepcopy(phase)
+            segment['cities'] = [name]
+            segment['days'] = current[name]
+            separate.append(segment)
+        updated['phases'][index:index + 1] = separate
+        index += phase['cities'].index(city)
     updated['days'] += amount
     updated['phases'][index]['days'] += amount
     return updated

@@ -61,6 +61,25 @@ def test_hyphenated_english_family_trip_keeps_context_on_replacement(tmp_path, m
     assert _allocation(second) == {'Cairo': 5, 'Luxor': 2, 'Sharm El Sheikh': 7}
 
 
+def test_explicit_arabic_extension_of_shared_phase_preserves_other_cities(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    original = consult_travel(ConsultRequest(
+        message='Plan a 14-day family trip: first week history in Cairo and Luxor, second week beaches in Hurghada.',
+        language='English',
+    ))
+    assert _allocation(original) == {'Cairo': 5, 'Luxor': 2, 'Hurghada': 7}
+    reply = consult_travel(ConsultRequest(
+        message='زود إجمالي الرحلة يومين في القاهرة', language='Arabic',
+        trip_state=original['trip_state'],
+    ))
+    assert reply['mode'] == 'local-planner'
+    assert reply['trip_state']['days'] == 16
+    assert _allocation(reply) == {'Cairo': 7, 'Luxor': 2, 'Hurghada': 7}
+
+
 def test_total_extension_without_a_city_fails_closed(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
