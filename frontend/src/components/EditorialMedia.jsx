@@ -74,5 +74,5 @@ export function EditorialImage({ src, alt, className = '', eager = false, fallba
   return actual
     ? <img src={actual} alt={alt} className={className} loading={eager ? 'eager' : 'lazy'}
         decoding="async" onError={() => setFailed(true)} />
-    : <span className={`mg-editorial-no-image ${className}`} aria-label="No verified photograph available" />
+    : <span className={`mg-editorial-no-image ${className}`} aria-hidden="true" />
 }
