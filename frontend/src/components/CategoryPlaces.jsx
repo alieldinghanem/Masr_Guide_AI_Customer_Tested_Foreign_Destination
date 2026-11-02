@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ArrowUpRight, Search, Landmark, Waves, MapPin, MessageCircle } from 'lucide-react'
 import { useI18n } from '../i18n'
-import { LANDMARK_MEDIA, EditorialImage } from './EditorialMedia'
+import { LANDMARK_MEDIA, getLandmarkFraming, EditorialImage } from './EditorialMedia'
 import { matchesPlaceCategory } from '../categoryFilters'
 
 
@@ -30,7 +30,7 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
       <div className="mg-category-count" role="status">{ar ? `${visible.length} مكان في الدليل` : `${visible.length} curated places`}</div>
       <div className="mg-category-grid">
         {visible.map(place => <article className="mg-place-card" key={place.id}>
-          <div className="mg-place-photo" aria-hidden="true"><EditorialImage src={LANDMARK_MEDIA[place.id]} alt="" className="mg-place-img" /><span>{coast ? <Waves size={20} /> : <Landmark size={20} />}</span></div>
+          <div className="mg-place-photo" aria-hidden="true" style={getLandmarkFraming(place.id)}><EditorialImage src={LANDMARK_MEDIA[place.id]} alt="" className="mg-place-img" /><span className="mg-place-symbol">{coast ? <Waves size={20} /> : <Landmark size={20} />}</span></div>
           <div className="mg-place-content">
             <div className="mg-place-location"><MapPin size={13}/>{place.city}</div>
             <h2>{placeName(place)}</h2>
