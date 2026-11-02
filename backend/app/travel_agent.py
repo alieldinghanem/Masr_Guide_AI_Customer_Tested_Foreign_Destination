@@ -958,6 +958,31 @@ def consult_travel(request):
                        'The AI service is temporarily unavailable. Showing limited local references, not an AI reply: ')
             result = {'answer': warning + offline_answer(places, request.language),
                       'sources': sources, 'mode': 'offline-fallback'}
+        if state and result.get('mode') == 'offline-preview' and not result.get('sources'):
+            # The catalogue has no match, but the structured itinerary is
+            # authoritative context. Acknowledge it rather than asking again
+            # for a duration the visitor has already supplied.
+            allocation = []
+            for phase in state['phases']:
+                if len(phase['cities']) == 1:
+                    city = phase['cities'][0]
+                    name = CITY_AR.get(city, city) if request.language == 'Arabic' else city
+                    allocation.append(f"{phase['days']} {name}" if request.language == 'Arabic'
+                                      else f"{phase['days']} days {name}")
+            if request.language == 'Arabic':
+                result['answer'] = (
+                    f"رحلتك الحالية {state['days']} أيام"
+                    + (f" ({'، '.join(allocation)})" if allocation else '')
+                    + ". تحب أساعدك تختار نشاط، أو تعدّل مدينة أو يوم، أو نراجع وتيرة الرحلة؟ "
+                      "لو تقصد سؤالًا مختلفًا، وضّحه لي."
+                )
+            else:
+                result['answer'] = (
+                    f"Your current trip is {state['days']} days"
+                    + (f" ({', '.join(allocation)})" if allocation else '')
+                    + ". Would you like to choose an activity, edit a city or day, or review the pace? "
+                      "If you meant something else, tell me a little more."
+                )
         return {**result, 'itinerary': None, 'trip_state': state}
 
     if is_edit:

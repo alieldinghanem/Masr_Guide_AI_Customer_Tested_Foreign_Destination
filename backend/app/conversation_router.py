@@ -126,7 +126,11 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
                      'You can delete saved conversations from your account history. This message has not deleted your data; please use the account deletion control.',
                      'Vous pouvez supprimer les conversations enregistrées depuis votre compte. Ce message ne supprime aucune donnée.')
     if (not re.search(r'(?:مطاعم|مطعم|restaurants?\b|dining\b|restauration\b)', t) and
-            re.search(r'(?:open now|open tomorrow|opening hours|entrance fee|ticket price|مفتوح دلوقتي|مفتوح بكرة|مفتوح بكره|شغال النهارده|سعر التذكرة|مواعيد الزيارة)', t)):
+            re.search(r'(?:open now|open tomorrow|opening hours|entrance fee|entry fee|ticket price|'
+                      r'مفتوح دلوقتي|مفتوح بكرة|مفتوح بكره|شغال النهارده|'
+                      r'سعر (?:ال)?تذكر[ةه]|مواعيد الزيارة|'
+                      r'(?:سعر|بكام|تكلفة|price|cost|fee).{0,45}'
+                      r'(?:تذكر[ةه]|دخول|ticket|entry|admission))', t)):
         return reply('ماقدرش أؤكد حالة فتح المعلم أو سعر التذكرة الآن من غير بيانات مباشرة. راجع الموقع الرسمي للمكان قبل الزيارة والحجز.',
                      'I cannot verify live opening hours, ticket prices or availability. Check the attraction’s official website before visiting or purchasing tickets.',
                      'Je ne peux pas confirmer les horaires ou prix des billets en temps réel. Vérifiez le site officiel.')
