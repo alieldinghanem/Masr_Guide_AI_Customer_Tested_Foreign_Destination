@@ -229,7 +229,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
                     <div className="message-sources"><strong>{t('guide.refs')}</strong>
                       <div>{m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).map((s, n) => (
                         <a href={s.url} key={s.id || s.url || n} target="_blank" rel="noopener noreferrer">
-                          [{s.number}] {(m.responseLanguage || language) === 'Arabic' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
+                          [{s.number ?? n + 1}] {(m.responseLanguage || language) === 'Arabic' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
                         </a>))}
                       </div>
                     </div>
@@ -253,7 +253,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
             <p className="consult-help">{answerArabic ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? 'زيارات' : 'stops'}</summary>
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}</summary>
                 {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
                 {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
                   : <div><p>{answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}

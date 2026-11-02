@@ -198,7 +198,7 @@ describe('AI consultant v2', () => {
     const plan = planFor({ pace: 'balanced', language: 'ar' })
     const { user } = await setup({ chat: {
       answer: 'دي خطة رحلتك.', mode: 'local-planner',
-      sources: [{ number: 1, id: 'karnak', title: 'Karnak Temple Complex', title_ar: 'معبد الكرنك', url: 'https://example.org/karnak' }],
+      sources: [{ id: 'karnak', title: 'Karnak Temple Complex', title_ar: 'معبد الكرنك', url: 'https://example.org/karnak' }],
       trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
       itinerary: plan,
     } })
@@ -208,6 +208,7 @@ describe('AI consultant v2', () => {
     expect(await screen.findByText('برنامج رحلتك القابل للتعديل')).toBeInTheDocument()
     expect(screen.getByText(/اليوم 1 — الجيزة/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /\[1\] معبد الكرنك/ })).toBeInTheDocument()
+    expect(screen.getByText(/اليوم 2 — الأقصر · 1 زيارة/)).toBeInTheDocument()
   })
 
   it('shows a real structured itinerary from a natural-language trip request', async () => {
