@@ -214,6 +214,58 @@ def retrieve(query, top_k=4):
 
 
 # ---------------------------------------------------------------- answers
+def local_cairo_day_reply(message: str, language: str):
+    """Offer a bounded, catalogue-backed day/evening idea when no LLM is available.
+
+    An example of Egyptian colloquial intent understanding, NOT a general LLM
+    or a claim of verified evening venue hours. Never mutates an itinerary.
+    """
+    folded = _fold(message)
+    cairo = 'القاهره' in folded or re.search(r'\\bcairo\\b', folded)
+    heritage = any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
+    evening = any(x in folded for x in ('بالليل', 'بليل', 'مساء', 'بالليل', 'evening', 'tonight', 'night'))
+    if not (cairo and heritage and evening):
+        return None
+
+    by_id = {p['id']: p for p in all_places()}
+    citadel, bazaar = by_id.get('citadel'), by_id.get('khan-el-khalili')
+    if not citadel or not bazaar:
+        return None
+    places = [citadel, bazaar]
+    sources = [
+        {'number': i, 'title': p['name'], 'title_ar': p['name_ar'],
+         'city': p['city'], 'id': p['id'], 'url': p['source_url']}
+        for i, p in enumerate(places, 1)
+    ]
+    if language == 'Arabic':
+        answer = (
+            'تمام، نقدر نخصص يوم إضافي للقاهرة: خلال النهار أرشح لك قلعة صلاح الدين '
+            'ومعالمها التاريخية [1]. خصص وقتًا كافيًا للزيارة والاستراحة والانتقال. '
+            'وبالليل ممكن تتمشى في منطقة خان الخليلي بالقاهرة التاريخية، '
+            'وتقعد في كافيه يناسب ذوقك [2]. '
+            'ده اقتراح مبدئي، مش حجز ولا تأكيد لمواعيد فتح المعالم أو الأماكن مساءً؛ '
+            'راجع المواعيد من الجهات الرسمية قبل الخروج. '
+            'تحب اليوم يكون هادي ولا مليان زيارات؟'
+        )
+    elif language == 'French':
+        answer = (
+            'Pour une journée de plus au Caire, je propose la citadelle de Saladin '
+            'pendant la journée [1], puis une promenade dans le quartier de Khan '
+            'el-Khalili en soirée [2]. Vérifiez les horaires et les conditions de '
+            'visite avant de partir : ce ne sont pas des réservations. '
+            'Vous préférez une journée tranquille ou chargée ?'
+        )
+    else:
+        answer = (
+            'For an extra day in Cairo, consider the historic Citadel of Saladin '
+            'during the day [1], then an evening walk around Khan el-Khalili [2]. '
+            'This is a draft idea, not a confirmed booking or opening-hours claim; '
+            'check official venue information before visiting. '
+            'Would you prefer a relaxed or busy day?'
+        )
+    return {'answer': answer, 'mode': 'offline-preview', 'sources': sources}
+
+
 
 def offline_answer(places, language):
     if language == "Arabic":
@@ -325,6 +377,9 @@ def answer_chat(request):
     configured = (bool(key) if chosen == 'openai' else bool(gemini_key()) if chosen == 'gemini'
                   else bool(key or gemini_key()) if chosen == 'auto' else False)
     if not configured:
+        local_idea = local_cairo_day_reply(request.message, language)
+        if local_idea:
+            return local_idea
         return {"answer": offline_answer(matches, request.language), "mode": "offline-preview", "sources": references}
 
     context = "\n\n".join(
