@@ -26,8 +26,8 @@ describe('landmark photo accuracy', () => {
   it('provides valid CSS focal positions and safe fallbacks for all places', () => {
     for (const id of Object.keys(PHOTO_FILES)) {
       const framing = getLandmarkFraming(id)
-      expect(framing['--mg-image-position']).toMatch(/^\\d{1,3}% \\d{1,3}%$/)
-      expect(framing['--mg-mobile-image-position']).toMatch(/^\\d{1,3}% \\d{1,3}%$/)
+      expect(framing['--mg-image-position']).toMatch(/^\d{1,3}% \d{1,3}%$/)
+      expect(framing['--mg-mobile-image-position']).toMatch(/^\d{1,3}% \d{1,3}%$/)
     }
     expect(Object.keys(LANDMARK_FRAMING).length).toBeGreaterThan(20)
     expect(getLandmarkFraming('unknown-place')['--mg-image-position']).toBe('50% 50%')
