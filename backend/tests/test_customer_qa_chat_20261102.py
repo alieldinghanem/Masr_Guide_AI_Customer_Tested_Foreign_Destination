@@ -1,5 +1,15 @@
 """Real visitor QA for Egyptian-colloquial, context-sensitive trip edits."""
 from collections import Counter
+import pytest
+from app.main import _chat_calls
+
+@pytest.fixture(autouse=True)
+def qa_rate_limit_isolation(monkeypatch):
+    monkeypatch.setenv('CHAT_RATE_LIMIT_PER_MINUTE', '999')
+    _chat_calls.clear()
+    yield
+    _chat_calls.clear()
+
 
 
 def ask(client, message, state=None):
