@@ -116,6 +116,42 @@ def test_ambiguous_city_increase_never_steals_a_day(tmp_path, monkeypatch):
     assert reply['itinerary'] is None
 
 
+def test_edit_command_without_a_trip_does_not_invent_one(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    for message in ('زود يوم للقاهرة', 'زود إجمالي الرحلة يوم واحد في القاهرة',
+                    'بدل الغردقة بشرم الشيخ'):
+        reply = consult_travel(ConsultRequest(message=message, language='Arabic'))
+        assert reply['mode'] == 'needs-clarification'
+        assert reply['trip_state'] is None
+        assert reply['itinerary'] is None
+        assert 'لسه ما عنديش رحلة' in reply['answer']
+
+    english = consult_travel(ConsultRequest(message='Add one day to Cairo', language='English'))
+    assert english['mode'] == 'needs-clarification'
+    assert english['trip_state'] is None
+    replacement = consult_travel(ConsultRequest(
+        message='Replace Hurghada with Sharm El Sheikh', language='English'))
+    assert replacement['mode'] == 'needs-clarification'
+    assert replacement['trip_state'] is None
+
+
+def test_new_arabic_trip_uses_correct_day_units(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    reply = consult_travel(ConsultRequest(
+        message='رحلة ٧ أيام: ٣ أيام في القاهرة، ويومين الأقصر، ويومين الغردقة',
+        language='Arabic',
+    ))
+    assert '3 أيام — القاهرة' in reply['answer']
+    assert 'يومين — الأقصر' in reply['answer']
+    assert 'يومين — الغردقة' in reply['answer']
+
+
 def test_empty_catalog_fallback_never_shows_the_dead_end_message():
     answer = offline_answer([], 'Arabic')
     assert 'مدة الرحلة' in answer

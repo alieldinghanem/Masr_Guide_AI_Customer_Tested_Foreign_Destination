@@ -962,6 +962,24 @@ def consult_travel(request):
                            if request.language == 'Arabic' else
                            f'{name} is not yet supported by our verified trip planner. I will not silently substitute Cairo or another city. Would you like to choose a supported destination?'),
                 'mode': 'unsupported-destination', 'sources': [], 'trip_state': state, 'itinerary': None}
+    # An edit command needs an existing itinerary. In a fresh conversation,
+    # "add a day to Cairo" must not turn into a new one-day Cairo trip or a
+    # generic catalogue answer about Cairo.
+    no_trip_day_edit = bool(not state and re.search(
+        r'(?:\b(?:add|increase|extend|move|transfer)\b|زود|زيد|مدد|ضيف|اضف|أضف|انقل)'
+        r'[^\n.!؟]{0,75}?(?:\d{1,2}\s*(?:days?|يوم|أيام|ايام)|يوم(?:ين|ان)?(?:\s+واحد)?|one\s+day|two\s+days)',
+        lowered, flags=re.I))
+    no_trip_city_edit = bool(not state and cities and re.search(
+        r'(?<!\w)(?:بدل|استبدل|غير|غيّر|احذف|شيل|replace|swap|switch|remove)\s+',
+        lowered, flags=re.I))
+    if no_trip_day_edit or no_trip_city_edit:
+        return {'answer': (
+            'لسه ما عنديش رحلة أعدّلها. قولّي إجمالي أيام الرحلة والمدن اللي عايز تزورها، '
+            'وبعد ما أجهزها أقدر أزود أيام مدينة من غير ما أغيّر باقي المدن.'
+            if request.language == 'Arabic' else
+            'I do not have an itinerary to edit yet. Tell me the total trip length and cities first; '
+            'then I can add days to one city without changing the others.'),
+                'mode': 'needs-clarification', 'sources': [], 'trip_state': None, 'itinerary': None}
     if not do_plan:
         try:
             result = answer_chat(request)
@@ -1193,7 +1211,9 @@ def consult_travel(request):
 
     if request.language == 'Arabic':
         kind_ar = {'history': 'آثار وتاريخ', 'mixed': 'ثقافة واستكشاف', 'beach': 'بحر واسترخاء'}
-        summaries = [f"{p['days']} يوم — {', '.join(CITY_AR.get(c, c) for c in p['cities'])} ({kind_ar.get(p['kind'], p['kind'])})" for p in validated.model_dump()['phases']]
+        def day_count_ar(days):
+            return 'يوم واحد' if days == 1 else 'يومين' if days == 2 else f'{days} أيام'
+        summaries = [f"{day_count_ar(p['days'])} — {', '.join(CITY_AR.get(c, c) for c in p['cities'])} ({kind_ar.get(p['kind'], p['kind'])})" for p in validated.model_dump()['phases']]
         intro = 'تم تجهيز البرنامج السياحي لهذه الجلسة. لم يُحفظ في حسابك بعد؛ استخدم زر حفظ الرحلة أو اطلب حفظها بعد تسجيل الدخول.'
         disclaimer = '\nلا توجد حجوزات أو أسعار مؤكدة.'
     elif request.language == 'French':
