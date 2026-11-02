@@ -108,7 +108,7 @@ def test_react(browser, label, width, height):
         # Register a unique ephemeral test traveler and persist a generated trip.
         # This verifies frontend -> FastAPI -> SQLite, not just localStorage.
         page.goto(f'{URL}/#/account', wait_until='domcontentloaded')
-        page.get_by_role('button', name='Create an account?').click()
+        page.get_by_role('button', name='Create an account').click()
         from uuid import uuid4
         demo_email = f'qa-{uuid4().hex[:12]}@example.org'
         page.get_by_label('Email').fill(demo_email)
