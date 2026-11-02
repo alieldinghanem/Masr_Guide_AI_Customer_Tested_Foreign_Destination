@@ -263,11 +263,13 @@ def current_user(authorization: str | None = Header(default=None)):
 
 
 def registration_enabled() -> bool:
-    # Public portfolio previews commonly use an ephemeral filesystem: refuse
-    # new accounts rather than imply any trip or conversation can survive a
-    # restart. Private local development remains functional.
-    return not (os.getenv('APP_ENV', '').lower() == 'portfolio' and
-                os.getenv('MASR_DURABLE_STORAGE_CONFIRMED', '').lower() not in ('1', 'true', 'yes'))
+    # Render previews can be deployed without the Blueprint's APP_ENV setting.
+    # Require a durability declaration before accepting new accounts on Render
+    # or a portfolio preview. Local development remains usable.
+    public_preview = (os.getenv('APP_ENV', '').lower() == 'portfolio' or
+                      os.getenv('RENDER', '').lower() == 'true')
+    durable = os.getenv('MASR_DURABLE_STORAGE_CONFIRMED', '').lower() in ('1', 'true', 'yes')
+    return not public_preview or durable
 
 
 @router.post('/auth/register', status_code=201)
