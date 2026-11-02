@@ -23,7 +23,7 @@ export const PHOTO_FILES = {
   "al-rifai-mosque": "Kairo Rifai Moschee BW 1.jpg",
   "manial-palace-museum": "Mohamed Ali's Palace, Manial, Cairo, Egypt.jpg",
   "baron-empain-palace": "The exterior of the Baron Empain palace.jpg",
-  "ibn-tulun-mosque": "Ibn Tulun Mosque, Cairo11.jpg",
+  "ibn-tulun-mosque": "Mosque of Ibn Tulun 2019.jpg",
   "al-azhar-mosque": "The Courtyard of Al-Azhar Mosque, Cairo, Egypt.jpg",
   "nilometer-roda": "Cairo Roda Nilometer panorama.jpg",
   "al-hakim-mosque": "Al-Hakim Mosque in Cairo.jpg",
@@ -57,6 +57,51 @@ export const PHOTO_FILES = {
   "mount-sinai": "Lever de soleil Mont Sinaï Egypte - Sunrise Mount Sinai Egypt - Photo image picture (12859772904).jpg",
   "blue-hole-dahab": "Dahab Blue Hole.jpg",
   "dahab-lagoon": "Dahab, Windsurfing in Lagoon.jpg",
+}
+
+// Focal points are chosen for architectural content, not generic centre-crop.
+// [desktop, narrow mobile]. Lower Y reveals courtyards, entrances and foreground.
+// The image is kept sharp with cover rather than stretched to fit.
+export const LANDMARK_FRAMING = {
+  'giza-pyramids': ['50% 54%', '50% 58%'],
+  'great-sphinx': ['50% 48%', '48% 53%'],
+  'grand-egyptian-museum': ['50% 54%', '50% 60%'],
+  saqqara: ['50% 57%', '50% 61%'],
+  citadel: ['50% 55%', '50% 60%'],
+  'egyptian-museum-tahrir': ['50% 54%', '50% 60%'],
+  'khan-el-khalili': ['50% 46%', '50% 51%'],
+  'coptic-cairo': ['50% 50%', '50% 55%'],
+  'ibn-tulun-mosque': ['50% 65%', '50% 67%'],
+  'sultan-hassan-mosque': ['50% 55%', '50% 59%'],
+  'al-rifai-mosque': ['50% 55%', '50% 58%'],
+  'al-hakim-mosque': ['50% 56%', '50% 62%'],
+  'baron-empain-palace': ['50% 61%', '50% 64%'],
+  'manial-palace-museum': ['50% 55%', '50% 59%'],
+  'museum-of-islamic-art': ['50% 58%', '50% 63%'],
+  'al-azhar-mosque': ['50% 58%', '50% 62%'],
+  'karnak': ['50% 54%', '50% 61%'],
+  'luxor-temple': ['50% 58%', '50% 64%'],
+  hatshepsut: ['50% 54%', '50% 60%'],
+  'valley-of-kings': ['50% 49%', '50% 55%'],
+  philae: ['50% 53%', '50% 59%'],
+  'abu-simbel': ['50% 53%', '50% 59%'],
+  'qaitbay': ['50% 53%', '50% 59%'],
+  'bibliotheca-alexandrina': ['50% 52%', '50% 55%'],
+  'montaza-gardens': ['50% 52%', '50% 57%'],
+  'ras-mohammed': ['50% 54%', '50% 59%'],
+  'giftun-island': ['50% 50%', '50% 52%'],
+  'naama-bay': ['50% 52%', '50% 54%'],
+  'hurghada-marina': ['50% 57%', '50% 63%'],
+  'el-gouna': ['50% 56%', '50% 60%'],
+  'siwa-fortress': ['50% 57%', '50% 61%'],
+  'siwa-salt-lakes': ['50% 51%', '50% 54%'],
+  'dahab-lagoon': ['50% 52%', '50% 54%'],
+  'blue-hole-dahab': ['50% 51%', '50% 56%'],
+  'st-catherine-monastery': ['50% 58%', '50% 63%'],
+}
+export const getLandmarkFraming = id => {
+  const [desktop, mobile] = LANDMARK_FRAMING[id] || ['50% 50%', '50% 54%']
+  return { '--mg-image-position': desktop, '--mg-mobile-image-position': mobile }
 }
 
 export const LANDMARK_MEDIA = Object.fromEntries(
