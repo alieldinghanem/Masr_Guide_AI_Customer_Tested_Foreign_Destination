@@ -763,7 +763,7 @@ def _with_verified_dialogue(request, message: str, response: dict) -> dict:
         response['itinerary'], request.history
     )
     if narrative:
-        return {**response, 'answer': narrative + '\\n\\n' + response['answer'],
+        return {**response, 'answer': narrative + '\n\n' + response['answer'],
                 'mode': mode}
     return response
 
