@@ -167,7 +167,7 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
     if len(t) <= 100 and re.search(r'بالفرنساوي|(?:speak|reply|respond) (?:to me )?in french|parlez en fran[çc]ais|en fran[çc]ais', t):
         return {'mode': 'local-assistant', 'sources': [], 'answer': 'Bien sûr ! Je peux répondre en français sur les sites, la culture et les voyages en Égypte.'}
 
-    greetings = ('السلام عليكم', 'سلام عليكم', 'اهلا', 'أهلا', 'اهلاً', 'مرحبا', 'مرحباً',
+    greetings = ('السلام عليكم', 'سلام عليكم', 'اهلا', 'أهلا', 'اهلاً', 'هلا', 'هلا والله', 'يا هلا', 'مرحبا', 'مرحباً',
                  'صباح الخير', 'مساء الخير', 'hello', 'hi', 'hey', 'bonjour', 'bonsoir', 'salut')
     # Tourists use Arabic hamza/diacritics freely (أهلاً, اهلا, أهلًا).
     normalized = re.sub(r'[\u064b-\u065f\u0670]', '', t.strip('!؟?.,، '))
