@@ -2,6 +2,7 @@
 from collections import Counter
 
 from app.database import initialize
+from app.conversation_router import special_reply
 from app.schemas import ChatTurn, ConsultRequest
 from app.travel_agent import consult_travel
 
@@ -92,3 +93,14 @@ def test_ambiguous_city_increase_never_steals_a_day(tmp_path, monkeypatch):
     assert reply['mode'] == 'needs-clarification'
     assert reply['trip_state'] == original['trip_state']
     assert reply['itinerary'] is None
+
+
+def test_offline_upcoming_trip_statement_gets_a_conversational_followup():
+    reply = special_reply('انا جاي مصر قريب', 'Arabic', [
+        ChatTurn(role='user', content='هلا'),
+        ChatTurn(role='assistant', content='أهلًا بيك، تحب نبدأ بإيه؟'),
+    ])
+    assert reply['mode'] == 'local-assistant'
+    assert 'كام يوم' in reply['answer']
+    assert 'الآثار' in reply['answer']
+    assert 'لا توجد معلومات كافية' not in reply['answer']

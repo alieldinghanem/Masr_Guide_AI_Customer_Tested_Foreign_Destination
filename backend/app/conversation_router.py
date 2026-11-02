@@ -184,6 +184,27 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
         }
         return {'mode': 'local-assistant', 'sources': [], 'answer': responses.get(language, responses[LANG_EN])}
 
+    # Keep a natural onboarding conversation working in offline mode. A visitor
+    # announcing an upcoming Egypt trip has supplied intent, but not enough
+    # constraints to build an itinerary; ask for the missing details instead of
+    # falling through to an unrelated "no catalogue references" response.
+    egypt_trip = (
+        bool(re.search(r'(?:مصر|egypt|[ée]gypte)', t, re.I)) and
+        bool(re.search(
+            r'(?:\b(?:انا|إنا|احنا|إحنا)\s+(?:جاي|جاية|جايين|رايح|رايحة|رايحين|مسافر|مسافرة)|'
+            r'هزور|ناوي\s+ازور|ناوية\s+ازور|قادم|قادمة|'
+            r"\b(?:i(?:'m| am)?|we(?:'re| are)?)\s+(?:coming|going|travell?ing|visiting)|"
+            r'je\s+(?:viens|voyage|vais\s+visiter))', t, re.I))
+    )
+    if len(t) <= 180 and egypt_trip:
+        return reply(
+            'أهلًا بيك في مصر! عشان أجهز لك اقتراح مناسب، هتقعد كام يوم، جاي لوحدك ولا مع عائلة، '
+            'وإيه اللي يهمك أكتر: الآثار، المتاحف، البحر، الأكل، ولا خليط منهم؟ ولو محدد مدن أو ميزانية قولّي عليها.',
+            'Welcome to Egypt! To shape a useful trip, tell me how many days you have, who is travelling, '
+            'and whether you prefer history, museums, beaches, food or a mix. Share any cities or budget you already have in mind.',
+            'Bienvenue en Égypte ! Indiquez la durée du séjour, les voyageurs, vos centres d’intérêt, '
+            'les villes souhaitées et votre budget éventuel pour préparer un itinéraire modifiable.')
+
     if re.search(r'(?:سعر|تكلفة|price|fare|cost|combien)', t) and re.search(r'(?:أتوبيس|اتوبيس|autobus|bus|coach|قطار|train)', t):
         return reply('ما عنديش سعر مباشر لتذاكر المواصلات. السعر بيعتمد على التاريخ، الشركة، ونوع الخدمة؛ تأكد من مشغل النقل قبل الدفع.',
                      'I cannot quote live transport fares. Prices depend on operator, date and service type. Check directly with the provider.',

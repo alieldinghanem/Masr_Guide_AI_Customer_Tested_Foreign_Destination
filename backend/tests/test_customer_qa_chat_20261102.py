@@ -43,6 +43,23 @@ def test_arabic_hala_responds_to_greeting_without_catalog_error(client):
     assert 'لا توجد معلومات كافية' not in reply['answer']
 
 
+def test_upcoming_egypt_trip_continues_offline_onboarding_after_greeting(client):
+    reply = client.post('/api/consult', json={
+        'message': 'انا جاي مصر قريب', 'language': 'Arabic',
+        'history': [
+            {'role': 'user', 'content': 'هلا'},
+            {'role': 'assistant', 'content': 'وعليكم السلام وأهلًا بيك في Masr Guide AI! تحب نبدأ بإيه؟'},
+        ],
+    })
+    assert reply.status_code == 200, reply.text
+    payload = reply.json()
+    assert payload['mode'] == 'local-assistant'
+    assert payload['itinerary'] is None
+    assert 'كام يوم' in payload['answer']
+    assert 'الآثار' in payload['answer']
+    assert 'لا توجد معلومات كافية' not in payload['answer']
+
+
 def test_family_7_day_split_and_currency_are_preserved(client):
     first = ask(client, 'أهلا، عايز أزور مصر أنا ومراتي وطفلين لمدة ٧ أيام، ومهتم بالآثار والبحر. اقترح رحلة مناسبة.')
     assert first['trip_state']['days'] == 7
