@@ -270,11 +270,22 @@ def local_cairo_day_reply(message: str, language: str):
 def offline_answer(places, language):
     if language == "Arabic":
         if not places:
-            return "لا توجد معلومات كافية في دليلنا المحلي للإجابة عن السؤال. جرّب ذكر اسم مدينة أو معلم سياحي. (وضع المعاينة، دون LLM)"
+            return (
+                "أنا معاك في تخطيط زيارتك لمصر. قولّي مدة الرحلة، مين مسافر معاك، "
+                "واهتماماتك مثل الآثار أو المتاحف أو البحر أو الأكل، وأي مدن أو ميزانية "
+                "في بالك، وأنا أساعدك تبدأ خطة قابلة للتعديل. "
+                "المحادثة الذكية الكاملة تحتاج تفعيل مزود الذكاء الاصطناعي على الخادم."
+            )
         parts = [f"{p['name_ar']} ({CITY_AR.get(p['city'], p['city'])}): {p['summary_ar']}" for p in places]
         return "وضع معاينة بدون LLM — معلومات مختارة من دليلنا المحلي:\n\n" + "\n\n".join(parts)
     if not places:
-        return "I don't have matching local references yet. Try asking about a specific Egyptian city or landmark. (Offline preview, not an LLM response.)"
+        if language == "French":
+            return ("Je peux vous aider à préparer votre voyage en Égypte. Indiquez la durée, les voyageurs, "
+                    "vos intérêts, les villes et votre budget éventuel. La conversation IA complète nécessite "
+                    "l’activation du fournisseur sur le serveur.")
+        return ("I can help you start an editable Egypt trip plan. Share the duration, travellers, interests, "
+                "cities and any budget you have in mind. Full open-ended AI conversation requires an enabled "
+                "provider on the server.")
     note = ("Offline knowledge preview (not an LLM response; descriptions are in English). "
             if language == "French" else "Offline knowledge preview (not an LLM response). ")
     return note + "An AI provider must be configured on the server for conversational answers.\n\n" + "\n\n".join(

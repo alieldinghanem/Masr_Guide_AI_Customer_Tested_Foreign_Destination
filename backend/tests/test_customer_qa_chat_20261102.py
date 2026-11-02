@@ -53,9 +53,9 @@ def test_upcoming_egypt_trip_continues_offline_onboarding_after_greeting(client)
     })
     assert reply.status_code == 200, reply.text
     payload = reply.json()
-    assert payload['mode'] == 'local-assistant'
+    assert payload['mode'] == 'offline-preview'
     assert payload['itinerary'] is None
-    assert 'كام يوم' in payload['answer']
+    assert 'مدة الرحلة' in payload['answer']
     assert 'الآثار' in payload['answer']
     assert 'لا توجد معلومات كافية' not in payload['answer']
 
