@@ -19,7 +19,7 @@ function restoredConsultation() {
 const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
 
 export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, home = false }) {
-  const { t, lang } = useI18n()
+  const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [savedConversations, setSavedConversations] = useState([])
@@ -33,6 +33,8 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   const scrollRef = useRef(null)
   useEffect(() => { scrollRef.current?.scrollIntoView?.({ behavior: 'smooth' }) }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
+  const answerArabic = language === 'Arabic'
+  const answerCity = city => answerArabic ? cityNameAr(city) : city
 
   const submitQuestion = async question => {
     if (busy || question.length < 2) return
@@ -43,11 +45,12 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
         : 'For your safety, do not enter card numbers in chat. Payments are not processed here.')
       return
     }
-    if (/[\u0600-\u06ff]{3,}/.test(question) && language !== 'Arabic') setLanguage('Arabic')
+    const responseLanguage = /[\u0600-\u06ff]{3,}/.test(question) ? 'Arabic' : language
+    if (responseLanguage === 'Arabic' && language !== 'Arabic') setLanguage('Arabic')
     const history = messages.map(m => ({ role: m.role, content: scrubPaymentNumber(m.text.slice(0, 1500)) })).slice(-8)
     setMessages(m => [...m, { role: 'user', text: question }]); setPrompt(''); setBusy(true); setError('')
     try {
-      const result = await api('/consult', { method: 'POST', token: getSession()?.token, body: { message: question, language: /[\u0600-\u06ff]{3,}/.test(question) ? 'Arabic' : language, history, trip_state: tripState } })
+      const result = await api('/consult', { method: 'POST', token: getSession()?.token, body: { message: question, language: responseLanguage, history, trip_state: tripState } })
       if (result.trip_state && result.itinerary) {
         if (!isCompatibleTripPlan(result.trip_state, result.itinerary)) {
           throw new Error('The assistant returned an invalid trip. Your previous trip is unchanged.')
@@ -59,7 +62,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
         } catch { /* private browsing */ }
       }
       if (result.saved_trip_id) setCloudStatus(lang === 'ar' ? 'تم حفظ الرحلة في حسابك ويمكنك العثور عليها من صفحة حسابي.' : 'Your trip was saved and is available in My Account.')
-      setMessages(m => [...m, { role: 'assistant', text: result.answer, sources: result.sources, mode: result.mode, grounding: result.grounding }])
+      setMessages(m => [...m, { role: 'assistant', text: result.answer, sources: result.sources, mode: result.mode, grounding: result.grounding, responseLanguage }])
       setGuideMode(result.mode)
     } catch (err) {
       // A failed request must not leave an unanswered user turn in the LLM history.
@@ -226,7 +229,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
                     <div className="message-sources"><strong>{t('guide.refs')}</strong>
                       <div>{m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).map((s, n) => (
                         <a href={s.url} key={s.id || s.url || n} target="_blank" rel="noopener noreferrer">
-                          [{s.number}] {lang === 'ar' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
+                          [{s.number}] {(m.responseLanguage || language) === 'Arabic' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
                         </a>))}
                       </div>
                     </div>
@@ -242,30 +245,30 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
             {busy && <div className="thinking"><LoaderCircle size={19} className="spin" /> {t('guide.thinking')}</div>}
             <div ref={scrollRef} />
           </div>
-          {itinerary && <section className="consult-trip" aria-label={lang === 'ar' ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
+          {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
             <div className="consult-heading">
-              <strong>{lang === 'ar' ? 'برنامج رحلتك القابل للتعديل' : 'Your editable Egypt itinerary'}</strong>
-              <span>{itinerary.days.length} {lang === 'ar' ? 'يوم' : 'days'}</span>
+              <strong>{answerArabic ? 'برنامج رحلتك القابل للتعديل' : 'Your editable Egypt itinerary'}</strong>
+              <span>{itinerary.days.length} {answerArabic ? 'يوم' : 'days'}</span>
             </div>
-            <p className="consult-help">{lang === 'ar' ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
+            <p className="consult-help">{answerArabic ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{lang === 'ar' ? 'اليوم' : 'Day'} {day.day} — {day.city} · {day.stops.length} {lang === 'ar' ? 'زيارات' : 'stops'}</summary>
-                {day.travel && <p>{lang === 'ar' ? 'انتقال تقريبي' : 'Approximate transfer'}: {day.travel.from_city} → {day.city} ({day.travel.minutes} min)</p>}
-                {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{lang === 'ar' ? stop.place.name_ar : stop.place.name}</li>)}</ul>
-                  : <div><p>{lang === 'ar' ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{lang === 'ar'?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? 'زيارات' : 'stops'}</summary>
+                {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
+                {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
+                  : <div><p>{answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
               </details>)}
             </div>
             {tripState?.accessibility_needs && (
               <p className="consult-help" role="status">
-                {lang === 'ar'
+                {answerArabic
                   ? 'تنبيه وصول: لم يتم التحقق من ملاءمة المعالم أو الانتقالات للكراسي المتحركة. أكد التفاصيل مع الجهات الرسمية قبل الحجز.'
                   : 'Accessibility notice: no attraction or transfer in this plan is verified wheelchair-accessible. Confirm details with operators before booking.'}
               </p>
             )}
             {!!itinerary.warnings?.length && (
               <details className="consult-day">
-                <summary>{lang === 'ar' ? 'تنبيهات مهمة قبل السفر' : 'Important travel notes'} ({itinerary.warnings.length})</summary>
+                <summary>{answerArabic ? 'تنبيهات مهمة قبل السفر' : 'Important travel notes'} ({itinerary.warnings.length})</summary>
                 <ul>{itinerary.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
               </details>
             )}

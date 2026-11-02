@@ -175,6 +175,39 @@ describe('Guide', () => {
 
 
 describe('AI consultant v2', () => {
+  it('keeps an English trip and its source titles in English when the site is Arabic', async () => {
+    const plan = planFor({ pace: 'balanced', language: 'en' })
+    const { user } = await setup({ lang: 'ar', chat: {
+      answer: 'Here is your travel itinerary.', mode: 'local-planner',
+      sources: [{ number: 1, id: 'karnak', title: 'Karnak Temple Complex', title_ar: 'معبد الكرنك', url: 'https://example.org/karnak' }],
+      trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
+      itinerary: plan,
+    } })
+    await user.click(nav('الشات'))
+    await user.selectOptions(screen.getByLabelText('لغة الرد'), 'English')
+    await user.type(screen.getByLabelText('اسأل المرشد السياحي'), 'Plan 2 days in Giza and Luxor')
+    await user.click(screen.getByRole('button', { name: 'إرسال' }))
+    expect(await screen.findByText('Your editable Egypt itinerary')).toBeInTheDocument()
+    expect(screen.getByText(/Day 1 — Giza/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /\[1\] Karnak Temple Complex/ })).toBeInTheDocument()
+  })
+
+  it('shows Arabic city and source names when an Arabic message switches the response language', async () => {
+    const plan = planFor({ pace: 'balanced', language: 'ar' })
+    const { user } = await setup({ chat: {
+      answer: 'دي خطة رحلتك.', mode: 'local-planner',
+      sources: [{ number: 1, id: 'karnak', title: 'Karnak Temple Complex', title_ar: 'معبد الكرنك', url: 'https://example.org/karnak' }],
+      trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
+      itinerary: plan,
+    } })
+    await user.click(nav('Chat'))
+    await user.type(screen.getByLabelText('Ask the tour guide'), 'خطط لي يومين في الجيزة والأقصر')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    expect(await screen.findByText('برنامج رحلتك القابل للتعديل')).toBeInTheDocument()
+    expect(screen.getByText(/اليوم 1 — الجيزة/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /\[1\] معبد الكرنك/ })).toBeInTheDocument()
+  })
+
   it('shows a real structured itinerary from a natural-language trip request', async () => {
     const plan = planFor({ pace: 'balanced', language: 'en' })
     const { user } = await setup({ chat: {

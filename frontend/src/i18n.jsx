@@ -33,6 +33,7 @@ export function I18nProvider({ children, initial, cityNamesAr = {} }) {
     return {
       lang, setLang, t, dir: ar ? 'rtl' : 'ltr',
       cityName: c => (ar ? cityNamesAr[c] || c : c),
+      cityNameAr: c => cityNamesAr[c] || c,
       placeName: p => (ar && p.name_ar ? p.name_ar : p.name),
       placeSummary: p => (ar && p.summary_ar ? p.summary_ar : p.description),
       category: c => t(`cat.${c}`),
