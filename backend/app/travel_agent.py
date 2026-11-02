@@ -753,6 +753,21 @@ def _make_plan(state: dict, lang: str):
             'disclaimer': disclaimer, 'sources': sources, 'day_allocation': allocations}
 
 
+def _with_verified_dialogue(request, message: str, response: dict) -> dict:
+    """Let an available LLM *discuss* a validated plan without editing it."""
+    if not response.get('itinerary') or not response.get('trip_state'):
+        return response
+    from .travel_dialogue import narrate_verified_trip
+    narrative, mode = narrate_verified_trip(
+        message, request.language, response['trip_state'],
+        response['itinerary'], request.history
+    )
+    if narrative:
+        return {**response, 'answer': narrative + '\\n\\n' + response['answer'],
+                'mode': mode}
+    return response
+
+
 def consult_travel(request):
     # Egyptian colloquial requests often include shadda: خلّي / بدّل / زوّد.
     # Parse the normalized text but retain the original visitor turn and history
@@ -908,8 +923,8 @@ def consult_travel(request):
                      f"{p.days} days — {', '.join(p.cities)}" for p in checked.phases]
             answer = ('عدلت توزيع الرحلة بناءً على الأيام والمدن التي حددتها. التعديل في هذه الجلسة فقط؛ استخدم حفظ الرحلة لتسجيله في حسابك.\n' if request.language == 'Arabic' else
                       'I rebuilt the itinerary using your exact city-day allocation. This is only in your current session until you save it to your account.\n') + '\n'.join(parts)
-            return {'answer': answer, 'mode': 'local-planner', 'sources': itinerary.get('sources', []),
-                    'trip_state': checked.model_dump(), 'itinerary': itinerary}
+            return _with_verified_dialogue(request, message, {'answer': answer, 'mode': 'local-planner', 'sources': itinerary.get('sources', []),
+                    'trip_state': checked.model_dump(), 'itinerary': itinerary})
         transfer = _explicit_day_transfer(state, message, available)
         # A request to 'add 3 days in Cairo' is NOT a request to set Cairo to
         # 3 days. It also does not say whether to lengthen the whole holiday
@@ -1101,4 +1116,4 @@ def consult_travel(request):
         answer += ('\nتوضيح مهم: ذكرت مبلغًا متبوعًا بكلمة «ألف»؛ هل الرقم بالجنيه بالفعل، أم تريد ضربه في ألف؟' if request.language == 'Arabic'
                    else '\nPlease clarify whether the stated figure is in EGP or thousands of EGP.')
     references = [{**ref, 'number': i} for i, ref in enumerate(itinerary['sources'], 1)]
-    return {'answer': answer, 'mode': mode, 'sources': references, 'trip_state': validated.model_dump(), 'itinerary': itinerary}
+    return _with_verified_dialogue(request, message, {'answer': answer, 'mode': mode, 'sources': references, 'trip_state': validated.model_dump(), 'itinerary': itinerary})
