@@ -99,7 +99,8 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
             "Je ne peux pas confirmer l'accessibilité en fauteuil roulant. Vérifiez auprès du site officiel les entrées sans marches, les parcours, les toilettes accessibles et l'aide disponible.")
     # An after-hours attraction question must not be answered from general
     # history snippets as if they establish opening hours or night access.
-    if re.search(r'(?:بالليل|ليلا|ليلًا|after dark|at night|night visit|evening entry|la nuit|le soir)', t) and re.search(
+    separate_outing = bool(re.search(r'(?:فسحة|فسحه|خروجة|خروجه|اتمشى|اتمشي|مكان للفسحة|outing|evening walk|where to go)', t))
+    if not separate_outing and re.search(r'(?:بالليل|ليلا|ليلًا|after dark|at night|night visit|evening entry|la nuit|le soir)', t) and re.search(
             r'(?:الأهرامات|الاهرامات|pyramids?|معبد|temple|museum|متحف|site|الموقع|the sphinx|ابو الهول)', t):
         return reply(
             'زيارة المعلم بالليل تعتمد على مواعيد الدخول الفعلية، وقد تختلف الفعاليات المسائية عن الزيارة العادية. ماقدرش أؤكد وجود دخول ليلي؛ راجع الموقع الرسمي أو اتصل بإدارة المعلم قبل ما تتحرك.',

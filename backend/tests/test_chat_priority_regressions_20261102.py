@@ -136,8 +136,21 @@ def test_compound_citadel_history_and_evening_outing_answers_both_parts(tmp_path
     ))
     assert 'قلعة صلاح الدين' in reply['answer']
     assert 'خان الخليلي' in reply['answer']
-    assert 'مفتوحة مساءً' in reply['answer']
+    assert 'مفتوح مساءً' in reply['answer']
     assert [source['id'] for source in reply['sources']] == ['citadel', 'khan-el-khalili']
+
+    another = consult_travel(ConsultRequest(
+        message='احكيلي عن متحف الفن الإسلامي ورشحلي خروجة بالليل', language='Arabic',
+    ))
+    assert 'متحف الفن الإسلامي' in another['answer']
+    assert 'خان الخليلي' in another['answer']
+    assert [source['id'] for source in another['sources']] == ['museum-of-islamic-art', 'khan-el-khalili']
+
+    hours = consult_travel(ConsultRequest(
+        message='هل متحف الفن الإسلامي مفتوح بالليل؟', language='Arabic',
+    ))
+    assert hours['mode'] == 'local-assistant'
+    assert 'ماقدرش أؤكد' in hours['answer']
 
 
 def test_vague_followup_uses_existing_trip_duration(tmp_path, monkeypatch):

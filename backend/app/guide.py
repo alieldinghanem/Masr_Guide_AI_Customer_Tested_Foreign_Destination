@@ -221,18 +221,23 @@ def local_cairo_day_reply(message: str, language: str):
     or a claim of verified evening venue hours. Never mutates an itinerary.
     """
     folded = _fold(message)
-    citadel_named = 'قلعه صلاح الدين' in folded or 'citadel of saladin' in folded
-    cairo = 'القاهره' in folded or re.search(r'\bcairo\b', folded) or citadel_named
-    heritage = citadel_named or any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
-    evening = any(x in folded for x in ('بالليل', 'بليل', 'مساء', 'بالليل', 'evening', 'tonight', 'night'))
-    if not (cairo and heritage and evening):
+    evening = any(x in folded for x in ('بالليل', 'بليل', 'مساء', 'evening', 'tonight', 'night'))
+    if not evening:
         return None
-
     by_id = {p['id']: p for p in all_places()}
     citadel, bazaar = by_id.get('citadel'), by_id.get('khan-el-khalili')
     if not citadel or not bazaar:
         return None
-    places = [citadel, bazaar]
+    named_place = next((p for p in sorted(by_id.values(), key=lambda p: -len(p['name']))
+                        if p['city'] == 'Cairo' and p['id'] != bazaar['id']
+                        and (_fold(p['name_ar']) in folded or p['name'].lower() in folded)), None)
+    cairo = 'القاهره' in folded or re.search(r'\bcairo\b', folded) or named_place
+    heritage = named_place or any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
+    if not (cairo and heritage and evening):
+        return None
+
+    primary = named_place or citadel
+    places = [primary, bazaar]
     sources = [
         {'number': i, 'title': p['name'], 'title_ar': p['name_ar'],
          'city': p['city'], 'id': p['id'], 'url': p['source_url']}
@@ -243,20 +248,20 @@ def local_cairo_day_reply(message: str, language: str):
     # to the attraction or changing an itinerary.
     outing = any(x in folded for x in ('فسحه', 'خروجه', 'اتمشي', 'تمشي', 'مكان',
                                        'outing', 'walk', 'where to go'))
-    if citadel_named and outing:
+    if named_place and outing:
         if language == 'Arabic':
-            answer = (f"{citadel['name_ar']}: {citadel['summary_ar']} [1] "
+            answer = (f"{primary['name_ar']}: {primary['summary_ar']} [1] "
                       f"وبالليل ممكن تتمشى في {bazaar['name_ar']}؛ {bazaar['summary_ar']} [2] "
-                      'ده اقتراح لخروجة، مش تأكيد إن القلعة مفتوحة مساءً أو إن أي مكان محجوز. '
+                      'ده اقتراح لخروجة، مش تأكيد إن المعلم مفتوح مساءً أو إن أي مكان محجوز. '
                       'راجع المواعيد قبل ما تروح.')
         elif language == 'French':
-            answer = (f"{citadel['name']} : {citadel['description']} [1] "
+            answer = (f"{primary['name']} : {primary['description']} [1] "
                       f"Pour la soirée, une promenade à {bazaar['name']} est une autre idée [2]. "
-                      "Vérifiez les horaires ; je ne confirme pas une visite nocturne de la citadelle.")
+                      "Vérifiez les horaires ; je ne confirme pas une visite nocturne du monument.")
         else:
-            answer = (f"{citadel['name']}: {citadel['description']} [1] "
+            answer = (f"{primary['name']}: {primary['description']} [1] "
                       f"For an evening outing, consider walking around {bazaar['name']} [2]. "
-                      'Check current hours; this does not confirm night access to the Citadel.')
+                      'Check current hours; this does not confirm night access to the attraction.')
         return {'answer': answer, 'mode': 'offline-preview', 'sources': sources}
     if language == 'Arabic':
         answer = (
