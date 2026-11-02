@@ -221,7 +221,7 @@ def local_cairo_day_reply(message: str, language: str):
     or a claim of verified evening venue hours. Never mutates an itinerary.
     """
     folded = _fold(message)
-    cairo = 'القاهره' in folded or re.search(r'\\bcairo\\b', folded)
+    cairo = 'القاهره' in folded or re.search(r'\bcairo\b', folded)
     heritage = any(x in folded for x in ('اثري', 'تاريخي', 'اثار', 'معلم', 'historic', 'heritage', 'historical'))
     evening = any(x in folded for x in ('بالليل', 'بليل', 'مساء', 'بالليل', 'evening', 'tonight', 'night'))
     if not (cairo and heritage and evening):
