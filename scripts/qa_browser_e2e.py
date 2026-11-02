@@ -193,12 +193,47 @@ def test_react(browser, label, width, height):
         context.close()
 
 
+
+def test_mobile_photo_layout(browser):
+    """Isolate customer-visible photo UX from unrelated account/AI workflows."""
+    context = browser.new_context(viewport={'width': 390, 'height': 844})
+    page = context.new_page()
+    try:
+        page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded', timeout=20000)
+        cards = page.locator('.mg-category-grid .mg-place-card')
+        expect(cards).to_have_count(31, timeout=15000)
+        for phone_width in (360, 390, 430):
+            page.set_viewport_size({'width': phone_width, 'height': 844})
+            first, second = cards.nth(0).bounding_box(), cards.nth(1).bounding_box()
+            photo = cards.nth(0).locator('.mg-place-photo').bounding_box()
+            tap = cards.nth(0).locator('.mg-place-actions button').last.bounding_box()
+            assert first and second and photo and tap, f'Missing photo/card at {phone_width}'
+            assert abs(first['x'] - second['x']) < 2 and second['y'] > first['y'], 'Mobile must have one card per row'
+            assert photo['height'] >= 170, f'Photo area too short at {phone_width}'
+            assert tap['width'] >= 44 and tap['height'] >= 44, f'Touch area too small at {phone_width}'
+            assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'Horizontal scrolling'
+        tulun = cards.filter(has_text='Mosque of Ahmad Ibn Tulun')
+        expect(tulun.locator('img')).to_have_css('object-position', '50% 67%')
+        assert 'Mosque%20of%20Ibn%20Tulun%202019.jpg' in tulun.locator('img').get_attribute('src')
+        page.locator('.lang-toggle').click()
+        expect(page.locator('html')).to_have_attribute('dir', 'rtl')
+        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'RTL overflow'
+        page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
+        coast = page.locator('.mg-category-grid .mg-place-card')
+        expect(coast).to_have_count(7, timeout=15000)
+        assert abs(coast.nth(0).bounding_box()['x'] - coast.nth(1).bounding_box()['x']) < 2, 'Coast mobile cards must stack'
+        print('PASS mobile photo QA: 360/390/430px, Arabic RTL, unique Ibn Tulun framing, heritage/coast')
+    finally:
+        context.close()
+
+
 def run():
     with sync_playwright() as p:
         exe = os.getenv('BROWSER_EXECUTABLE') or shutil.which('chromium') or shutil.which('google-chrome')
         browser = p.chromium.launch(headless=True, args=['--no-sandbox'], **({'executable_path':exe} if exe else {}))
         try:
             test_demo(browser)
+            test_mobile_photo_layout(browser)
             # Must be the compiled React entry point served by the backend.
             test_react(browser, 'desktop', 1366, 900)
             test_react(browser, 'mobile', 390, 844)
