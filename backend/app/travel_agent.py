@@ -967,7 +967,7 @@ def consult_travel(request):
     # generic catalogue answer about Cairo.
     no_trip_day_edit = bool(not state and re.search(
         r'(?:\b(?:add|increase|extend|move|transfer)\b|زود|زيد|مدد|ضيف|اضف|أضف|انقل)'
-        r'[^\n.!؟]{0,75}?(?:\d{1,2}\s*(?:days?|يوم|أيام|ايام)|يوم(?:ين|ان)?(?:\s+واحد)?|one\s+day|two\s+days)',
+        r'[^\n.!؟]{0,75}?(?:\d{1,2}\s*(?:days?|يوم|أيام|ايام)|يوم(?:ين|ان)?(?:\s+واحد)?|one(?:\s+more)?\s+day|two(?:\s+more)?\s+days|an?\s+extra\s+day)',
         lowered, flags=re.I))
     no_trip_city_edit = bool(not state and cities and re.search(
         r'(?<!\w)(?:بدل|استبدل|غير|غيّر|احذف|شيل|replace|swap|switch|remove)\s+',

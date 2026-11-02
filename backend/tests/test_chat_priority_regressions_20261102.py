@@ -129,9 +129,10 @@ def test_edit_command_without_a_trip_does_not_invent_one(tmp_path, monkeypatch):
         assert reply['itinerary'] is None
         assert 'لسه ما عنديش رحلة' in reply['answer']
 
-    english = consult_travel(ConsultRequest(message='Add one day to Cairo', language='English'))
-    assert english['mode'] == 'needs-clarification'
-    assert english['trip_state'] is None
+    for message in ('Add one day to Cairo', 'Add one more day to Cairo'):
+        english = consult_travel(ConsultRequest(message=message, language='English'))
+        assert english['mode'] == 'needs-clarification'
+        assert english['trip_state'] is None
     replacement = consult_travel(ConsultRequest(
         message='Replace Hurghada with Sharm El Sheikh', language='English'))
     assert replacement['mode'] == 'needs-clarification'
