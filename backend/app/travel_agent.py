@@ -822,6 +822,30 @@ def consult_travel(request):
                             (declared_total or any(k in lowered for k in
                              ('to ', 'إلى', 'الى', 'خلي', 'خليه', 'make ', 'set '))))))
     do_plan = plan_words or action == 'plan' or is_edit
+    # A colloquial mixed day/evening sightseeing edit may lack an explicit
+    # total-day number. Discuss a useful example, but never silently change
+    # an existing itinerary's total or take a day from another city.
+    if state and is_edit:
+        from .guide import local_cairo_day_reply
+        local_idea = local_cairo_day_reply(message, request.language)
+        if local_idea:
+            question = (
+                'ما عدّلتش رحلتك لسه: تحب نزود يوم على إجمالي الرحلة، '
+                'ولا ننقل يوم من مدينة تانية للقاهرة؟'
+                if request.language == 'Arabic' else
+                'Je n\'ai pas modifié votre voyage. Souhaitez-vous ajouter '
+                'un jour au total ou le déplacer depuis une autre ville ?'
+                if request.language == 'French' else
+                'I have not changed your trip. Should I add a day to the total '
+                'or move one from another city?'
+            )
+            return {
+                **local_idea,
+                'answer': local_idea['answer'] + '\\n\\n' + question,
+                'mode': 'needs-clarification',
+                'trip_state': state,
+                'itinerary': None,
+            }
     # Nights and sightseeing days are different units. A hotel stay described
     # only in nights must not be silently converted into an equal day count;
     # ask the traveler for the actual itinerary duration first.
