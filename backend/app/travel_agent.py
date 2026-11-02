@@ -72,7 +72,7 @@ def _explicit_non_egypt_destination(message: str) -> list[str]:
 _BEACH = ('beach', 'sea', 'red sea', 'coast', 'snorkel', 'diving', 'بحر', 'شاطئ', 'شواطئ', 'غوص', 'سباحة', 'mer', 'plage', 'hurghada', 'الغردقة', 'الغردقه', 'للغردقة', 'للغردقه', 'sharm', 'شرم الشيخ', 'dahab', 'دهب')
 _HISTORY = ('history', 'historic', 'ancient', 'museum', 'pyramid', 'temple', 'ruins', 'heritage', 'آثار', 'اثار', 'تاريخ', 'معابد', 'متحف', 'اهرام', 'histoire', 'antique')
 _PLAN = ('plan', 'itinerary', 'trip', 'holiday', 'travel', 'visit egypt', 'week', 'days', 'route', 'برنامج', 'رحلة', 'اسبوع', 'أسبوع', 'يوم', 'زيارة', 'visiter', 'voyage', 'jours', 'semaine')
-_EDIT = ('move ', 'transfer ', 'shift ', 'انقل', 'نقل ', 'حوّل', 'حول ', 'change', 'replace', 'instead', 'remove', 'swap', 'modify', 'add one', 'extra day', 'more day', 'switch', 'غير', 'غيّر', 'بدل', 'استبدل', 'احذف', 'شيل', 'زود', 'زيادة', 'ضيف', 'plus de', 'remplace', 'add ', 'include ', 'أضف', 'اضف', 'more days', 'fewer days', 'less days', 'مدة الرحلة', 'المدة', 'ميزانيتي', 'budget', 'معايا')
+_EDIT = ('move ', 'transfer ', 'shift ', 'انقل', 'نقل ', 'حوّل', 'حول ', 'change', 'replace', 'instead', 'remove', 'swap', 'modify', 'add one', 'extra day', 'more day', 'switch', 'غير', 'غيّر', 'بدل', 'بدّل', 'استبدل', 'خلي', 'خلّي', 'خلينا', 'احذف', 'شيل', 'زود', 'زيادة', 'ضيف', 'plus de', 'remplace', 'add ', 'include ', 'أضف', 'اضف', 'more days', 'fewer days', 'less days', 'مدة الرحلة', 'المدة', 'ميزانيتي', 'budget', 'معايا')
 
 
 def mentioned_cities(text: str, available: set[str]) -> list[str]:
@@ -146,7 +146,7 @@ def _full_reallocation(state: dict, message: str, available: set[str]) -> dict |
         [city for city, _ in allocation], message,
         state.get('budget_egp'), allocation
     )
-    rebuilt['budget_usd'] = state.get('budget_usd')
+    rebuilt['budget_usd'] = _budget_usd(message) or state.get('budget_usd')
     rebuilt['family'] = state['family']
     rebuilt['pace'] = state['pace']
     rebuilt['accessibility_needs'] = state.get('accessibility_needs', False)
@@ -754,7 +754,10 @@ def _make_plan(state: dict, lang: str):
 
 
 def consult_travel(request):
-    message = request.message
+    # Egyptian colloquial requests often include shadda: خلّي / بدّل / زوّد.
+    # Parse the normalized text but retain the original visitor turn and history
+    # for any conversational answer or provider-native chat context.
+    message = re.sub(r'[\u064b-\u065f\u0670]', '', request.message)
     effective_language = _reply_language(message, request.language)
     if effective_language != request.language:
         request = request.model_copy(update={'language': effective_language})
