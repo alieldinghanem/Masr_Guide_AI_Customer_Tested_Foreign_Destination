@@ -21,6 +21,15 @@ def ask(client, message, state=None):
     return result.json()
 
 
+def ask_with_history(client, message, state, history):
+    result = client.post('/api/consult', json={
+        'message': message, 'language': 'Arabic', 'trip_state': state,
+        'history': history,
+    })
+    assert result.status_code == 200, result.text
+    return result.json()
+
+
 def allocations(response):
     plan = response['itinerary']
     assert plan is not None, response['answer']
@@ -62,6 +71,51 @@ def test_cairo_day_and_evening_asks_before_changing_total(client):
     assert edit['itinerary'] is None
     assert 'خان الخليلي' in edit['answer']
     assert edit['mode'] == 'needs-clarification'
+
+
+def test_arabic_explicit_total_extension_uses_prior_city_without_reducing_others(client):
+    original = ask(client, 'رحلة ٧ أيام: ٣ أيام في القاهرة، ويومين الأقصر، ويومين الغردقة')
+    clarified = ask_with_history(
+        client,
+        'زوّد إجمالي مدة الرحلة يوم واحد، من غير ما نقلل باقي المدن',
+        original['trip_state'],
+        [
+            {'role': 'user', 'content': 'زود يوم للقاهرة'},
+            {'role': 'assistant', 'content': 'هل تريد زيادة الإجمالي أم نقل يوم من مدينة أخرى؟'},
+        ],
+    )
+    assert clarified['mode'] == 'local-planner'
+    assert clarified['trip_state']['days'] == 8
+    assert allocations(clarified) == {'Cairo': 4, 'Luxor': 2, 'Hurghada': 2}
+    assert 'من غير ما أقلل أيام أي مدينة أخرى' in clarified['answer']
+
+
+def test_english_hyphenated_14_day_family_trip_and_followup_context(client):
+    first = client.post('/api/consult', json={
+        'message': 'Plan a 14-day family trip to Egypt with Cairo, Luxor, and Hurghada.',
+        'language': 'English',
+    })
+    assert first.status_code == 200, first.text
+    planned = first.json()
+    assert planned['trip_state']['days'] == 14
+    assert planned['trip_state']['family'] is True
+    assert planned['itinerary'] is not None
+    assert {'Cairo', 'Luxor', 'Hurghada'} <= set(allocations(planned))
+
+    second = client.post('/api/consult', json={
+        'message': 'Replace Hurghada with Sharm El Sheikh and keep the same duration.',
+        'language': 'English', 'trip_state': planned['trip_state'],
+        'history': [
+            {'role': 'user', 'content': 'Plan a 14-day family trip to Egypt with Cairo, Luxor, and Hurghada.'},
+            {'role': 'assistant', 'content': planned['answer'][:1500]},
+        ],
+    })
+    assert second.status_code == 200, second.text
+    edited = second.json()
+    assert edited['trip_state']['days'] == 14
+    assert edited['trip_state']['family'] is True
+    assert 'Hurghada' not in allocations(edited)
+    assert 'Sharm El Sheikh' in allocations(edited)
 
 
 def test_outside_egypt_does_not_silently_replace_destination(client):

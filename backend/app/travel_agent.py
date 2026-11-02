@@ -213,7 +213,10 @@ def total_days(message: str) -> int | None:
         r'[^\d]{0,28}(\d{1,3})\s*(?:days?|jours?|يوم|أيام|ايام)', t)
     if overall:
         return int(overall.group(1))
-    dates = [int(m.group(1)) for m in re.finditer(r'(?<!\d)(\d{1,3})\s*(?:days?|jours?|يوم|أيام|ايام)', t)]
+    # Accept adjectival English durations such as "a 14-day family trip" as
+    # well as the conventional "14 days" form.
+    dates = [int(m.group(1)) for m in re.finditer(
+        r'(?<!\d)(\d{1,3})\s*(?:-\s*)?(?:days?|jours?|يوم|أيام|ايام)', t)]
     if not dates:
         word_numbers = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
                         'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
@@ -268,6 +271,55 @@ def total_days(message: str) -> int | None:
     if beach is not None and culture is not None and beach + culture <= 30:
         return beach + culture
     return None
+
+
+def _relative_trip_extension(message: str) -> int | None:
+    """Return an explicitly requested increase to the total trip duration."""
+    t = _digits(message)
+    total_phrase = r'(?:إجمالي\s+(?:مدة\s+)?الرحلة|اجمالي\s+(?:مدة\s+)?الرحلة|مدة\s+الرحلة|الرحلة\s+كلها|whole\s+trip|entire\s+trip|total\s+(?:trip\s+)?duration)'
+    additive = r'(?:زود|زيد|مدد|اضف|زيادة|extend|increase|add)'
+    if not (re.search(total_phrase, t, flags=re.I) and re.search(additive, t, flags=re.I)):
+        return None
+    amount = re.search(
+        r'(?:ب(?:مقدار)?\s*)?(\d{1,2})\s*(?:days?|يوم|أيام|ايام)', t, flags=re.I)
+    if amount:
+        return int(amount.group(1))
+    if re.search(r'(?:يوم\s+واحد|one\s+(?:more\s+)?day|an?\s+extra\s+day)', t, flags=re.I):
+        return 1
+    if re.search(r'(?:يومين|يومان|two\s+(?:more\s+)?days)', t, flags=re.I):
+        return 2
+    return None
+
+
+def _extension_city_from_context(request, message: str, state: dict, available: set[str]) -> str | None:
+    """Resolve the city for a clarified extension from literal chat context."""
+    present = {city for phase in state['phases'] for city in phase['cities']}
+    current = [city for city in mentioned_cities(message, available) if city in present]
+    if len(current) == 1:
+        return current[0]
+    for turn in reversed(request.history):
+        if turn.role != 'user':
+            continue
+        prior = [city for city in mentioned_cities(turn.content, available) if city in present]
+        if len(prior) == 1 and re.search(
+                r'(?:\b(?:add|increase|extend)\b|زود|زيد|ضيف|اضف)',
+                _digits(turn.content), flags=re.I):
+            return prior[0]
+    return None
+
+
+def _apply_relative_extension(state: dict, amount: int, city: str | None) -> dict | None:
+    """Extend without taking or redistributing any existing city days."""
+    if amount < 1 or state['days'] + amount > 30 or city is None:
+        return None
+    index = next((i for i, phase in enumerate(state['phases'])
+                  if phase['cities'] == [city]), None)
+    if index is None:
+        return None
+    updated = deepcopy(state)
+    updated['days'] += amount
+    updated['phases'][index]['days'] += amount
+    return updated
 
 
 def wants_beach(message: str) -> bool:
@@ -928,6 +980,33 @@ def consult_travel(request):
                            f'\nBudget noted: USD {checked.budget_usd:,}. This itinerary does not verify hotel or transfer costs.')
             return _with_verified_dialogue(request, message, {'answer': answer, 'mode': 'local-planner', 'sources': itinerary.get('sources', []),
                     'trip_state': checked.model_dump(), 'itinerary': itinerary})
+        extension_amount = _relative_trip_extension(message)
+        if extension_amount is not None:
+            extension_city = _extension_city_from_context(request, message, state, available)
+            extended = _apply_relative_extension(state, extension_amount, extension_city)
+            if extended is None:
+                answer = (
+                    'فهمت إنك تريد زيادة إجمالي مدة الرحلة من غير تقليل أي مدينة. '
+                    'حدّد المدينة التي تريد إضافة اليوم لها؛ لم أغيّر الرحلة بعد.'
+                    if request.language == 'Arabic' else
+                    'I understand that you want to extend the total trip without reducing any city. '
+                    'Please name the city that should receive the extra day; the trip is unchanged.'
+                )
+                return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+                        'trip_state': state, 'itinerary': None}
+            checked = TripState.model_validate(extended)
+            itinerary = _make_plan(checked.model_dump(), 'ar' if request.language == 'Arabic' else 'en')
+            city_name = CITY_AR.get(extension_city, extension_city) if request.language == 'Arabic' else extension_city
+            answer = (
+                f'زودت إجمالي مدة الرحلة {extension_amount} يوم إلى {checked.days} أيام، '
+                f'وضفت الزيادة إلى {city_name} من غير ما أقلل أيام أي مدينة أخرى.'
+                if request.language == 'Arabic' else
+                f'I extended the total trip by {extension_amount} day(s) to {checked.days} days and added '
+                f'them to {city_name}, without reducing any other city.'
+            )
+            return _with_verified_dialogue(request, message, {
+                'answer': answer, 'mode': 'local-planner', 'sources': itinerary.get('sources', []),
+                'trip_state': checked.model_dump(), 'itinerary': itinerary})
         transfer = _explicit_day_transfer(state, message, available)
         # A request to 'add 3 days in Cairo' is NOT a request to set Cairo to
         # 3 days. It also does not say whether to lengthen the whole holiday
@@ -936,7 +1015,8 @@ def consult_travel(request):
         # A fully specified city-to-city transfer is handled above.
         ambiguous_city_increase = re.search(
             r'(?:\b(?:add|increase|extend)\b|(?:ن)?زود|زيد|ضيف|أضف|اضف)'
-            r'[^\n.!؟]{0,55}?\d{1,2}\s*(?:days?|يوم|أيام|ايام)',
+            r'[^\n.!؟]{0,55}?(?:\d{1,2}\s*(?:days?|يوم|أيام|ايام)|'
+            r'one\s+more\s+day|another\s+day|extra\s+day|يوم(?:\s+(?:واحد|زيادة|كمان))?)',
             _digits(message).lower(), flags=re.I)
         if transfer is None and ambiguous_city_increase and cities:
             return {
