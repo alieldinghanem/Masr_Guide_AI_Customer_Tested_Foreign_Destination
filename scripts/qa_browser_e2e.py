@@ -41,6 +41,7 @@ def test_demo(browser):
 
 def test_react(browser, label, width, height):
     context = browser.new_context(viewport={'width': width, 'height': height})
+    context.add_init_script("if (!localStorage.getItem('masr-guide-lang')) localStorage.setItem('masr-guide-lang', 'en')")
     page = context.new_page()
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
@@ -58,7 +59,10 @@ def test_react(browser, label, width, height):
             expect(page.locator('.mg-mobile-tabs')).to_be_visible()
         page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded')
         expect(page.locator('.mg-category-grid .mg-place-card').first).to_be_visible(timeout=15000)
-        expect(page.locator('.mg-category-grid .mg-place-card')).to_have_count(31, timeout=15000)
+        assert [name.strip() for name in page.locator('.mg-category-grid .mg-place-card h2').all_text_contents()[:5]] == [
+            'Pyramids of Giza', 'Grand Egyptian Museum', 'The Hanging Church',
+            'Bab Zuwayla', "Saint Catherine's Monastery",
+        ]
         # Real Chromium geometry (not jsdom): mobile cards must be readable,
         # one per row, with a generous image and 44px touch targets.
         if width <= 620:
@@ -80,7 +84,10 @@ def test_react(browser, label, width, height):
             page.set_viewport_size({'width': width, 'height': height})
             print('PASS mobile imagery: 360/390/430px single column, crop, tap targets and overflow')
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
-        expect(page.locator('.mg-category-grid .mg-place-card')).to_have_count(7, timeout=15000)
+        expect(page.locator('#swimming-beaches-title')).to_be_visible(timeout=15000)
+        expect(page.locator('#coastal-other-title')).to_be_visible(timeout=15000)
+        assert page.locator('.mg-coastal-guide').count() == 10
+        assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
         page.goto(f'{URL}/#/home', wait_until='domcontentloaded')
         page.locator('.lang-toggle').click()
@@ -146,7 +153,7 @@ def test_react(browser, label, width, height):
         expect(page.get_by_text('My Egypt Journey', exact=True).first).to_be_visible(timeout=15000)
         # A traveler must be able to revise the *same* cloud record, not create
         # duplicates. This uses the real Planner and conditional PUT If-Match.
-        page.get_by_role('button', name='View').first.click()
+        page.get_by_role('button', name='View', exact=True).first.click()
         expect(page.get_by_text('Day 2 —')).to_be_visible(timeout=15000)
         page.get_by_role('button', name='Open in planner to edit').click()
         page.get_by_label('Number of days').fill('3')
@@ -154,14 +161,14 @@ def test_react(browser, label, width, height):
         expect(page.locator('.day-card')).to_have_count(3, timeout=20000)
         page.get_by_role('button', name='Save this plan').click()
         page.goto(f'{URL}/#/account', wait_until='domcontentloaded')
-        page.get_by_role('button', name='View').first.click()
+        page.get_by_role('button', name='View', exact=True).first.click()
         page.once('dialog', lambda dialog: dialog.accept())
         with page.expect_response(lambda response: '/api/my/trips/' in response.url and
                                   response.request.method == 'PUT', timeout=15000) as cloud_update:
             page.get_by_role('button', name='Replace with my current planner itinerary').click()
         assert cloud_update.value.status == 200
         expect(page.get_by_text('Day 3 —')).to_be_visible(timeout=15000)
-        assert page.get_by_role('button', name='View').count() == 1, 'Update must not create duplicate cloud trips'
+        assert page.get_by_role('button', name='View', exact=True).count() == 1, 'Update must not create duplicate cloud trips'
         print(f'PASS {label}: saved trip revised via real conditional cloud update')
         # Account-backed favorites must persist after reload, remain scoped to
         # this visitor, and be cleared from the UI on logout. Requires the real
@@ -197,11 +204,16 @@ def test_react(browser, label, width, height):
 def test_mobile_photo_layout(browser):
     """Isolate customer-visible photo UX from unrelated account/AI workflows."""
     context = browser.new_context(viewport={'width': 390, 'height': 844})
+    context.add_init_script("if (!localStorage.getItem('masr-guide-lang')) localStorage.setItem('masr-guide-lang', 'en')")
     page = context.new_page()
     try:
         page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded', timeout=20000)
         cards = page.locator('.mg-category-grid .mg-place-card')
-        expect(cards).to_have_count(31, timeout=15000)
+        expect(cards.nth(1)).to_be_visible(timeout=15000)
+        assert [name.strip() for name in cards.locator('h2').all_text_contents()[:5]] == [
+            'Pyramids of Giza', 'Grand Egyptian Museum', 'The Hanging Church',
+            'Bab Zuwayla', "Saint Catherine's Monastery",
+        ], 'The requested heritage sites must lead the catalog'
         for phone_width in (360, 390, 430):
             page.set_viewport_size({'width': phone_width, 'height': 844})
             first, second = cards.nth(0).bounding_box(), cards.nth(1).bounding_box()
@@ -220,7 +232,12 @@ def test_mobile_photo_layout(browser):
         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'RTL overflow'
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
         coast = page.locator('.mg-category-grid .mg-place-card')
-        expect(coast).to_have_count(7, timeout=15000)
+        expect(page.locator('#swimming-beaches-title')).to_be_visible(timeout=15000)
+        expect(page.locator('#coastal-other-title')).to_be_visible(timeout=15000)
+        expect(coast.nth(1)).to_be_visible(timeout=15000)
+        assert page.locator('.mg-coastal-guide').count() == 10, 'All requested coastal destinations must be shown'
+        assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
+        assert coast.nth(0).locator('h2').inner_text() == 'خليج نعمة'
         assert abs(coast.nth(0).bounding_box()['x'] - coast.nth(1).bounding_box()['x']) < 2, 'Coast mobile cards must stack'
         print('PASS mobile photo QA: 360/390/430px, Arabic RTL, unique Ibn Tulun framing, heritage/coast')
     finally:
