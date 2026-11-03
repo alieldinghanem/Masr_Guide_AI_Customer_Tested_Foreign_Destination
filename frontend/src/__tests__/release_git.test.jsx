@@ -23,11 +23,10 @@ describe('GitHub release fixes', () => {
       expect(MESSAGES[lang]['guide.welcome.offline-preview']).not.toMatch(/API key|مفتاح API/)
     }
     const { user } = await boot({ chat: { answer: 'Welcome to Egypt!', mode: 'local-assistant', sources: [] } })
-    await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Hello')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await screen.findByText('Welcome to Egypt!')
-    expect(screen.getByText(MESSAGES.en['guide.welcome.local-assistant'])).toBeInTheDocument()
+    expect(screen.getByText(MESSAGES.en['guide.availability.local'])).toBeInTheDocument()
     expect(screen.queryByText('guide.welcome.local-assistant')).not.toBeInTheDocument()
   })
 
@@ -41,6 +40,7 @@ describe('GitHub release fixes', () => {
         : path === '/places' ? { places: [] } : { guide_mode: 'offline-preview' } }
     })
     vi.stubGlobal('fetch', originalFetch)
+    localStorage.setItem('masr-guide-lang', 'en')
     render(<App />)
     const user = userEvent.setup()
     const retry = await screen.findByRole('button', { name: 'Retry connection' })
@@ -57,7 +57,6 @@ describe('GitHub release fixes', () => {
 
   it('clears the chat when requested', async () => {
     const { user } = await boot()
-    await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Tell me about Karnak')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await screen.findByText('Karnak is a huge temple complex.')
@@ -67,7 +66,6 @@ describe('GitHub release fixes', () => {
 
   it('restores failed chat questions without polluting the history', async () => {
     const { user } = await boot({ chatStatus: 429 })
-    await user.click(screen.getByRole('button', { name: 'Chat' }))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Tell me about Karnak')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests')

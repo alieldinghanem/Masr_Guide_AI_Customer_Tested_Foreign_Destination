@@ -13,7 +13,7 @@ const audit = async () => {
   return result.violations.map(v => `${v.id}: ${v.help} -> ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)
 }
 
-const PAGES = [['Chat', 'AI Chat', 'الشات الذكي'], ['Historical', 'Historical Places', 'الأماكن الأثرية'], ['Beaches', 'Beaches', 'الشواطئ والبحر'], ['Recommendations', 'Recommendations', 'الترشيحات'], ['Travel tips', 'Travel Tips', 'نصائح السفر'], ['Trip planner', 'Plan a journey', 'خطط لرحلة']]
+const PAGES = [['Chat', 'AI guide', 'المرشد الذكي'], ['Explore', 'Explore Egypt', 'اكتشف مصر'], ['Reviews', 'Traveler reviews', 'تقييمات المسافرين'], ['Safety', 'Travel safety', 'السلامة والمساعدة'], ['Trip planner', 'Trip planner', 'مخطط الرحلات']]
 
 describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
   it.each(PAGES)('%s page has no axe violations', async (_name, en, ar) => {

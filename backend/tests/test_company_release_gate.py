@@ -4,12 +4,12 @@ from app.main import validate_deployment_settings
 
 
 @pytest.fixture
-def production(monkeypatch):
+def production(monkeypatch, tmp_path):
     monkeypatch.setenv('APP_ENV', 'production')
     monkeypatch.setenv('MASR_DURABLE_STORAGE_CONFIRMED', 'yes')
     monkeypatch.setenv('BACKUP_RECOVERY_VERIFIED', 'yes')
-    monkeypatch.setenv('MASR_USER_DB', '/data/travelers.sqlite3')
-    monkeypatch.setenv('DATABASE_PATH', '/data/catalog.sqlite3')
+    monkeypatch.setenv('MASR_USER_DB', str(tmp_path / 'travelers.sqlite3'))
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'catalog.sqlite3'))
     monkeypatch.setenv('GEMINI_API_KEY', 'test-only-not-a-real-key')
     monkeypatch.delenv('TRUST_PROXY_HEADERS', raising=False)
     return monkeypatch
@@ -42,9 +42,10 @@ def test_production_rejects_database_files_inside_backend_source(production):
         validate_deployment_settings()
 
 
-def test_production_rejects_same_database_file(production):
-    production.setenv('MASR_USER_DB', '/data/same.sqlite3')
-    production.setenv('DATABASE_PATH', '/data/same.sqlite3')
+def test_production_rejects_same_database_file(production, tmp_path):
+    same_path = str(tmp_path / 'same.sqlite3')
+    production.setenv('MASR_USER_DB', same_path)
+    production.setenv('DATABASE_PATH', same_path)
     with pytest.raises(RuntimeError, match='separate'):
         validate_deployment_settings()
 

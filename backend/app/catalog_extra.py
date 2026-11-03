@@ -105,6 +105,20 @@ EXTRA = {
         "tip": "Dress modestly for the churches; it is compact and walkable, so it works well as a half-day.",
         "tip_ar": "ارتدِ ملابس محتشمة داخل الكنائس؛ المنطقة صغيرة ويمكن المشي فيها خلال نصف يوم.",
     },
+    "hanging-church": {
+        "name_ar": "الكنيسة المعلّقة",
+        "summary_ar": "كنيسة قبطية تاريخية في مصر القديمة شُيّدت فوق جزء من حصن بابليون الروماني.",
+        "details": "The Hanging Church stands near the Coptic Museum in Old Cairo. Its name comes from its position above the old Roman fortress. It is a distinct stop within the wider Coptic Cairo area.",
+        "tip": "Pair it with other Old Cairo sites and check current visiting arrangements before going.",
+        "tip_ar": "اجمع زيارتها مع معالم مصر القديمة، وتحقق من ترتيبات الزيارة الحالية قبل الذهاب.",
+    },
+    "bab-zuwayla": {
+        "name_ar": "باب زويلة",
+        "summary_ar": "بوابة تاريخية باقية من السور الجنوبي للقاهرة الفاطمية، عند الطرف الجنوبي لشارع المعز.",
+        "details": "Bab Zuwayla was built under the Fatimid vizier Badr al-Gamali in 1092. The adjacent Mosque of al-Mu'ayyad Shaykh later added its minarets above the gate.",
+        "tip": "Combine it with a walk along al-Mu'izz Street; confirm any access to elevated viewpoints locally.",
+        "tip_ar": "يمكن ضمه إلى جولة في شارع المعز؛ تحقق محليًا من إمكانية صعود البرجين.",
+    },
     "karnak": {
         "name_ar": "معبد الكرنك",
         "summary_ar": "مجمع معابد مصري قديم ضخم، وجزء من موقع طيبة القديمة المدرج في قائمة اليونسكو.",
@@ -290,7 +304,7 @@ EXTRA = {
     "st-catherine-monastery": {
         "name_ar": "دير سانت كاترين",
         "summary_ar": "دير مسيحي قديم عند سفح جبل سيناء، وجزء من موقع تراث عالمي لليونسكو.",
-        "details": "Founded in the 6th century, the monastery is among the oldest continuously inhabited Christian monasteries and holds an important library of manuscripts. It sits in a mountain valley at the foot of Mount Sinai.",
+        "details": "Founded in the 6th century, this is a Christian monastery with an important manuscript library at the foot of Mount Sinai. The wider Saint Catherine area is sacred to Christianity, Islam and Judaism; the monastery itself is not a synagogue.",
         "tip": "Opening times for visitors are limited; check them before you arrive and dress modestly.",
         "tip_ar": "أوقات زيارة الدير محدودة، فتحقق منها قبل الوصول وارتدِ ملابس محتشمة.",
     },

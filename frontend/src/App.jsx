@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Bookmark, Menu, X, MessageCircle, Landmark, Waves, Compass } from 'lucide-react'
+import { ArrowUpRight, Bookmark, Menu, X, MessageCircle, Compass, Star, CalendarDays, ShieldCheck } from 'lucide-react'
 import { api } from './api'
 import { I18nProvider, errorText, useI18n } from './i18n'
 import { ErrorNote, Logo } from './components/Common'
@@ -10,17 +10,19 @@ import Guide from './components/Guide'
 import Destinations from './components/Destinations'
 import Experiences from './components/Experiences'
 import Essentials from './components/Essentials'
+import TravelerReviews from './components/TravelerReviews'
+import PlaceDetails from './components/PlaceDetails'
 import Saved from './components/Saved'
 import Account, { getSession } from './components/Account'
 import Budget from './components/Budget'
 import {Stories, Offers, Partners, Staff, Project} from './components/Portal'
 
 const GUIDE_LANGUAGE = { en: 'English', ar: 'Arabic' }
-const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget']
+const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'reviews', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget']
 const SAVED_PLACES_KEY = 'masr-guide-saved-places-v3'
 const pageFromHash = () => {
   const name = window.location.hash.replace(/^#\/?/, '')
-  return PAGES.includes(name) ? name : 'home'
+  return PAGES.includes(name) || /^place\/[a-z0-9_-]+$/i.test(name) ? name : 'home'
 }
 
 function Shell({ meta }) {
@@ -47,6 +49,14 @@ function Shell({ meta }) {
     try { sessionStorage.setItem('masr-guide-chat-session-v7', JSON.stringify(guideMessages.slice(-24))) } catch { /* private mode or storage quota */ }
   }, [guideMessages])
   const [guideLanguage, setGuideLanguage] = useState(GUIDE_LANGUAGE[lang])
+  const guideLanguageChosen = useRef(false)
+  useEffect(() => {
+    if (!guideLanguageChosen.current) setGuideLanguage(GUIDE_LANGUAGE[lang])
+  }, [lang])
+  const chooseGuideLanguage = next => {
+    guideLanguageChosen.current = true
+    setGuideLanguage(next)
+  }
   const [highlight, setHighlight] = useState(null)
   const [exploreKey, setExploreKey] = useState(0)
   const [exploreInterest, setExploreInterest] = useState(null)
@@ -120,10 +130,11 @@ function Shell({ meta }) {
     setPage(name); setMobileOpen(false)
     window.scrollTo?.({ top: 0, behavior: 'smooth' })
   }
-  useEffect(() => { document.title = `${page === 'account' ? 'My Account' : ({home: lang === 'ar' ? 'المرشد الذكي' : 'AI Travel Guide', heritage: lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places', coast: lang === 'ar' ? 'الشواطئ' : 'Beaches', destinations: lang === 'ar' ? 'الترشيحات' : 'Recommendations', essentials: lang === 'ar' ? 'نصائح السفر' : 'Travel Tips', stories:'Egypt Travel Journal', offers:'Verified Partner Experiences', partners:'Partner With Us', staff:'Staff Studio', project:'Project Case Study',budget:'Travel Budget' }[page] || t(`nav.${page}`))} · Masr Guide AI` }, [page, t, lang])
+  useEffect(() => { document.title = `${page.startsWith('place/') ? (meta.places.find(place => place.id === page.slice(6))?.[lang === 'ar' ? 'name_ar' : 'name'] || t('nav.exploreEgypt')) : page === 'account' ? 'My Account' : ({home: lang === 'ar' ? 'المرشد الذكي' : 'AI Travel Guide', heritage: lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places', coast: lang === 'ar' ? 'الشواطئ' : 'Beaches', destinations: lang === 'ar' ? 'الترشيحات' : 'Recommendations', essentials: lang === 'ar' ? 'نصائح السفر' : 'Travel Tips', stories:'Egypt Travel Journal', offers:'Verified Partner Experiences', partners:'Partner With Us', staff:'Staff Studio', project:'Project Case Study',budget:'Travel Budget' }[page] || t(`nav.${page}`))} · Masr Guide AI` }, [page, t, lang, meta.places])
   const askQuestion = q => { setGuideDraft(q); go('home') }
   // Opening a place from elsewhere remounts Discover so stale search/filters cannot hide it.
   const openPlace = p => { setHighlight(p); setExploreInterest(null); setExploreKey(k => k + 1); go('explore') }
+  const openDetails = p => { if (p?.id && meta.places.some(place => place.id === p.id)) go(`place/${p.id}`) }
   const exploreTheme = tag => { setHighlight(null); setExploreInterest(tag); setExploreKey(k => k + 1); go('explore') }
   const clearTravelerUi = () => {
     // Clearing storage alone is insufficient: Shell persists across routes.
@@ -136,9 +147,10 @@ function Shell({ meta }) {
   }
   const switchLanguage = () => {
     const next = lang === 'ar' ? 'en' : 'ar'
+    guideLanguageChosen.current = false
     setLang(next); setGuideLanguage(GUIDE_LANGUAGE[next])
   }
-  const menu = [['home', lang === 'ar' ? 'الشات الذكي' : 'AI Chat'], ['heritage', lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places'], ['coast', lang === 'ar' ? 'الشواطئ والبحر' : 'Beaches'], ['destinations', lang === 'ar' ? 'الترشيحات' : 'Recommendations'], ['essentials', lang === 'ar' ? 'نصائح السفر' : 'Travel Tips']]
+  const menu = [['home', t('nav.guide')], ['explore', t('nav.exploreEgypt')], ['reviews', t('nav.reviews')], ['essentials', t('nav.safety')], ['planner', t('nav.planner')]]
   const { places, cities, interests } = meta
 
   return (
@@ -148,12 +160,13 @@ function Shell({ meta }) {
           <Logo go={go} />
           <nav id="masr-main-menu" className={`navigation ${mobileOpen ? 'is-open' : ''}`} aria-label={t('nav.aria')}>
             {menu.map(([id, key]) => (
-              <button type="button" key={id} onClick={() => go(id)} className={(page === id || (page === 'guide' && id === 'home')) ? 'active' : ''} aria-current={(page === id || (page === 'guide' && id === 'home')) ? 'page' : undefined}>{key}</button>
+              <button type="button" key={id} onClick={() => go(id)} className={(page === id || (page === 'guide' && id === 'home') || (id === 'explore' && page.startsWith('place/'))) ? 'active' : ''} aria-current={(page === id || (page === 'guide' && id === 'home') || (id === 'explore' && page.startsWith('place/'))) ? 'page' : undefined}>{key}</button>
             ))}
           </nav>
           <div className="nav-actions">
             <button type="button" className="nav-account-link" onClick={() => go('account')}>{lang === 'ar' ? 'حسابي' : 'My account'}</button>
             <button type="button" className="nav-saved" onClick={() => go('saved')} aria-label={t('nav.saved')} aria-current={page === 'saved' ? 'page' : undefined}><Bookmark size={17}/><span>{savedIds.length}</span></button>
+            <button type="button" className="nav-safety" onClick={() => go('essentials')} aria-label={t('nav.safety')} aria-current={page === 'essentials' ? 'page' : undefined}><ShieldCheck size={19}/></button>
             <button type="button" className="lang-toggle" onClick={switchLanguage} aria-label={t('lang.switchAria')} lang={lang === 'ar' ? 'en' : 'ar'}>{t('lang.switch')}</button>
             <button type="button" className="nav-cta" onClick={() => go('planner')}>{t('nav.plan')} <ArrowUpRight size={16} /></button>
             <button type="button" className="mobile-toggle" onClick={() => setMobileOpen(v => !v)} aria-label={t('nav.toggle')} aria-expanded={mobileOpen} aria-controls="masr-main-menu">{mobileOpen ? <X /> : <Menu />}</button>
@@ -168,14 +181,16 @@ function Shell({ meta }) {
           <button className="btn secondary" type="button" onClick={meta.retry}>{t('nav.retry')}</button>
         </div>
       )}
-      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={setGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} home /></div>}
+      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
       {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'coast' && <CategoryPlaces type="coast" places={places} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'experiences' && <Experiences experiences={discovery.experiences} places={places} onExplore={exploreTheme} askQuestion={askQuestion} />}
       {page === 'essentials' && <Essentials items={discovery.essentials} />}
+      {page === 'reviews' && <TravelerReviews onExplore={() => go('explore')} />}
       {page === 'saved' && <Saved places={places} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={openPlace} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
-      {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
+      {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} openDetails={openDetails} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
+      {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go('explore')} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} />}
       {page === 'planner' && <Planner cities={cities} interests={interests} openPlace={openPlace} />}
       {page === 'account' && <Account registrationEnabled={meta.registrationEnabled} onOpenPlanner={() => go('planner')} onSignOut={clearTravelerUi} onSignIn={next => { setSavedIds([]); setFavoritesError(''); setTravelerSession(next) }} />}
       {page === 'stories' && <Stories go={go} />}
@@ -202,7 +217,7 @@ function Shell({ meta }) {
         <div className="container footer-bottom"><span>{t('footer.copy', { year: new Date().getFullYear() })}</span><span>{t('footer.note')}</span></div>
       </footer>
       <nav className="mg-mobile-tabs" aria-label={lang === 'ar' ? 'التنقل السريع' : 'Quick navigation'}>
-        {[[ 'home', MessageCircle, lang === 'ar' ? 'الشات' : 'Chat'], ['heritage', Landmark, lang === 'ar' ? 'الآثار' : 'History'], ['coast', Waves, lang === 'ar' ? 'الشواطئ' : 'Beaches'], ['destinations', Compass, lang === 'ar' ? 'اكتشف' : 'Explore']].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide')) ? 'active' : ''} aria-current={(id === page || (id === 'home' && page === 'guide')) ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
+        {[[ 'home', MessageCircle, t('nav.guide')], ['explore', Compass, t('nav.explore')], ['reviews', Star, t('nav.reviews')], ['planner', CalendarDays, t('nav.planner')]].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && page.startsWith('place/'))) ? 'active' : ''} aria-current={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && page.startsWith('place/'))) ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
       </nav>
     </div>
   )

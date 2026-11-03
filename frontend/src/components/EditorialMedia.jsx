@@ -3,7 +3,8 @@ import React from 'react'
 // Every photographed attraction below has a unique filename that was validated
 // against Wikimedia Commons' MediaWiki imageinfo API on 2026-11-02.
 // Do not substitute a city-wide image for a specific unrelated attraction.
-// Full source/licence credits: /photo-credits.html
+// Each Commons file page records the source and licence; new images with
+// required attribution have visible credit links on their place pages.
 const commons = file => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=1000`
 
 export const PHOTO_FILES = {
@@ -17,6 +18,8 @@ export const PHOTO_FILES = {
   "khan-el-khalili": "Khan El-Khalili.jpg",
   "al-azhar-park": "Al-Azhar Park Cairo (2).jpg",
   "coptic-cairo": "Cairo - Coptic area - Hanging Church from courtyard.JPG",
+  "hanging-church": "Hanging Church Cairo.jpg",
+  "bab-zuwayla": "Cairo, bab zuweila 01.JPG",
   "museum-of-islamic-art": "Museum of Islamic Art Cairo DSCF7680.jpg",
   "gayer-anderson-museum": "Gayer-Anderson Museum, Cairo 01.jpg",
   "sultan-hassan-mosque": "Mosque-Madrassa of Sultan Hassan.jpg",
@@ -71,6 +74,8 @@ export const LANDMARK_FRAMING = {
   'egyptian-museum-tahrir': ['50% 54%', '50% 60%'],
   'khan-el-khalili': ['50% 46%', '50% 51%'],
   'coptic-cairo': ['50% 50%', '50% 55%'],
+  'hanging-church': ['50% 54%', '50% 57%'],
+  'bab-zuwayla': ['50% 53%', '50% 56%'],
   'ibn-tulun-mosque': ['50% 65%', '50% 67%'],
   'sultan-hassan-mosque': ['50% 55%', '50% 59%'],
   'al-rifai-mosque': ['50% 55%', '50% 58%'],
@@ -107,6 +112,17 @@ export const getLandmarkFraming = id => {
 export const LANDMARK_MEDIA = Object.fromEntries(
   Object.entries(PHOTO_FILES).map(([id, filename]) => [id, commons(filename)])
 )
+
+export const PHOTO_CREDITS = {
+  'hanging-church': {
+    author: 'Radosław Botev', license: 'CC BY 3.0 PL',
+    url: 'https://commons.wikimedia.org/wiki/File:Hanging_Church_Cairo.jpg',
+  },
+  'bab-zuwayla': {
+    author: 'Sailko', license: 'CC BY 3.0',
+    url: 'https://commons.wikimedia.org/wiki/File:Cairo,_bab_zuweila_01.JPG',
+  },
+}
 
 // Cover photos are characteristic views of the named destination, not a shared
 // picture used across all attractions inside that destination.

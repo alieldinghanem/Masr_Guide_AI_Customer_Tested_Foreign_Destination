@@ -114,7 +114,7 @@
   "lang": "en",
   "q": "Tell me about the Hanging Church",
   "expect": [
-   "coptic-cairo"
+   "hanging-church"
   ]
  },
  {

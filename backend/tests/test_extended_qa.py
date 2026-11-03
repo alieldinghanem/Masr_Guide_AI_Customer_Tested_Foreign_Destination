@@ -61,6 +61,16 @@ def test_catalog_coordinates_unique_https_and_minutes(client):
         assert place['source_url'].startswith('https://')
 
 
+def test_requested_heritage_sites_have_distinct_verified_catalog_entries(client):
+    places = {place['id']: place for place in client.get('/api/places').json()['places']}
+    assert places['hanging-church']['name_ar'] == 'الكنيسة المعلّقة'
+    assert places['hanging-church']['source_url'] == 'https://egymonuments.gov.eg/monuments/the-hanging-church/'
+    assert places['bab-zuwayla']['name_ar'] == 'باب زويلة'
+    assert places['bab-zuwayla']['source_url'] == 'https://egymonuments.gov.eg/monuments/bab-zuwayla'
+    assert places['st-catherine-monastery']['city'] == 'Saint Catherine'
+    assert 'Christian monastery' in places['st-catherine-monastery']['details']
+
+
 def test_bad_json_and_query_inputs_never_return_server_error(client):
     cases = [
         ('POST', '/api/plan', {'cities': ['Cairo'], 'days': 'oops'}),

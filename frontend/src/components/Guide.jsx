@@ -17,8 +17,9 @@ function restoredConsultation() {
 }
 
 const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
+const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
 
-export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, home = false }) {
+export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -30,9 +31,13 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   const [restored] = useState(restoredConsultation)
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
-  const scrollRef = useRef(null)
-  useEffect(() => { scrollRef.current?.scrollIntoView?.({ behavior: 'smooth' }) }, [messages, busy])
+  const messagesRef = useRef(null)
+  useEffect(() => {
+    const log = messagesRef.current
+    if (log) log.scrollTop = log.scrollHeight
+  }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
+  const serviceState = mode === 'provider-error' ? 'error' : AI_ACTIVE_MODES.has(mode) ? 'ai' : 'local'
   const answerArabic = language === 'Arabic'
   const answerCity = city => answerArabic ? cityNameAr(city) : city
 
@@ -204,7 +209,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${['gemini-search-grounded', 'gemini-rag', 'llm-rag', 'openai-rag', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'gemini-intent+local-planner', 'openai-intent+local-planner'].includes(mode) ? 'ready' : ''}`} />{t(`guide.status.${mode}`)}</span>
+              <span><span className={`status-dot ${serviceState === 'ai' ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />
@@ -213,13 +218,16 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </select><ChevronDown size={14} />
             </label>
           </header>
-          <div className="chat-messages">
-            <div className="guide-welcome">
+          <div className="chat-messages" ref={messagesRef} role="log" aria-label={t('guide.conversation')} aria-live="polite" aria-relevant="additions">
+            {!messages.length && <div className="guide-welcome">
               <div className="welcome-icon"><Sparkles size={25} /></div>
               <h3>{t('guide.welcomeTitle')}</h3>
               <p>{t('guide.welcomeText')}</p>
-              <span>{t(`guide.welcome.${mode}`)}</span>
-            </div>
+              <div className="guide-start-actions">
+                {[['planner', 'guide.action.plan'], ['explore', 'guide.action.explore'], ['reviews', 'guide.action.reviews'], ['essentials', 'guide.action.safety']].map(([route, key]) =>
+                  <button key={route} type="button" onClick={() => onNavigate?.(route)}>{t(key)}</button>)}
+              </div>
+            </div>}
             {messages.map((m, i) => (
               <div className={`msg ${m.role}`} key={i}>
                 <div className="msg-avatar">{m.role === 'assistant' ? <Bot size={17} /> : t('guide.you')}</div>
@@ -243,7 +251,15 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </div>
             ))}
             {busy && <div className="thinking"><LoaderCircle size={19} className="spin" /> {t('guide.thinking')}</div>}
-            <div ref={scrollRef} />
+          </div>
+          <div className="chat-compose">
+            <ErrorNote text={error} />
+            {error && prompt.trim().length >= 2 && <button className="chat-retry" type="button" disabled={busy} onClick={() => submitQuestion(prompt.trim())}>{t('guide.retry')}</button>}
+            <form onSubmit={send}>
+              <input aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
+              <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
+            </form>
+            <small>{t('guide.privacy')}</small>
           </div>
           {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
             <div className="consult-heading">
@@ -277,8 +293,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               <button type="button" onClick={exportTrip}>{lang === 'ar' ? 'نزّل الرحلة' : 'Download itinerary'}</button></div>
             <small>{itinerary.disclaimer}</small>
           </section>}
-          {home && <div className="mg-quick-prompts" aria-label={lang === 'ar' ? 'أسئلة مقترحة' : 'Suggested questions'}>{[1,2,3].map(n => <button type="button" key={n} onClick={() => setPrompt(t(`guide.prompt${n}`))}>{t(`guide.prompt${n}`)}</button>)}<button type="button" onClick={() => setPrompt(lang === 'ar' ? 'أنا جاي مصر شهر وعايز برنامج بين القاهرة والأقصر وأسوان والغردقة.' : 'Plan a month in Egypt: Cairo, Luxor, Aswan, and Hurghada.')}>{lang === 'ar' ? 'خطط رحلة شهر' : 'Plan a month'}</button></div>}
-          <div className="chat-cloud-tools" aria-label={lang === 'ar' ? 'محادثاتك المحفوظة' : 'Saved conversations'}>
+          <details className="chat-cloud-tools"><summary>{t('guide.conversationOptions')}</summary><div className="chat-cloud-controls">
             <button type="button" onClick={saveConversation} disabled={busy || !messages.length}>{lang === 'ar' ? 'حفظ المحادثة في حسابي' : 'Save conversation to account'}</button>
             <button type="button" onClick={refreshConversations} disabled={busy}>{lang === 'ar' ? 'عرض المحادثات المحفوظة' : 'Show saved chats'}</button>
             {savedConversations.length > 0 && <div className="chat-cloud-restore">
@@ -290,16 +305,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               <button type="button" disabled={busy || !selectedConversation} onClick={deleteConversation}>{lang === 'ar' ? 'حذف المحفوظة' : 'Delete saved'}</button>
             </div>}
             {cloudStatus && <small role="status">{cloudStatus}</small>}
-          </div>
-          <div className="chat-compose">
-            <ErrorNote text={error} />
-            {error && prompt.trim().length >= 2 && <button className="chat-retry" type="button" disabled={busy} onClick={() => submitQuestion(prompt.trim())}>{t('guide.retry')}</button>}
-            <form onSubmit={send}>
-              <input aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
-              <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
-            </form>
-            <small>{t('guide.privacy')}</small>
-          </div>
+          </div></details>
         </section>
         <aside className="guide-side">
           <div className="side-card suggested">
@@ -311,7 +317,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </button>))}
           </div>
           <div className="side-card suggested">
-            <span className="eyebrow">TRAVEL CONSULTANT</span>
+            <span className="eyebrow">{lang === 'ar' ? 'مستشار رحلتك' : 'TRAVEL CONSULTANT'}</span>
             <h3>{lang === 'ar' ? 'كوّن رحلة كاملة بالكلام' : 'Plan a full journey in chat'}</h3>
             <button type="button" onClick={() => setPrompt(lang === 'ar'
               ? 'أنا جاي مصر أسبوعين، عايز أول أسبوع آثار والقاهرة والأقصر، والأسبوع التاني بحر في الغردقة.'

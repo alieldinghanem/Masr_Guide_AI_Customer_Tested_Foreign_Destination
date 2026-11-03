@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import App from '../App'
 import { isValidPlan } from '../components/Planner'
 import { mockApi, planFor } from './fixtures'
+import { VISITOR_COUNTRY_KEY } from '../visitorLocale'
 
 const setup = async opts => {
   const calls = mockApi(opts)
@@ -30,6 +31,18 @@ describe('startup', () => {
 })
 
 describe('navigation and language', () => {
+  it('uses the detected Arabic locale for the chat reply language', async () => {
+    sessionStorage.setItem(VISITOR_COUNTRY_KEY, 'EG')
+    const calls = mockApi()
+    const user = userEvent.setup()
+    render(<App />)
+    const question = await screen.findByLabelText('اسأل المرشد السياحي')
+    expect(document.documentElement.dir).toBe('rtl')
+    await user.type(question, 'Tell me about Karnak')
+    await user.click(screen.getByRole('button', { name: 'إرسال' }))
+    await waitFor(() => expect(calls.find(call => call.path === '/consult')?.body?.language).toBe('Arabic'))
+  })
+
   it('opens working AI chat on the homepage', async () => {
     await setup()
     expect(await screen.findByRole('heading', { level: 1, name: /Discover Egypt, your way/ })).toBeInTheDocument()
@@ -40,11 +53,11 @@ describe('navigation and language', () => {
     const { user } = await setup()
     await user.click(screen.getByRole('button', { name: 'Switch to Arabic' }))
     expect(document.documentElement.dir).toBe('rtl')
-    expect(nav('الشات الذكي')).toBeInTheDocument()
+    expect(nav('المرشد الذكي')).toBeInTheDocument()
     expect(screen.getByLabelText('اسأل المرشد السياحي')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'التبديل إلى الإنجليزية' }))
     expect(document.documentElement.dir).toBe('ltr')
-    expect(nav('AI Chat')).toBeInTheDocument()
+    expect(nav('AI guide')).toBeInTheDocument()
   })
 
   it('starts in Arabic when the saved language is Arabic', async () => {
@@ -52,13 +65,53 @@ describe('navigation and language', () => {
     expect(document.documentElement.dir).toBe('rtl')
     expect(await screen.findByRole('heading', { level: 1, name: /اكتشف مصر بطريقتك/ })).toBeInTheDocument()
   })
+
+  it('offers four real start actions and an honest traveler reviews page', async () => {
+    const { user } = await setup()
+    const welcome = screen.getByRole('log', { name: 'Conversation' })
+    expect(within(welcome).getByRole('button', { name: 'Plan my trip' })).toBeInTheDocument()
+    expect(within(welcome).getByRole('button', { name: 'Explore Egypt' })).toBeInTheDocument()
+    expect(within(welcome).getByRole('button', { name: 'Safety & help' })).toBeInTheDocument()
+    await user.click(within(welcome).getByRole('button', { name: 'Traveler reviews' }))
+    expect(window.location.hash).toBe('#/reviews')
+    expect(screen.getByRole('heading', { name: 'No traveler reviews published yet' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Explore places in Egypt' }))
+    expect(window.location.hash).toBe('#/explore')
+  })
+
+  it('offers source-backed emergency contacts and scenario steps in both languages', async () => {
+    const { user } = await setup()
+    await user.click(nav('Travel safety'))
+    expect(screen.getByRole('heading', { name: 'Travel safety & help' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Call Ambulance 123' })).toHaveAttribute('href', 'tel:123')
+    await user.click(screen.getByRole('button', { name: 'Lost passport' }))
+    expect(screen.getByText(/Contact your own embassy or consulate/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Check source/ })).toHaveAttribute('href', 'https://www.gov.uk/foreign-travel-advice/egypt/getting-help')
+    await user.click(screen.getByRole('button', { name: 'Switch to Arabic' }))
+    expect(screen.getByRole('heading', { name: 'السلامة والمساعدة أثناء الرحلة' })).toBeInTheDocument()
+    expect(screen.getByText(/تواصل مع سفارة أو قنصلية بلدك/)).toBeInTheDocument()
+  })
 })
 
 describe('Discover', () => {
+  it('opens a shareable place page with real catalog details and a working save action', async () => {
+    const { user } = await setup()
+    await user.click(nav('Explore Egypt'))
+    await user.type(screen.getByLabelText('Search places'), 'Karnak')
+    await user.click(screen.getByRole('button', { name: 'View details' }))
+    expect(window.location.hash).toBe('#/place/karnak')
+    expect(screen.getByRole('heading', { level: 1, name: 'Karnak Temple Complex' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Place reference' })).toHaveAttribute('href', 'https://example.org/karnak')
+    expect(screen.getByText('No verified traveler reviews have been published for this place yet.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save place' }))
+    expect(screen.getByRole('button', { name: 'Remove saved place' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Explore Egypt' }))
+    expect(window.location.hash).toBe('#/explore')
+  })
+
   it('filters by Arabic or English text and shows localised details', async () => {
     const { user } = await setup()
-    await user.click(nav('Recommendations'))
-    await user.click((await screen.findAllByRole('button', { name: 'Explore places' }))[0])
+    await user.click(nav('Explore Egypt'))
     expect(screen.getByText('3 places')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Search places'), 'الكرنك')
     expect(screen.getByText('1 places')).toBeInTheDocument()
@@ -69,8 +122,7 @@ describe('Discover', () => {
 
   it('shows Arabic names and hides English-only tips in Arabic mode', async () => {
     const { user } = await setup({ lang: 'ar' })
-    await user.click(nav('الترشيحات'))
-    await user.click((await screen.findAllByRole('button', { name: 'استكشف المعالم' }))[0])
+    await user.click(nav('اكتشف مصر'))
     expect((await screen.findAllByText('معبد الكرنك')).length).toBeGreaterThan(0)
     expect(screen.queryByText(/Visit early/)).not.toBeInTheDocument()
   })
@@ -79,7 +131,7 @@ describe('Discover', () => {
 describe('Planner', () => {
   it('sends the request (route optimisation + language) and renders travel info and warnings', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Plan a journey'))
+    await user.click(nav('Trip planner'))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     expect(await screen.findByText(/Your suggested/)).toBeInTheDocument()
     const post = calls.find(c => c.path === '/plan')
@@ -92,7 +144,7 @@ describe('Planner', () => {
 
   it('validates days versus cities before calling the API', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Plan a journey'))
+    await user.click(nav('Trip planner'))
     await user.click(screen.getByRole('button', { name: 'Giza' }))   // 2 cities now (Cairo is not in fixtures)
     await user.click(screen.getByRole('button', { name: 'Luxor' }))
     const days = screen.getByLabelText(/Number of days/)
@@ -104,7 +156,7 @@ describe('Planner', () => {
 
   it('regenerates the plan in the new language when the UI language changes', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Plan a journey'))
+    await user.click(nav('Trip planner'))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     await screen.findByText('English disclaimer')
     await user.click(screen.getByRole('button', { name: 'Switch to Arabic' }))
@@ -117,7 +169,7 @@ describe('Planner', () => {
 
   it('saves to localStorage and clears the saved plan', async () => {
     const { user } = await setup()
-    await user.click(nav('Plan a journey'))
+    await user.click(nav('Trip planner'))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     await user.click(await screen.findByRole('button', { name: 'Save this plan' }))
     expect(localStorage.getItem('masr-guide-plan-v1')).toContain('"days"')
@@ -135,7 +187,7 @@ describe('Planner', () => {
 describe('Guide', () => {
   it('sends a question, renders the answer and its source link', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Chat'))
+    await user.click(nav('AI guide'))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Tell me about Karnak')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     expect(await screen.findByText('Karnak is a huge temple complex.')).toBeInTheDocument()
@@ -147,7 +199,7 @@ describe('Guide', () => {
 
   it('uses Arabic as the response language and Arabic source titles in Arabic mode', async () => {
     const { calls, user } = await setup({ lang: 'ar' })
-    await user.click(nav('الشات'))
+    await user.click(nav('المرشد الذكي'))
     await user.type(screen.getByLabelText('اسأل المرشد السياحي'), 'حدثني عن الكرنك')
     await user.click(screen.getByRole('button', { name: 'إرسال' }))
     expect(await screen.findByRole('link', { name: /\[1\] معبد الكرنك/ })).toBeInTheDocument()
@@ -156,7 +208,7 @@ describe('Guide', () => {
 
   it('shows a localised rate-limit error', async () => {
     const { user } = await setup({ chatStatus: 429 })
-    await user.click(nav('Chat'))
+    await user.click(nav('AI guide'))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'hello there')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests')
@@ -164,11 +216,11 @@ describe('Guide', () => {
 
   it('keeps the chat when navigating between sections', async () => {
     const { user } = await setup()
-    await user.click(nav('Chat'))
+    await user.click(nav('AI guide'))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Tell me about Karnak')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await screen.findByText('Karnak is a huge temple complex.')
-    await user.click(nav('History')); await user.click(nav('Chat'))
+    await user.click(screen.getByRole('button', { name: 'Historical places' })); await user.click(nav('AI guide'))
     expect(screen.getByText('Karnak is a huge temple complex.')).toBeInTheDocument()
   })
 })
@@ -183,11 +235,12 @@ describe('AI consultant v2', () => {
       trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
       itinerary: plan,
     } })
-    await user.click(nav('الشات'))
+    await user.click(nav('المرشد الذكي'))
     await user.selectOptions(screen.getByLabelText('لغة الرد'), 'English')
     await user.type(screen.getByLabelText('اسأل المرشد السياحي'), 'Plan 2 days in Giza and Luxor')
     await user.click(screen.getByRole('button', { name: 'إرسال' }))
     expect(await screen.findByText('Your editable Egypt itinerary')).toBeInTheDocument()
+    expect(screen.getByLabelText('اسأل المرشد السياحي').compareDocumentPosition(screen.getByRole('region', { name: 'Suggested itinerary' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText(/Day 1 — Giza/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /\[1\] Karnak Temple Complex/ })).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('لغة الرد'), 'Arabic')
@@ -202,7 +255,7 @@ describe('AI consultant v2', () => {
       trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
       itinerary: plan,
     } })
-    await user.click(nav('Chat'))
+    await user.click(nav('AI guide'))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'خطط لي يومين في الجيزة والأقصر')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     expect(await screen.findByText('برنامج رحلتك القابل للتعديل')).toBeInTheDocument()
@@ -218,7 +271,7 @@ describe('AI consultant v2', () => {
       trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza','Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
       itinerary: plan
     } })
-    await user.click(nav('Chat'))
+    await user.click(nav('AI guide'))
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Plan 2 days in Luxor and Giza')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     expect(await screen.findByText('Your editable Egypt itinerary')).toBeInTheDocument()

@@ -19,6 +19,8 @@ PLACES = [
     place("khan-el-khalili", "Khan el-Khalili", "Cairo", "Market", ["culture", "food", "family"], 30.0477,31.2622,100,"A traditional bazaar district in historic Cairo known for shops, crafts and lively streets.","https://whc.unesco.org/en/list/89/"),
     place("al-azhar-park", "Al-Azhar Park", "Cairo", "Park", ["nature", "family", "culture"], 30.0429,31.2657,90,"A landscaped urban park offering open spaces and views over historic Cairo.","https://www.azarpark.com/"),
     place("coptic-cairo", "Coptic Cairo", "Cairo", "Heritage", ["history", "culture", "family"], 30.0059,31.2307,120,"A historic area of Old Cairo containing important Christian religious landmarks.","https://whc.unesco.org/en/list/89/"),
+    place("hanging-church", "The Hanging Church", "Cairo", "Heritage", ["history", "culture", "family"], 30.0054,31.2301,75,"A historic Coptic church in Old Cairo built above part of the Roman Fortress of Babylon.","https://egymonuments.gov.eg/monuments/the-hanging-church/"),
+    place("bab-zuwayla", "Bab Zuwayla", "Cairo", "Heritage", ["history", "culture", "family"], 30.0428,31.2578,60,"A surviving southern gate of Fatimid Cairo, built in the late eleventh century.","https://egymonuments.gov.eg/monuments/bab-zuwayla"),
     # Additional Cairo attractions individually documented by Egyptian Ministry of
     # Tourism and Antiquities or UNESCO. Coordinates are approximate map pins, not routes.
     # Different places may share entry tickets or be neighbours; check venues first.

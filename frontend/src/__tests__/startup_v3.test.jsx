@@ -22,18 +22,18 @@ const renderApp = async () => {
 describe('TravelTech discovery MVP', () => {
   it('navigates beyond AI into real destination, experiences and essentials views', async () => {
     const user = await renderApp()
-    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button', {name: 'Recommendations'}))
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button', {name: 'Destinations'}))
     expect(screen.getByRole('heading', {name:/Find your next/})).toBeInTheDocument()
     expect(screen.getByText('Mediterranean soul')).toBeInTheDocument()
-    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button', {name:'Travel Tips'}))
+    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button', {name:'Travel safety'}))
     expect(screen.getByRole('heading', {name:/Travel with/})).toBeInTheDocument()
-    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button', {name:'Travel Tips'}))
+    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button', {name:'Travel safety'}))
     expect(screen.getByRole('link', {name:/Egypt e-Visa/})).toHaveAttribute('href','https://www.visa2egypt.gov.eg/')
   })
 
   it('saves an attraction locally and it stays visible under Saved places', async () => {
     const user=await renderApp()
-    await user.click(within(screen.getByRole('navigation', {name:'Primary navigation'})).getByRole('button',{name:'Recommendations'}))
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button',{name:'Destinations'}))
     await user.click((await screen.findAllByRole('button',{name:'Explore places'}))[0])
     await user.click(screen.getByRole('button',{name:'Save place'}))
     expect(JSON.parse(localStorage.getItem('masr-guide-saved-places-v3'))).toHaveLength(1)

@@ -3,8 +3,8 @@ import { PHOTO_FILES, LANDMARK_MEDIA, DESTINATION_MEDIA, LANDMARK_FRAMING, getLa
 
 describe('landmark photo accuracy', () => {
   it('gives each curated attraction its own real distinct licensed-image file', () => {
-    expect(Object.keys(PHOTO_FILES)).toHaveLength(50)
-    expect(new Set(Object.values(PHOTO_FILES)).size).toBe(50)
+    expect(Object.keys(PHOTO_FILES)).toHaveLength(52)
+    expect(new Set(Object.values(PHOTO_FILES)).size).toBe(52)
     for (const [id, filename] of Object.entries(PHOTO_FILES)) {
       expect(id).toBeTruthy()
       expect(filename).toMatch(/\.(?:jpe?g|png)$/i)

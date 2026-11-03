@@ -2,19 +2,20 @@ import React, { useState } from 'react'
 import { ArrowRight, ChevronDown, ChevronRight, Bookmark, BookmarkCheck, Clock3, Compass, ExternalLink, Landmark, MapPin, Search } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
+import { orderCategoryPlaces } from '../categoryFilters'
 
 const ALL = '__all__'
 
-export default function Explore({ places, cities, interests, highlight, setHighlight, askQuestion, savedIds = [], toggleSaved = () => {}, initialInterest = null }) {
+export default function Explore({ places, cities, interests, highlight, setHighlight, askQuestion, openDetails, savedIds = [], toggleSaved = () => {}, initialInterest = null }) {
   const { t, lang, placeName, placeSummary, cityName, category, interestName, duration } = useI18n()
   const [city, setCity] = useState(ALL)
   const [search, setSearch] = useState('')
   const [interest, setInterest] = useState(initialInterest || ALL)
   const needle = search.trim().toLowerCase()
-  const visible = places.filter(p =>
+  const visible = orderCategoryPlaces(places.filter(p =>
     (city === ALL || p.city === city) &&
     (interest === ALL || p.tags.includes(interest)) &&
-    [p.name, p.name_ar, p.city, cityName(p.city), p.description, p.summary_ar].filter(Boolean).join(' ').toLowerCase().includes(needle))
+    [p.name, p.name_ar, p.city, cityName(p.city), p.description, p.summary_ar].filter(Boolean).join(' ').toLowerCase().includes(needle)), 'heritage')
   const current = visible.find(p => p.id === highlight?.id) || visible[0] || null
   return (
     <main className="page-wrap container explore-page">
@@ -72,6 +73,7 @@ export default function Explore({ places, cities, interests, highlight, setHighl
               )}
               <div className="tag-list">{current.tags.map(tag => <span key={tag}>{interestName(tag)}</span>)}</div>
               <div className="detail-actions">
+                <button type="button" className="btn secondary" onClick={() => openDetails(current)}>{lang === 'ar' ? 'صفحة المكان' : 'View details'} <ArrowRight size={16} /></button>
                 <button type="button" className="v3-save-btn" aria-pressed={savedIds.includes(current.id)} onClick={() => toggleSaved(current.id)}>{savedIds.includes(current.id) ? <BookmarkCheck size={17}/> : <Bookmark size={17}/>} {t(savedIds.includes(current.id) ? 'saved.remove' : 'saved.add')}</button>
                 <button className="btn primary dark" onClick={() => askQuestion(t('explore.askQ', { name: placeName(current), city: cityName(current.city) }))}>{t('explore.askAi')} <ArrowRight size={16} /></button>
                 <a href={current.source_url} target="_blank" rel="noopener noreferrer" className="source-link">{t('explore.ref')} <ExternalLink size={15} /></a>

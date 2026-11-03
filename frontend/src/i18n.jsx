@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { MESSAGES } from './messages'
+import { languageForCountry, lookupVisitorCountry, VISITOR_COUNTRY_KEY } from './visitorLocale'
 
 const STORAGE_KEY = 'masr-guide-lang'
 const I18nContext = createContext(null)
@@ -13,11 +14,32 @@ function initialLang() {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved === 'ar' || saved === 'en') return saved
   } catch { /* storage may be disabled */ }
+  try {
+    const cached = languageForCountry(sessionStorage.getItem(VISITOR_COUNTRY_KEY))
+    if (cached) return cached
+  } catch { /* storage may be disabled */ }
   return typeof navigator !== 'undefined' && /^ar/i.test(navigator.language || '') ? 'ar' : 'en'
 }
 
 export function I18nProvider({ children, initial, cityNamesAr = {} }) {
   const [lang, setLangState] = useState(initial || initialLang)
+  useEffect(() => {
+    if (initial) return
+    try {
+      if (['ar', 'en'].includes(localStorage.getItem(STORAGE_KEY)) || languageForCountry(sessionStorage.getItem(VISITOR_COUNTRY_KEY))) return
+    } catch { /* still try the lookup when storage is unavailable */ }
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3000)
+    lookupVisitorCountry(controller.signal).then(country => {
+      if (!country || controller.signal.aborted) return
+      try {
+        sessionStorage.setItem(VISITOR_COUNTRY_KEY, country)
+        if (['ar', 'en'].includes(localStorage.getItem(STORAGE_KEY))) return
+      } catch { /* storage may be disabled */ }
+      setLangState(languageForCountry(country))
+    }).catch(() => { /* browser language remains the fallback */ }).finally(() => clearTimeout(timer))
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [initial])
   useEffect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
