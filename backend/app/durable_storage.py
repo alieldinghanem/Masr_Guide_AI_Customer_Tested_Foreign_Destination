@@ -20,7 +20,7 @@ class _Row(dict):
 
 
 def _row_factory(cursor):
-    names = [column.name for column in cursor.description]
+    names = [column.name for column in (cursor.description or ())]
     return lambda values: _Row(names, values)
 
 
