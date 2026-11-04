@@ -18,6 +18,7 @@ function restoredConsultation() {
 
 const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
 const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
+const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
 export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
@@ -37,7 +38,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
     if (log) log.scrollTop = log.scrollHeight
   }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
-  const serviceState = mode === 'provider-error' ? 'error' : AI_ACTIVE_MODES.has(mode) ? 'ai' : 'local'
+  const serviceState = mode === 'provider-error' ? 'error' : AI_ACTIVE_MODES.has(mode) ? 'ai' : AI_CONFIGURED_MODES.has(mode) ? 'configured' : 'local'
   const answerArabic = language === 'Arabic'
   const answerCity = city => answerArabic ? cityNameAr(city) : city
 

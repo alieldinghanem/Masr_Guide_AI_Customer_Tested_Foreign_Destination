@@ -2,34 +2,15 @@
 
 ## ما تحقق على الموقع المنشور
 
-- `/api/health` يعيد `registration_enabled: false`.
-- `/api/ratings` يعيد `temporary_storage: true`؛ لا توجد تقييمات محفوظة حاليًا في هذه النسخة.
-- Render يعمل بخدمة مجانية، وملفا SQLite للحسابات والتقييمات في `/app/data` داخل نظام ملفات مؤقت. فتح التسجيل بتغيير متغير البيئة وحده سيعرّض بيانات الزوار للفقد عند إعادة النشر.
+- خدمة Render الحالية ما زالت على خطة **Free**. رُبطت بقاعدة Neon PostgreSQL مجانية في Oregon لحسابات الزوار والتقييمات والتعليقات والمفضلة. كتالوج الأماكن فقط يبقى SQLite محليًا ويُعاد بناؤه من الكود.
+- `/api/health` يعيد `registration_enabled: true`، و`/api/ratings` يعيد `temporary_storage: false`، و`/api/ready` يعيد `ready`.
+- نجح [CI على commit 955ddb8](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/runs/41847587999): **433 اختبارًا للباك إند**، منها اختبار PostgreSQL حقيقي، واختبارات الواجهة والمتصفح. على الموقع المنشور أُنشئ حساب تجريبي وتقييم وتعليق ومفضلة، ثم أُعيد نشر الخدمة ونجح تسجيل الدخول وبقيت البيانات. حُذف الحساب التجريبي واختفى التعليق بعدها.
 
-## مسار تفعيل الحسابات والتقييمات الدائمة
+## حدود الحل المجاني
 
-التغيير المطلوب في خدمة Render الحالية هو **ترقية مدفوعة** وإضافة قرص دائم. وافق صاحب المشروع على الخطة أدناه؛ التنفيذ ينتظر الوصول إلى إعدادات **الخدمة المنشورة نفسها** والتحقق من هويتها، لأن اسم الخدمة في `render.yaml` قد لا يطابق اسم الرابط المنشور:
+متغير `NEON_DATABASE_URL` محفوظ كسر داخل إعدادات خدمة Render، وليس في المستودع. فُعّل `MASR_DURABLE_STORAGE_CONFIRMED=true` بعد اختبار بقاء البيانات عبر إعادة نشر فعلية. لا توجد بطاقة دفع في مساحة Render، ولم تتم ترقية الخدمة. قاعدة Neon ظاهرة بخطة Free في لوحتها.
 
-```yaml
-plan: starter
-disk:
-  name: masr-data
-  mountPath: /app/data
-  sizeGB: 5
-```
-
-ملفا التطبيق مضبوطان بالفعل على `/app/data/traveler.sqlite3` و`/app/data/tourism.db`. بعد تركيب القرص، تحقق من بقاء الملفين بعد إعادة نشر تجريبية. خذ نسختين احتياطيتين باستخدام أداة موجودة في صورة Docker، وانقلهما إلى مكان خاص **خارج الخدمة والقرص نفسه**:
-
-```bash
-python /app/scripts/storage_backup.py backup --output /tmp/masr-private-backups
-python /app/scripts/storage_backup.py backup-reviews --output /tmp/masr-private-backups
-python /app/scripts/storage_backup.py verify --file /tmp/masr-private-backups/traveler-....sqlite3
-python /app/scripts/storage_backup.py verify-reviews --file /tmp/masr-private-backups/reviews-....sqlite3
-```
-
-اختبر استعادة النسختين في بيئة منفصلة. بعدها فقط اضبط `MASR_DURABLE_STORAGE_CONFIRMED=true` على Render. يجب أن تصبح استجابة `/api/health` بقيمة `registration_enabled: true`، واستجابة `/api/ratings` بقيمة `temporary_storage: false`. سجّل حسابًا تجريبيًا، أضف تقييمًا وتعليقًا، أعد نشر الخدمة، ثم تأكد من نجاح تسجيل الدخول وبقاء التقييم والتعليق. احذف الحساب التجريبي بعد الاختبار.
-
-Render لا يتيح الأقراص الدائمة للخدمة المجانية. قاعدة Render Postgres المجانية تنتهي بعد 30 يومًا، كما أن التطبيق الحالي يستخدم SQLite؛ لذلك ليست بديلًا دائمًا مباشرًا. راجع [وثائق أقراص Render](https://render.com/docs/disks) و[حدود الخدمة المجانية](https://render.com/docs/free) والتكلفة الحالية قبل الترقية.
+الخدمة المجانية على Render قد تتوقف بعد الخمول وتفقد الملفات المحلية عند إعادة النشر، ولذلك لا تُحفظ بيانات الزوار في SQLite المحلي. قاعدة Render Postgres المجانية تنتهي بعد 30 يومًا؛ استخدمنا Neon بدلها. لدى مشروع Neon المجاني نافذة استعادة ظاهرة في اللوحة مدتها 6 ساعات، ولم يُختبر بعد نسخ احتياطي خارجي أو استعادته. حدود السعة والاستخدام والسياسات المجانية قد تتغير؛ راجع [Render Free](https://render.com/docs/free) و[Neon Free](https://neon.com/pricing) قبل الاعتماد التجاري الواسع.
 
 ## اللغة حسب بلد الزائر
 

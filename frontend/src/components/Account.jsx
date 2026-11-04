@@ -181,7 +181,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
 
   return (
     <main className="page-wrap container account-page">
-      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك. بيانات النسخة التجريبية قد تختفي بعد إعادة تشغيل الموقع.' : 'Save Egypt itineraries and share reviews from your account. Portfolio/demo hosting can erase stored data on restart; never rely on this preview for important travel plans.'}</p></div>
+      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك.' : 'Save Egypt itineraries and share reviews from your account.'}{!registrationEnabled && ` ${ar ? 'التخزين مؤقت في هذه النسخة، وقد تختفي البيانات بعد إعادة تشغيل الموقع.' : 'Storage is temporary in this preview, and data may disappear after a restart.'}`}</p></div>
       {error && <p role="alert" className="account-error">{error}</p>}
       {!session ? (
         <form className="account-panel" onSubmit={signIn}>

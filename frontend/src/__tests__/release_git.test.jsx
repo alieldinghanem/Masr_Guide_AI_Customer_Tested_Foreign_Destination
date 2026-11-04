@@ -9,12 +9,33 @@ import { MESSAGES } from '../messages'
 const boot = async opts => {
   const calls = mockApi(opts)
   localStorage.setItem('masr-guide-lang', 'en')
+  window.location.hash = '#/home'
   render(<App />)
   await waitFor(() => expect(calls.some(c => c.path === '/places')).toBe(true))
   return { calls, user: userEvent.setup() }
 }
 
 describe('GitHub release fixes', () => {
+  it('shows a configured AI connection as unverified until a model replies', async () => {
+    await boot({ guideMode: 'gemini-configured' })
+    expect(await screen.findByText(MESSAGES.en['guide.availability.configured'])).toBeInTheDocument()
+    expect(screen.queryByText(MESSAGES.en['guide.availability.local'])).not.toBeInTheDocument()
+  })
+
+  it('matches account storage guidance and registration to the backend state', async () => {
+    const { user } = await boot({ registrationEnabled: true })
+    await user.click(screen.getAllByRole('button', { name: /My account/i })[0])
+    expect(await screen.findByRole('button', { name: 'Create an account' })).toBeInTheDocument()
+    expect(screen.queryByText(/storage is temporary/i)).not.toBeInTheDocument()
+  })
+
+  it('warns when account storage is temporary and registration is unavailable', async () => {
+    const { user } = await boot({ registrationEnabled: false })
+    await user.click(screen.getAllByRole('button', { name: /My account/i })[0])
+    expect(await screen.findByText(/storage is temporary in this preview/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create an account' })).not.toBeInTheDocument()
+  })
+
   it('keeps offline chat notices visitor-facing in English and Arabic', async () => {
     for (const lang of ['en', 'ar']) {
       for (const mode of ['offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'unsupported-destination', 'trip-saved', 'needs-authentication']) {

@@ -4,6 +4,7 @@ No paid account, provider SDK, or outgoing request is necessary to run the demo.
 The free API key is optional. Do not log keys, provider errors or prompt contents.
 """
 import json
+import logging
 import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -11,6 +12,8 @@ from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from .conversation_router import redact_payment_data
+
+logger = logging.getLogger(__name__)
 
 
 def gemini_key():
@@ -26,7 +29,7 @@ def _require_complete_candidate(candidate: dict) -> None:
     """
     reason = candidate.get('finishReason')
     if reason is not None and reason != 'STOP':
-        raise ValueError('Gemini did not complete the response')
+        raise ValueError(f'Gemini completion status: {reason}')
 
 
 def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tokens: int = 1300, history=None) -> str:
@@ -93,6 +96,9 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
         return text
     except (HTTPError, URLError, OSError, ValueError, KeyError, IndexError) as exc:
         # Never disclose API key or provider response body to the browser.
+        logger.warning('Gemini generation failed: model=%s type=%s status=%s completion=%s',
+                       model, type(exc).__name__, getattr(exc, 'code', None),
+                       str(exc) if isinstance(exc, ValueError) else None)
         raise HTTPException(502, 'Gemini is currently unavailable. Check your API key, free-tier quota and connectivity.') from exc
 
 
