@@ -3,6 +3,7 @@ import { Compass, ShieldCheck } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
 import RatingWidget from './RatingWidget'
+import VisitorComments from './VisitorComments'
 
 export default function TravelerReviews({ onExplore, places = [], ratings = {}, onRate, temporaryStorage = false }) {
   const { t, lang, placeName } = useI18n()
@@ -30,7 +31,7 @@ export default function TravelerReviews({ onExplore, places = [], ratings = {}, 
           <optgroup label={t('reviews.places')}>{catalog.map(item => <option value={item.id} key={item.id}>{item.label}</option>)}</optgroup>
         </select>
       </label>
-      {selected && <RatingWidget targetId={selected.id} name={selected.label} summary={ratings[selected.id]} onRate={onRate} />}
+      {selected && <><RatingWidget targetId={selected.id} name={selected.label} summary={ratings[selected.id]} onRate={onRate} /><VisitorComments targetId={selected.id} /></>}
     </section>
     <section className="reviews-rank" aria-labelledby="reviews-rank-title">
       <h2 id="reviews-rank-title">{t('reviews.rank.title')}</h2>

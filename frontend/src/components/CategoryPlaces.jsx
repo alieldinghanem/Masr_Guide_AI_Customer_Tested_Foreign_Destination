@@ -12,7 +12,7 @@ import { sortCoastalGuides } from '../ratingOrder'
 /** Separate, data-driven collections. Results are sourced from /api/places,
  * never represented as live tickets, prices or bookable inventory.
  */
-export default function CategoryPlaces({ type, places = [], openPlace, askQuestion, ratings = {}, onRate }) {
+export default function CategoryPlaces({ type, places = [], openDetails, openPlace, askQuestion, ratings = {}, onRate }) {
   const { lang, placeName, cityName } = useI18n()
   const ar = lang === 'ar'
   const coast = type === 'coast'
@@ -32,13 +32,13 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
       .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), ratings, sort) : []
   const placeCards = items => <div className="mg-category-grid">
     {items.map(place => <article className="mg-place-card" key={place.id}>
-      <div className="mg-place-photo" aria-hidden="true" style={getLandmarkFraming(place.id)}><EditorialImage src={LANDMARK_MEDIA[place.id]} alt="" className="mg-place-img" /><span className="mg-place-symbol">{coast && isSwimmingBeach(place) ? <Waves size={20} /> : <Landmark size={20} />}</span></div>
+      <button type="button" className="mg-place-photo" style={getLandmarkFraming(place.id)} aria-label={`${ar ? 'تفاصيل أكثر عن' : 'More details about'} ${placeName(place)}`} onClick={() => (openDetails || openPlace)?.(place)}><EditorialImage src={LANDMARK_MEDIA[place.id]} alt="" className="mg-place-img" /><span className="mg-place-symbol" aria-hidden="true">{coast && isSwimmingBeach(place) ? <Waves size={20} /> : <Landmark size={20} />}</span><span className="mg-image-more" aria-hidden="true">{ar ? 'تفاصيل أكثر' : 'More details'} <ArrowUpRight size={15} /></span></button>
       <div className="mg-place-content">
         <div className="mg-place-location"><MapPin size={13}/>{cityName(place.city)}</div>
         <h2>{placeName(place)}</h2>
         <p>{ar ? (place.summary_ar || place.description) : place.description}</p>
         <RatingWidget targetId={place.id} name={placeName(place)} summary={ratings[place.id]} onRate={onRate} />
-        <div className="mg-place-actions"><button type="button" onClick={() => openPlace(place)}>{ar ? 'تفاصيل المكان' : 'View details'} <ArrowUpRight size={15}/></button><button type="button" title={ar ? 'اسأل المساعد' : 'Ask AI'} aria-label={`${ar ? 'اسأل المساعد عن' : 'Ask AI about'} ${placeName(place)}`} onClick={() => askQuestion(ar ? `احكيلي عن ${placeName(place)} وإزاي أضيفه لرحلتي؟` : `Tell me about ${place.name} and how to add it to my itinerary.`)}><MessageCircle size={17}/></button></div>
+        <div className="mg-place-actions"><button type="button" onClick={() => (openDetails || openPlace)?.(place)}>{ar ? 'تفاصيل المكان' : 'View details'} <ArrowUpRight size={15}/></button><button type="button" title={ar ? 'اسأل المساعد' : 'Ask AI'} aria-label={`${ar ? 'اسأل المساعد عن' : 'Ask AI about'} ${placeName(place)}`} onClick={() => askQuestion(ar ? `احكيلي عن ${placeName(place)} وإزاي أضيفه لرحلتي؟` : `Tell me about ${place.name} and how to add it to my itinerary.`)}><MessageCircle size={17}/></button></div>
         {PHOTO_CREDITS[place.id] && <a className="mg-photo-credit" href={PHOTO_CREDITS[place.id].url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {PHOTO_CREDITS[place.id].author} · {PHOTO_CREDITS[place.id].license}</a>}
       </div>
     </article>)}

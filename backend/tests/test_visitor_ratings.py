@@ -56,3 +56,34 @@ def test_ratings_survive_catalog_rebuild_and_expose_temporary_storage(client):
     listing = client.get('/api/ratings').json()
     assert listing['ratings']['ben-ezra-synagogue'] == {'average': 5.0, 'count': 1}
     assert listing['temporary_storage'] is True
+
+
+def test_visitor_comments_are_visible_editable_and_survive_catalog_rebuild(client):
+    from app.database import initialize
+    voter = str(uuid4())
+    target = '/api/ratings/giza-pyramids/comments'
+    first = client.post(target, json={'visitor_id': voter, 'name': 'Traveler', 'comment': 'The pyramids were memorable.'})
+    assert first.status_code == 200
+    assert first.json()['count'] == 1
+    assert first.json()['comments'][0]['comment'] == 'The pyramids were memorable.'
+    edited = client.post(target, json={'visitor_id': voter, 'name': 'Traveler', 'comment': 'Go early in the morning.'})
+    assert edited.status_code == 200
+    assert edited.json()['count'] == 1
+    assert edited.json()['comments'][0]['comment'] == 'Go early in the morning.'
+    initialize()
+    listing = client.get(target)
+    assert listing.status_code == 200
+    assert listing.json()['count'] == 1
+    assert listing.json()['temporary_storage'] is True
+    assert 'voter_hash' not in str(listing.json())
+
+
+def test_comments_reject_links_bad_text_and_unknown_places(client):
+    voter = str(uuid4())
+    target = '/api/ratings/coast:marsa-alam/comments'
+    valid = client.post(target, json={'visitor_id': voter, 'name': 'Guest', 'comment': 'Lovely coastline.'})
+    assert valid.status_code == 200
+    for comment in ('https://spam.example', 'mail me a@b.com', '    '):
+        assert client.post(target, json={'visitor_id': voter, 'name': 'Guest', 'comment': comment}).status_code == 422
+    assert client.post(target, json={'visitor_id': voter, 'name': '   A  ', 'comment': 'Lovely coastline.'}).status_code == 422
+    assert client.get('/api/ratings/no-such-place/comments').status_code == 404

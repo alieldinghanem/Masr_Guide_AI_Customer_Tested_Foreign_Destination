@@ -40,6 +40,7 @@ export const planFor = (body, extra = {}) => ({
 export function mockApi({ chat, chatStatus = 200, failNetwork = false } = {}) {
   const calls = []
   const ratingVotes = new Map()
+  const visitorComments = new Map()
   vi.stubGlobal('fetch', vi.fn(async (url, opts = {}) => {
     if (failNetwork) throw new TypeError('Failed to fetch')
     const path = String(url).replace(/^\/api/, '')
@@ -53,6 +54,15 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false } = {}) {
       const ratings = {}
       for (const [target, votes] of ratingVotes) ratings[target] = { average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size }
       return reply({ ratings, temporary_storage: true })
+    }
+    if (/^\/ratings\/[^/]+\/comments$/.test(path)) {
+      const target = decodeURIComponent(path.slice('/ratings/'.length, -'/comments'.length))
+      const comments = visitorComments.get(target) || new Map()
+      if (opts.method === 'POST') {
+        comments.set(body.visitor_id, { name: body.name, comment: body.comment, updated_at: '2026-11-04 00:00:00' })
+        visitorComments.set(target, comments)
+      }
+      return reply({ comments: [...comments.values()], count: comments.size, temporary_storage: true })
     }
     if (path.startsWith('/ratings/') && opts.method === 'POST') {
       const target = decodeURIComponent(path.slice('/ratings/'.length))

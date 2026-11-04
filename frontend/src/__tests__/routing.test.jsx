@@ -66,7 +66,7 @@ describe('hash routing', () => {
 })
 
 describe('Discover state', () => {
-  it('a place opened from elsewhere is visible even if Discover had a conflicting filter', async () => {
+  it('opens a place page from heritage even if Discover has a conflicting filter', async () => {
     const user = await boot()
     await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Destinations' }))
     await user.click((await screen.findAllByRole('button', { name: 'Explore places' }))[0])
@@ -75,8 +75,10 @@ describe('Discover state', () => {
     await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI guide' }))
     await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Historical places' }))
     await user.click(within((await screen.findByRole('heading', { name: 'Karnak Temple Complex' })).closest('.mg-place-card')).getByRole('button', { name: /View details/ }))
-    expect(await screen.findByRole('heading', { level: 2, name: 'Karnak Temple Complex' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Search places')).toHaveValue('')
+    expect(window.location.hash).toBe('#/place/karnak')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Karnak Temple Complex' })).toBeInTheDocument()
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Historical places' }))
+    expect(window.location.hash).toBe('#/heritage')
   })
 
   it('keeps the user filters when selecting a place inside Discover', async () => {

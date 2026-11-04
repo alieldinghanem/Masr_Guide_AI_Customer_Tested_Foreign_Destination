@@ -4,6 +4,7 @@ import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
 import { getReligiousGroup, orderCategoryPlaces } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
+import { EditorialImage, LANDMARK_MEDIA, getLandmarkFraming } from './EditorialMedia'
 
 const ALL = '__all__'
 
@@ -63,6 +64,7 @@ export default function Explore({ places, cities, interests, highlight, setHighl
         </div>
         <aside className="place-detail">
           {current ? <>
+            {LANDMARK_MEDIA[current.id] && <button type="button" className="detail-photo" style={getLandmarkFraming(current.id)} onClick={() => openDetails(current)} aria-label={`${lang === 'ar' ? 'تفاصيل أكثر عن' : 'More details about'} ${placeName(current)}`}><EditorialImage src={LANDMARK_MEDIA[current.id]} alt="" className="mg-place-img" /><span>{lang === 'ar' ? 'تفاصيل أكثر عن المكان' : 'More about this place'} <ArrowRight size={16} /></span></button>}
             <div className="detail-map">
               <iframe key={current.id} title={t('explore.map', { name: placeName(current) })} src={getMapUrl(current)} loading="lazy" referrerPolicy="no-referrer" />
             </div>

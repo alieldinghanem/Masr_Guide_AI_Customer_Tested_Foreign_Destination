@@ -142,7 +142,7 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 Docker Compose uses the persistent local named volume `masr_data` for SQLite. For Render hosting, `render.yaml` offers a simple **portfolio preview** service using GitHub + Docker. **Free Render instances use ephemeral storage**; account records, staff edits, trip saves, and referral click counts can disappear on restart/redeploy. Do **not** use the free configuration as a durable production service with real user data. Upgrade to paid persistent disk and backup procedures or migrate to a managed database before onboarding real customers. See `docs/DEPLOY_GITHUB_RENDER_AR.md`.
 
-Visitor star ratings use the tourism SQLite database. One browser can revise its vote for a place or coastal destination; votes are anonymous and **not verified visits**. They persist across normal page reloads but can disappear when the free Render instance is recreated or redeployed. The site labels this limitation. Before using ratings as a durable public feature, provide persistent storage and backups, then verify recovery.
+Visitor star ratings and comments use the tourism SQLite database. One browser can revise its vote and comment for a place or coastal destination; submissions are anonymous and **not verified visits**. Comments reject links and email addresses and public submissions have a basic per-peer rate limit. They persist across normal page reloads but can disappear when the free Render instance is recreated or redeployed. The site labels this limitation. Before using them as a durable public feature, provide persistent storage, backups, and a moderation workflow, then verify recovery.
 
 ## Architecture
 
