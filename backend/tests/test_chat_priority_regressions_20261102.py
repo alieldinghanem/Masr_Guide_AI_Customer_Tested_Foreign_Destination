@@ -34,6 +34,35 @@ def test_explicit_arabic_total_extension_preserves_every_other_city(tmp_path, mo
     assert _allocation(reply) == {'Cairo': 4, 'Luxor': 2, 'Hurghada': 2}
 
 
+def test_total_extension_with_protected_cities_targets_only_named_city(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    original = consult_travel(ConsultRequest(
+        message='رحلة ٧ أيام: ٣ أيام في القاهرة، ويومين الأقصر، ويومين الغردقة',
+        language='Arabic',
+    ))
+    for message, language in (
+        ('ممكن تزود إجمالي الرحلة يومين في القاهرة من غير تغيير الأقصر والغردقة؟', 'Arabic'),
+        ('Increase total trip duration by 2 days in Cairo without changing Luxor or Hurghada.', 'English'),
+        ('Increase total trip duration by 2 days in Cairo and keep Luxor and Hurghada unchanged.', 'English'),
+    ):
+        reply = consult_travel(ConsultRequest(
+            message=message, language=language, trip_state=original['trip_state'],
+        ))
+        assert reply['mode'] == 'local-planner'
+        assert reply['trip_state']['days'] == 9
+        assert _allocation(reply) == {'Cairo': 5, 'Luxor': 2, 'Hurghada': 2}
+
+    protected_only = consult_travel(ConsultRequest(
+        message='زود إجمالي الرحلة يومين من غير تغيير القاهرة والأقصر والغردقة',
+        language='Arabic', trip_state=original['trip_state'],
+    ))
+    assert protected_only['mode'] == 'needs-clarification'
+    assert protected_only['trip_state'] == original['trip_state']
+
+
 def test_hyphenated_english_family_trip_keeps_context_on_replacement(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)

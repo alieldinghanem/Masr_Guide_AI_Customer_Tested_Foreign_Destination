@@ -294,9 +294,15 @@ def _relative_trip_extension(message: str) -> int | None:
 def _extension_city_from_context(request, message: str, state: dict, available: set[str]) -> str | None:
     """Resolve the city for a clarified extension from literal chat context."""
     present = {city for phase in state['phases'] for city in phase['cities']}
-    current = [city for city in mentioned_cities(message, available) if city in present]
+    # Cities named after "without/من غير" are protected from the edit, not
+    # candidates to receive the extra days. Never count them as targets.
+    target_clause = re.split(r'\bwithout\b|\band\s+keep\b|من\s+غير|بدون|وخلي\s+(?:أيام\s+|ايام\s+)?(?=ال)',
+                             message, maxsplit=1, flags=re.I)[0]
+    current = [city for city in mentioned_cities(target_clause, available) if city in present]
     if len(current) == 1:
         return current[0]
+    if len(current) > 1:
+        return None
     for turn in reversed(request.history):
         if turn.role != 'user':
             continue

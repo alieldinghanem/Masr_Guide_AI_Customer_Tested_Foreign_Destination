@@ -102,3 +102,19 @@ jobs:
       - name: Show server error log on failure
         if: failure()
         run: cat /tmp/masr_browser_server.log || true
+
+  geo_live:
+    name: Live country-language check (manual only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Check the deployed site's locale from this runner's real country
+        run: python scripts/qa_live_country_language.py
