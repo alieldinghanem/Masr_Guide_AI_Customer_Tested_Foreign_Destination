@@ -2,7 +2,7 @@ import React from 'react'
 import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, MapPin, MessageCircle } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
-import { EditorialImage, LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming } from './EditorialMedia'
+import { EditorialImage, LANDMARK_MEDIA, PhotoCredit, getLandmarkFraming } from './EditorialMedia'
 import RatingWidget from './RatingWidget'
 import VisitorComments from './VisitorComments'
 
@@ -17,7 +17,7 @@ export default function PlaceDetails({ place, onBack, backLabel, askQuestion, sa
     <div className="place-full-hero">
       <div className="place-full-photo" style={getLandmarkFraming(place.id)}>{media ? <EditorialImage src={media} alt={title} className="mg-place-img" /> : <div className="place-no-photo">{ar ? 'لا توجد صورة موثقة لهذا المكان' : 'No verified photo available'}</div>}</div>
       <div className="place-full-intro"><span><MapPin size={16} aria-hidden="true" />{cityName(place.city)} · {category(place.category)}</span><h1>{title}</h1><p>{placeSummary(place)}</p>
-        {PHOTO_CREDITS[place.id] && <a className="mg-photo-credit" href={PHOTO_CREDITS[place.id].url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {PHOTO_CREDITS[place.id].author} · {PHOTO_CREDITS[place.id].license}</a>}
+        <PhotoCredit id={place.id} ar={ar} />
         <div className="place-full-actions"><button type="button" aria-pressed={saved} onClick={() => toggleSaved(place.id)}>{saved ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}{ar ? (saved ? 'إزالة من المحفوظات' : 'احفظ المكان') : (saved ? 'Remove saved place' : 'Save place')}</button><button type="button" onClick={() => askQuestion(ar ? `احكيلي عن ${title} وإزاي أضيفه لرحلتي؟` : `Tell me about ${title} and how to add it to my itinerary.`)}><MessageCircle size={17} />{ar ? 'اسأل المرشد' : 'Ask AI'}</button></div>
       </div>
     </div>

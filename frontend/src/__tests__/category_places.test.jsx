@@ -106,6 +106,6 @@ describe('category presentation', () => {
       'giza-pyramids', 'grand-egyptian-museum', 'bab-zuwayla', 'sultan-hassan-mosque', 'hanging-church', 'ben-ezra-synagogue',
     ])
     expect([...document.querySelectorAll('.mg-religious-group h3')].map(el => el.textContent)).toEqual(['المساجد', 'الكنائس والأديرة', 'المعابد اليهودية'])
-    expect(screen.getAllByRole('link', { name: /الصورة:/ })).toHaveLength(3)
+    expect(screen.getAllByRole('link', { name: /الصورة:/ })).toHaveLength(6)
   })
 })

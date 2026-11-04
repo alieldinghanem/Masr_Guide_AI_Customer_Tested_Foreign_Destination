@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ArrowUpRight, ExternalLink, Search, Landmark, Waves, MapPin, MessageCircle } from 'lucide-react'
 import { useI18n } from '../i18n'
-import { LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming, EditorialImage } from './EditorialMedia'
+import { LANDMARK_MEDIA, getLandmarkFraming, EditorialImage, PhotoCredit } from './EditorialMedia'
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
 import { COASTAL_MEDIA } from '../coastalMedia'
 import { getReligiousGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, RELIGIOUS_GROUP_ORDER } from '../categoryFilters'
@@ -40,7 +40,7 @@ export default function CategoryPlaces({ type, places = [], openDetails, openPla
         <p>{ar ? (place.summary_ar || place.description) : place.description}</p>
         <RatingWidget targetId={place.id} name={placeName(place)} summary={ratings[place.id]} yourRating={myRatings[place.id]} onRate={onRate} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} />
         <div className="mg-place-actions"><button type="button" onClick={() => (openDetails || openPlace)?.(place)}>{ar ? 'تفاصيل المكان' : 'View details'} <ArrowUpRight size={15}/></button><button type="button" title={ar ? 'اسأل المساعد' : 'Ask AI'} aria-label={`${ar ? 'اسأل المساعد عن' : 'Ask AI about'} ${placeName(place)}`} onClick={() => askQuestion(ar ? `احكيلي عن ${placeName(place)} وإزاي أضيفه لرحلتي؟` : `Tell me about ${place.name} and how to add it to my itinerary.`)}><MessageCircle size={17}/></button></div>
-        {PHOTO_CREDITS[place.id] && <a className="mg-photo-credit" href={PHOTO_CREDITS[place.id].url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {PHOTO_CREDITS[place.id].author} · {PHOTO_CREDITS[place.id].license}</a>}
+        <PhotoCredit id={place.id} ar={ar} />
       </div>
     </article>)}
   </div>

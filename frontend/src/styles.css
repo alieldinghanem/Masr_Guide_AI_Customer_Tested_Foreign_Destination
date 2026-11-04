@@ -817,7 +817,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .mg-coast-group>p { margin:0 0 1rem; color:var(--mg-muted); line-height:1.6; }
 @media(max-width:850px) { .mg-coastal-guides-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:620px) { .mg-coastal-guides-grid { grid-template-columns:minmax(0,1fr); } }
-.mg-photo-credit { display:inline-block; width:fit-content; margin-top:10px; color:#715e52; font-size:11px; line-height:1.5; text-decoration:underline; text-underline-offset:2px; }
+.mg-photo-credit { display:inline-block; width:fit-content; margin-top:10px; color:#715e52; font-size:11px; line-height:1.5; }
+.mg-photo-credit a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
 
 .nav-discover { position:relative; }
 .nav-discover-submenu { display:none; position:absolute; z-index:50; top:100%; inset-inline-start:0; min-width:205px; padding:8px; border:1px solid var(--mg-line); border-radius:10px; background:#fff; box-shadow:0 14px 30px #2b180e1c; }

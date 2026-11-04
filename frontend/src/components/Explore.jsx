@@ -4,7 +4,7 @@ import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
 import { getExploreGroup, orderExplorePlaces } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
-import { EditorialImage, LANDMARK_MEDIA, LANDMARK_THUMBNAILS, getLandmarkFraming } from './EditorialMedia'
+import { EditorialImage, LANDMARK_MEDIA, LANDMARK_THUMBNAILS, PhotoCredit, getLandmarkFraming } from './EditorialMedia'
 
 const ALL = '__all__'
 
@@ -72,6 +72,7 @@ export default function Explore({ places, cities, interests, highlight, setHighl
             <div className="detail-content">
               <div className="detail-meta"><MapPin size={15} />{cityName(current.city)} <span className="meta-separator">/</span> {category(current.category)}</div>
               <h2>{placeName(current)}</h2>
+              <PhotoCredit id={current.id} ar={lang === 'ar'} />
               <p>{placeSummary(current)}</p>
               {lang === 'en' && current.details && <p className="detail-more">{current.details}</p>}
               {(lang === 'ar' ? current.tip_ar : current.tip) && (

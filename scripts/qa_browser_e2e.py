@@ -154,6 +154,14 @@ def test_react(browser, label, width, height):
         expect(field).to_be_visible(timeout=15000)
         expect(page.locator('.place-row')).to_have_count(53)
         expect(page.locator('.place-row .place-mini img')).to_have_count(53)
+        if width > 780:
+            photo_sizes = page.locator('.place-row .place-mini img').evaluate_all("""async images =>
+              Promise.all(images.map(async image => {
+                image.loading = 'eager'
+                await image.decode()
+                return { source: image.getAttribute('src'), width: image.naturalWidth }
+              }))""")
+            assert len(photo_sizes) == 53 and all(photo['source'].startswith('/assets/places/') and photo['width'] >= 300 for photo in photo_sizes), 'Catalog thumbnails must load from bundled local files'
         assert page.locator('.mg-place-group-heading').all_text_contents() == [
             'History & museums', 'Beaches & sea', 'Nature, culture & more',
             'Historic mosques', 'Churches & monasteries', 'Synagogues',
@@ -289,7 +297,7 @@ def test_mobile_photo_layout(browser):
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'Horizontal scrolling'
         tulun = cards.filter(has_text='Mosque of Ahmad Ibn Tulun')
         expect(tulun.locator('img')).to_have_css('object-position', '50% 67%')
-        assert 'Mosque%20of%20Ibn%20Tulun%202019.jpg' in tulun.locator('img').get_attribute('src')
+        assert tulun.locator('img').get_attribute('src') == '/assets/places/ibn-tulun-mosque.jpg'
         page.locator('.lang-toggle').click()
         expect(page.locator('html')).to_have_attribute('dir', 'rtl')
         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'RTL overflow'

@@ -1,9 +1,10 @@
 import React from 'react'
+import PHOTO_CREDITS from './placePhotoCredits.json'
 
 // Every photographed attraction below has a unique Wikimedia Commons filename.
 // Do not substitute a city-wide image for a specific unrelated attraction.
-// Each Commons file page records the source and licence; new images with
-// required attribution have visible credit links on their place pages.
+// Local copies keep the catalog visible when Wikimedia is unavailable.
+// Each Commons file page records the source and license; place pages show credit.
 const commons = (file, width = 1000) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${width}`
 
 export const PHOTO_FILES = {
@@ -21,7 +22,7 @@ export const PHOTO_FILES = {
   "ben-ezra-synagogue": "Cairo - Coptic area - Ben Ezra Synagogue.JPG",
   "bab-zuwayla": "Cairo, bab zuweila 01.JPG",
   "museum-of-islamic-art": "Museum of Islamic Art Cairo DSCF7680.jpg",
-  "gayer-anderson-museum": "Gayer-Anderson Museum, Cairo 01.jpg",
+  "gayer-anderson-museum": "Gayer-Anderson Museum 0W163.jpg",
   "sultan-hassan-mosque": "Mosque-Madrassa of Sultan Hassan.jpg",
   "al-rifai-mosque": "Kairo Rifai Moschee BW 1.jpg",
   "manial-palace-museum": "Mohamed Ali's Palace, Manial, Cairo, Egypt.jpg",
@@ -111,26 +112,23 @@ export const getLandmarkFraming = id => {
 }
 
 export const LANDMARK_MEDIA = Object.fromEntries(
-  Object.entries(PHOTO_FILES).map(([id, filename]) => [id, commons(filename)])
+  Object.keys(PHOTO_FILES).map(id => [id, `/assets/places/${id}.jpg`])
 )
 
 export const LANDMARK_THUMBNAILS = Object.fromEntries(
-  Object.entries(PHOTO_FILES).map(([id, filename]) => [id, commons(filename, 240)])
+  Object.keys(PHOTO_FILES).map(id => [id, `/assets/places/${id}-thumb.jpg`])
 )
 
-export const PHOTO_CREDITS = {
-  'hanging-church': {
-    author: 'Radosław Botev', license: 'CC BY 3.0 PL',
-    url: 'https://commons.wikimedia.org/wiki/File:Hanging_Church_Cairo.jpg',
-  },
-  'ben-ezra-synagogue': {
-    author: 'herr müller', license: 'CC BY-SA 4.0',
-    url: 'https://commons.wikimedia.org/wiki/File:Cairo_-_Coptic_area_-_Ben_Ezra_Synagogue.JPG',
-  },
-  'bab-zuwayla': {
-    author: 'Sailko', license: 'CC BY 3.0',
-    url: 'https://commons.wikimedia.org/wiki/File:Cairo,_bab_zuweila_01.JPG',
-  },
+export { PHOTO_CREDITS }
+
+export function PhotoCredit({ id, ar }) {
+  const credit = PHOTO_CREDITS[id]
+  if (!credit) return null
+  return <span className="mg-photo-credit">
+    <a href={credit.url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {credit.author}</a>
+    {' · '}
+    {credit.licenseUrl ? <a href={credit.licenseUrl} target="_blank" rel="noopener noreferrer">{credit.license}</a> : credit.license}
+  </span>
 }
 
 // Cover photos are characteristic views of the named destination, not a shared
