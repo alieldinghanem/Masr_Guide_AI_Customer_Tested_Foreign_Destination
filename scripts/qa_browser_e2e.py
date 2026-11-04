@@ -55,6 +55,8 @@ def test_react(browser, label, width, height):
         # Current product navigation: chat is the homepage, not a marketing
         # landing page; historical and beach collections are independent.
         expect(page.locator('.mg-chat-home .chat-panel')).to_be_visible()
+        chat_box = page.locator('.mg-chat-home .chat-panel').bounding_box()
+        assert chat_box and abs(chat_box['x'] - (width - chat_box['width']) / 2) < 4, f'{label}: homepage chat is off center'
         if width <= 620:
             expect(page.locator('.mg-mobile-tabs')).to_be_visible()
             page.locator('.mobile-toggle').click()
