@@ -18,6 +18,7 @@ from pydantic import BaseModel, EmailStr, Field, ValidationError
 from .schemas import TripState
 from .database import get_place
 from .conversation_router import payment_sensitive
+from .durable_storage import configured as postgres_configured, connect_traveler
 
 router = APIRouter(prefix='/api', tags=['traveler-account'])
 # None means resolve configured storage lazily (after backend/.env is loaded).
@@ -31,7 +32,15 @@ def _db_path() -> Path:
 
 @contextmanager
 def _open():
-    """One SQLite transaction per operation; always release its file descriptor."""
+    """One transaction per operation; always release its connection."""
+    if _DB is None and postgres_configured():
+        conn = connect_traveler()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+        return
     db_path = _db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10)

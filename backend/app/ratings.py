@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .accounts import current_user
 from .database import connect, get_place
+from .durable_storage import configured as postgres_configured, connect_traveler
 
 router = APIRouter(prefix='/api/ratings', tags=['ratings'])
 
@@ -17,6 +18,10 @@ COASTAL_GUIDE_IDS = {
     'sharm-el-sheikh', 'north-coast-alamein', 'alexandria', 'marsa-matruh',
     'marsa-alam', 'hurghada', 'dahab', 'ain-sokhna', 'nuweiba', 'safaga',
 }
+
+
+def _connect_reviews():
+    return connect_traveler() if postgres_configured() else connect()
 
 
 class RatingVote(BaseModel):
@@ -38,7 +43,7 @@ class VisitorComment(BaseModel):
 
 
 def setup():
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         db.execute('''CREATE TABLE IF NOT EXISTS visitor_ratings (
             target_id TEXT NOT NULL,
             voter_hash TEXT NOT NULL,
@@ -73,7 +78,7 @@ def _valid_target(target_id: str) -> bool:
 def _comments(db, target_id: str):
     rows = db.execute('''SELECT display_name AS name, comment, updated_at
                          FROM visitor_comments WHERE target_id = ? AND voter_hash LIKE 'account:%'
-                         ORDER BY updated_at DESC, rowid DESC LIMIT 30''', (target_id,)).fetchall()
+                         ORDER BY updated_at DESC, voter_hash DESC LIMIT 30''', (target_id,)).fetchall()
     total = db.execute("SELECT COUNT(*) FROM visitor_comments WHERE target_id = ? AND voter_hash LIKE 'account:%'", (target_id,)).fetchone()[0]
     return {'comments': [dict(row) for row in rows], 'count': total, 'temporary_storage': _temporary_storage()}
 
@@ -84,7 +89,7 @@ def _account_hash(user_id: str) -> str:
 
 def delete_account_reviews(user_id: str):
     """Remove public reviews when their account is deleted."""
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         with db:
             voter_hash = _account_hash(user_id)
             db.execute('DELETE FROM visitor_ratings WHERE voter_hash = ?', (voter_hash,))
@@ -92,7 +97,7 @@ def delete_account_reviews(user_id: str):
 
 
 def account_reviews(user_id: str):
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         voter_hash = _account_hash(user_id)
         ratings = db.execute('SELECT target_id, rating, updated_at FROM visitor_ratings WHERE voter_hash = ?', (voter_hash,)).fetchall()
         comments = db.execute('SELECT target_id, comment, updated_at FROM visitor_comments WHERE voter_hash = ?', (voter_hash,)).fetchall()
@@ -101,7 +106,7 @@ def account_reviews(user_id: str):
 
 @router.get('')
 def list_ratings():
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         rows = db.execute("SELECT target_id, ROUND(AVG(rating), 1) AS average, COUNT(*) AS count FROM visitor_ratings WHERE voter_hash LIKE 'account:%' GROUP BY target_id").fetchall()
     return {'ratings': {row['target_id']: {'average': row['average'], 'count': row['count']} for row in rows},
             'temporary_storage': _temporary_storage()}
@@ -109,7 +114,7 @@ def list_ratings():
 
 @router.get('/mine')
 def my_ratings(user=Depends(current_user)):
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         rows = db.execute('SELECT target_id, rating FROM visitor_ratings WHERE voter_hash = ?',
                           (_account_hash(user['id']),)).fetchall()
     return {'ratings': {row['target_id']: row['rating'] for row in rows}}
@@ -120,7 +125,7 @@ def submit_rating(target_id: str, vote: RatingVote, user=Depends(current_user)):
     if not _valid_target(target_id):
         raise HTTPException(404, detail='Place or coastal destination not found')
     voter_hash = _account_hash(user['id'])
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         with db:
             db.execute('''INSERT INTO visitor_ratings (target_id, voter_hash, rating)
                           VALUES (?, ?, ?)
@@ -136,7 +141,7 @@ def submit_rating(target_id: str, vote: RatingVote, user=Depends(current_user)):
 def list_comments(target_id: str):
     if not _valid_target(target_id):
         raise HTTPException(404, detail='Place or coastal destination not found')
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         return _comments(db, target_id)
 
 
@@ -146,7 +151,7 @@ def submit_comment(target_id: str, body: VisitorComment, user=Depends(current_us
         raise HTTPException(404, detail='Place or coastal destination not found')
     voter_hash = _account_hash(user['id'])
     display_name = 'Traveler #' + user['id'][:6].upper()
-    with closing(connect()) as db:
+    with closing(_connect_reviews()) as db:
         with db:
             db.execute('''INSERT INTO visitor_comments (target_id, voter_hash, display_name, comment)
                           VALUES (?, ?, ?, ?)

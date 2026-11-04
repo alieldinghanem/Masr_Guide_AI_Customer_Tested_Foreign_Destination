@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 import sqlite3
+from psycopg import Error as PostgresError
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -28,6 +29,7 @@ from .accounts import router as account_router, setup as setup_accounts
 from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
 from .ratings import router as ratings_router, setup as setup_ratings
+from .durable_storage import configured as postgres_configured
 
 # Read the backend-local .env for local development; environment variables take priority.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
@@ -48,20 +50,23 @@ def validate_deployment_settings():
     if os.getenv('BACKUP_RECOVERY_VERIFIED', '').lower() not in accepted:
         raise RuntimeError('Production requires a successfully tested backup and recovery procedure')
 
-    # Require explicit separate absolute paths; otherwise the service can
-    # silently place customer data inside a disposable image filesystem.
-    db_paths = []
-    for key in ('MASR_USER_DB', 'DATABASE_PATH'):
-        value = os.getenv(key, '').strip()
-        if not value or not Path(value).is_absolute():
-            raise RuntimeError(f'Production requires an explicit absolute {key} path on verified durable storage')
-        path = Path(value).resolve()
-        source_root = Path(__file__).resolve().parents[1]
-        if path == source_root or source_root in path.parents:
-            raise RuntimeError(f'Production {key} cannot be stored inside the backend source tree')
-        db_paths.append(path)
-    if db_paths[0] == db_paths[1]:
-        raise RuntimeError('Production account and tourism databases must use separate files')
+    if postgres_configured():
+        if not os.getenv('NEON_DATABASE_URL', '').strip().startswith(('postgresql://', 'postgres://')):
+            raise RuntimeError('Production NEON_DATABASE_URL must be a PostgreSQL URL')
+    else:
+        # With SQLite, both customer-data files must live on verified durable storage.
+        db_paths = []
+        for key in ('MASR_USER_DB', 'DATABASE_PATH'):
+            value = os.getenv(key, '').strip()
+            if not value or not Path(value).is_absolute():
+                raise RuntimeError(f'Production requires an explicit absolute {key} path on verified durable storage')
+            path = Path(value).resolve()
+            source_root = Path(__file__).resolve().parents[1]
+            if path == source_root or source_root in path.parents:
+                raise RuntimeError(f'Production {key} cannot be stored inside the backend source tree')
+            db_paths.append(path)
+        if db_paths[0] == db_paths[1]:
+            raise RuntimeError('Production account and tourism databases must use separate files')
 
     provider = os.getenv('AI_PROVIDER', 'auto').strip().lower()
     if provider not in ('auto', 'openai', 'gemini'):
@@ -195,7 +200,7 @@ def ready():
             c.execute('SELECT 1 FROM editorial_articles LIMIT 1').fetchone()
         with closing(connect()) as c:
             c.execute('SELECT 1 FROM places LIMIT 1').fetchone()
-    except (OSError, ValueError, sqlite3.Error) as exc:
+    except (OSError, ValueError, sqlite3.Error, PostgresError) as exc:
         raise HTTPException(503, detail='Storage is not ready') from exc
     return {'status': 'ready'}
 

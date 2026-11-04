@@ -9,6 +9,22 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: masr_test
+          POSTGRES_PASSWORD: ci-postgres-only
+          POSTGRES_DB: masr_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U masr_test -d masr_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MASR_TEST_POSTGRES_URL: postgresql://masr_test:ci-postgres-only@127.0.0.1:5432/masr_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
