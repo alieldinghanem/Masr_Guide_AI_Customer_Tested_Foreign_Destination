@@ -4,7 +4,7 @@ import React from 'react'
 // Do not substitute a city-wide image for a specific unrelated attraction.
 // Each Commons file page records the source and licence; new images with
 // required attribution have visible credit links on their place pages.
-const commons = file => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=1000`
+const commons = (file, width = 1000) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${width}`
 
 export const PHOTO_FILES = {
   "giza-pyramids": "The Pyramids of GIZA.jpg",
@@ -112,6 +112,10 @@ export const getLandmarkFraming = id => {
 
 export const LANDMARK_MEDIA = Object.fromEntries(
   Object.entries(PHOTO_FILES).map(([id, filename]) => [id, commons(filename)])
+)
+
+export const LANDMARK_THUMBNAILS = Object.fromEntries(
+  Object.entries(PHOTO_FILES).map(([id, filename]) => [id, commons(filename, 240)])
 )
 
 export const PHOTO_CREDITS = {

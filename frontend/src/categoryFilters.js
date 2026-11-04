@@ -17,10 +17,9 @@ const RELIGIOUS_RANK = new Map(RELIGIOUS_GROUP_ORDER.flatMap((group, groupIndex)
 const COAST_PRIORITY = [
   'naama-bay', 'giftun-island', 'dahab-lagoon',
   'el-gouna', 'ras-mohammed', 'blue-hole-dahab', 'hurghada-marina',
-  'montaza-gardens', 'qaitbay',
 ]
-const COASTAL_LANDMARKS = new Set(['qaitbay', 'montaza-gardens'])
 const SWIMMING_BEACHES = new Set(['naama-bay', 'giftun-island'])
+const EXPLORE_GROUP_ORDER = ['heritage', 'coast', 'other', ...RELIGIOUS_GROUP_ORDER]
 
 export function getReligiousGroup(place) {
   return RELIGIOUS_RANK.get(place?.id)?.group || null
@@ -34,7 +33,7 @@ export function matchesPlaceCategory(place, type) {
   if (!place || typeof place !== 'object') return false
   const category = String(place.category || '').toLowerCase()
   const tags = Array.isArray(place.tags) ? place.tags.map(tag => String(tag).toLowerCase()) : []
-  if (type === 'coast') return category === 'beach' || tags.includes('beaches') || COASTAL_LANDMARKS.has(place.id)
+  if (type === 'coast') return category === 'beach' || tags.includes('beaches')
   if (type === 'heritage') return ['heritage', 'museum'].includes(category) || (category === 'landmark' && tags.includes('history'))
   return false
 }
@@ -54,4 +53,21 @@ export function orderCategoryPlaces(places, type) {
     }
     return (rank.get(a.place.id) ?? Infinity) - (rank.get(b.place.id) ?? Infinity) || a.index - b.index
   }).map(({ place }) => place)
+}
+
+export function getExploreGroup(place) {
+  const religiousGroup = getReligiousGroup(place)
+  if (religiousGroup) return religiousGroup
+  if (matchesPlaceCategory(place, 'heritage')) return 'heritage'
+  if (matchesPlaceCategory(place, 'coast')) return 'coast'
+  return 'other'
+}
+
+/** Keep every catalog place once, grouped by the experience it offers. */
+export function orderExplorePlaces(places) {
+  const editorial = orderCategoryPlaces(places, 'heritage')
+  return EXPLORE_GROUP_ORDER.flatMap(group => {
+    const members = editorial.filter(place => getExploreGroup(place) === group)
+    return group === 'coast' ? orderCategoryPlaces(members, 'coast') : members
+  })
 }

@@ -107,6 +107,8 @@ def test_react(browser, label, width, height):
         assert page.locator('.mg-coastal-photo-credit').count() == 10
         assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
+        assert page.get_by_text('Citadel of Qaitbay').count() == 0, 'Historic fortress must appear under heritage, not beaches'
+        assert page.get_by_text('Montaza Gardens').count() == 0, 'Seaside gardens are not a beach activity'
         page.goto(f'{URL}/#/home', wait_until='domcontentloaded')
         page.locator('.lang-toggle').click()
         expect(page.locator('html')).to_have_attribute('dir', 'rtl')
@@ -118,8 +120,20 @@ def test_react(browser, label, width, height):
         page.goto(f'{URL}/#/explore', wait_until='domcontentloaded')
         field = page.get_by_role('textbox', name='Search places')
         expect(field).to_be_visible(timeout=15000)
+        expect(page.locator('.place-row')).to_have_count(53)
+        expect(page.locator('.place-row .place-mini img')).to_have_count(53)
+        assert page.locator('.mg-place-group-heading').all_text_contents() == [
+            'History & museums', 'Beaches & sea', 'Nature, culture & more',
+            'Historic mosques', 'Churches & monasteries', 'Synagogues',
+        ]
+        expect(page.locator('.place-row').filter(has_text='Citadel of Qaitbay')).to_have_count(1)
+        if width <= 780:
+            assert page.locator('.place-row').first.bounding_box()['y'] < height - 80, 'First place hidden below mobile navigation'
         field.fill('Karnak')
         expect(page.get_by_text('Karnak Temple Complex').first).to_be_visible(timeout=15000)
+        if width <= 780:
+            page.locator('.place-row').first.click()
+            page.wait_for_function("document.querySelector('.place-detail').getBoundingClientRect().top < window.innerHeight", timeout=5000)
         print(f'PASS {label}: catalog and search')
 
         page.goto(f'{URL}/#/planner', wait_until='domcontentloaded')

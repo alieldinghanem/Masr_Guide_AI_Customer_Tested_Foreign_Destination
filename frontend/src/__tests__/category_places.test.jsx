@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '../i18n'
-import { isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces } from '../categoryFilters'
+import { getExploreGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, orderExplorePlaces } from '../categoryFilters'
 import CategoryPlaces from '../components/CategoryPlaces'
 import Explore from '../components/Explore'
 
@@ -21,13 +21,14 @@ describe('category presentation', () => {
     expect(apiOrder[0].id).toBe('abu-simbel')
   })
 
-  it('includes actual waterfront landmarks but not every place in a coastal city', () => {
-    expect(matchesPlaceCategory(entry('qaitbay', 'Alexandria', 'Heritage'), 'coast')).toBe(true)
-    expect(matchesPlaceCategory(entry('montaza-gardens', 'Alexandria', 'Park', ['nature']), 'coast')).toBe(true)
+  it('keeps historic waterfront landmarks out of the beach collection', () => {
+    expect(matchesPlaceCategory(entry('qaitbay', 'Alexandria', 'Heritage'), 'coast')).toBe(false)
+    expect(matchesPlaceCategory(entry('qaitbay', 'Alexandria', 'Heritage'), 'heritage')).toBe(true)
+    expect(matchesPlaceCategory(entry('montaza-gardens', 'Alexandria', 'Park', ['nature']), 'coast')).toBe(false)
     expect(matchesPlaceCategory(entry('bibliotheca-alexandrina', 'Alexandria', 'Culture'), 'coast')).toBe(false)
     expect(matchesPlaceCategory(entry('dahab-lagoon', 'Dahab', 'Beach', ['beaches']), 'coast')).toBe(true)
-    const coast = [entry('qaitbay'), entry('naama-bay'), entry('ras-mohammed')]
-    expect(orderCategoryPlaces(coast, 'coast').map(place => place.id)).toEqual(['naama-bay', 'ras-mohammed', 'qaitbay'])
+    const coast = [entry('ras-mohammed'), entry('naama-bay')]
+    expect(orderCategoryPlaces(coast, 'coast').map(place => place.id)).toEqual(['naama-bay', 'ras-mohammed'])
     expect(isSwimmingBeach(entry('naama-bay'))).toBe(true)
     expect(isSwimmingBeach(entry('giftun-island'))).toBe(true)
     for (const id of ['dahab-lagoon', 'ras-mohammed', 'blue-hole-dahab', 'qaitbay', 'hurghada-marina']) {
@@ -52,7 +53,8 @@ describe('category presentation', () => {
     expect(screen.getAllByRole('link', { name:'Destination source' })).toHaveLength(10)
     expect(screen.getByRole('heading', { name:'Marsa Alam' }).closest('.mg-coastal-guide')).toHaveTextContent('Sharm El Luli Beach')
     expect([...document.querySelectorAll('#swimming-beaches-title + p + .mg-category-grid h2')].map(el => el.textContent)).toEqual(['naama-bay', 'giftun-island'])
-    expect([...document.querySelectorAll('#coastal-other-title + p + .mg-category-grid h2')].map(el => el.textContent)).toEqual(['dahab-lagoon', 'ras-mohammed', 'qaitbay'])
+    expect([...document.querySelectorAll('#coastal-other-title + p + .mg-category-grid h2')].map(el => el.textContent)).toEqual(['dahab-lagoon', 'ras-mohammed'])
+    expect(screen.queryByRole('heading', { name:'qaitbay' })).not.toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name:'Search places' }), 'Marsa Alam')
     expect(screen.getByRole('heading', { name:'Marsa Alam' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name:'Destination source' })).toHaveLength(1)
@@ -74,8 +76,19 @@ describe('category presentation', () => {
     expect([...document.querySelectorAll('.place-row .place-title')].map(el => el.textContent)).toEqual([
       'giza-pyramids', 'grand-egyptian-museum', 'bab-zuwayla', 'karnak', 'sultan-hassan-mosque', 'hanging-church', 'st-catherine-monastery', 'ben-ezra-synagogue',
     ])
-    expect([...document.querySelectorAll('.mg-place-group-heading')].map(el => el.textContent)).toEqual(['Historic mosques', 'Churches & monasteries', 'Jewish synagogues'])
+    expect([...document.querySelectorAll('.mg-place-group-heading')].map(el => el.textContent)).toEqual(['History & museums', 'Historic mosques', 'Churches & monasteries', 'Synagogues'])
     expect(screen.getByRole('link', { name: 'Beaches & sea' })).toHaveAttribute('href', '#/coast')
+  })
+
+  it('groups all places once and shows a distinct thumbnail in each catalog row', () => {
+    const places = [entry('montaza-gardens', 'Alexandria', 'Park', ['nature']), entry('naama-bay', 'Sharm El Sheikh', 'Beach', ['beaches']), entry('qaitbay', 'Alexandria', 'Heritage'), entry('hanging-church', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
+    expect(orderExplorePlaces(places).map(place => place.id)).toEqual(['giza-pyramids', 'grand-egyptian-museum', 'qaitbay', 'naama-bay', 'montaza-gardens', 'hanging-church'])
+    expect(getExploreGroup(places[2])).toBe('heritage')
+    render(<I18nProvider initial="en"><Explore places={places} cities={['Giza', 'Alexandria', 'Sharm El Sheikh']} interests={['history', 'nature', 'beaches']} highlight={null} setHighlight={vi.fn()} askQuestion={vi.fn()} openDetails={vi.fn()} /></I18nProvider>)
+    expect([...document.querySelectorAll('.mg-place-group-heading')].map(el => el.textContent)).toEqual(['History & museums', 'Beaches & sea', 'Nature, culture & more', 'Churches & monasteries'])
+    expect(document.querySelectorAll('.place-row')).toHaveLength(6)
+    expect(document.querySelectorAll('.place-row .place-mini img')).toHaveLength(6)
+    expect(new Set([...document.querySelectorAll('.place-row .place-mini img')].map(image => image.getAttribute('src'))).size).toBe(6)
   })
 
   it('labels official coastal ideas in Arabic', () => {

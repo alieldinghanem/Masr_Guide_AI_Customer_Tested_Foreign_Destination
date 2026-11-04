@@ -52,7 +52,10 @@ export const MESSAGES = {
     'cta.button': 'Build my itinerary',
 
     'explore.eyebrow': 'DISCOVER YOUR NEXT STORY', 'explore.h1a': 'Places worth', 'explore.h1b': 'exploring.',
-    'explore.p': "Explore a growing collection of Egypt's iconic sights, museums and natural wonders.",
+    'explore.p': "Browse Egypt's history, beaches, nature and culture. Places are grouped by what you can experience there.",
+    'explore.group.heritage': 'History & museums', 'explore.group.coast': 'Beaches & sea',
+    'explore.group.other': 'Nature, culture & more', 'explore.group.mosques': 'Historic mosques',
+    'explore.group.churches': 'Churches & monasteries', 'explore.group.synagogues': 'Synagogues',
     'explore.searchPlaceholder': 'Search destinations and landmarks...', 'explore.searchAria': 'Search places',
     'explore.filterCity': 'Filter city', 'explore.filterInterest': 'Filter interest',
     'explore.allDestinations': 'All destinations', 'explore.allInterests': 'All interests',
@@ -186,7 +189,10 @@ export const MESSAGES = {
     'cta.button': 'ابنِ جدولي',
 
     'explore.eyebrow': 'اكتشف حكايتك القادمة', 'explore.h1a': 'أماكن تستحق', 'explore.h1b': 'الاستكشاف.',
-    'explore.p': 'استكشف مجموعة متنامية من معالم مصر الشهيرة ومتاحفها وعجائبها الطبيعية.',
+    'explore.p': 'تصفح آثار مصر وشواطئها وطبيعتها وثقافتها. الأماكن مرتبة حسب نوع التجربة.',
+    'explore.group.heritage': 'الآثار والمتاحف', 'explore.group.coast': 'الشواطئ والبحر',
+    'explore.group.other': 'الطبيعة والثقافة وأماكن أخرى', 'explore.group.mosques': 'المساجد التاريخية',
+    'explore.group.churches': 'الكنائس والأديرة', 'explore.group.synagogues': 'المعابد اليهودية',
     'explore.searchPlaceholder': 'ابحث عن الوجهات والمعالم...', 'explore.searchAria': 'ابحث عن الأماكن',
     'explore.filterCity': 'تصفية حسب المدينة', 'explore.filterInterest': 'تصفية حسب الاهتمام',
     'explore.allDestinations': 'كل الوجهات', 'explore.allInterests': 'كل الاهتمامات',
