@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Bookmark, Menu, X, MessageCircle, Compass, Star, CalendarDays, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, Bookmark, Menu, X, MessageCircle, Compass, Star, CalendarDays, ShieldCheck, Waves, Landmark } from 'lucide-react'
 import { api } from './api'
 import { I18nProvider, errorText, useI18n } from './i18n'
 import { ErrorNote, Logo } from './components/Common'
@@ -159,9 +159,13 @@ function Shell({ meta }) {
         <div className="nav-wrap container">
           <Logo go={go} />
           <nav id="masr-main-menu" className={`navigation ${mobileOpen ? 'is-open' : ''}`} aria-label={t('nav.aria')}>
-            {menu.map(([id, key]) => (
-              <button type="button" key={id} onClick={() => go(id)} className={(page === id || (page === 'guide' && id === 'home') || (id === 'explore' && page.startsWith('place/'))) ? 'active' : ''} aria-current={(page === id || (page === 'guide' && id === 'home') || (id === 'explore' && page.startsWith('place/'))) ? 'page' : undefined}>{key}</button>
-            ))}
+            {menu.map(([id, key]) => id === 'explore' ? <div className="nav-discover" key={id}>
+              <button type="button" onClick={() => go('explore')} className={['explore', 'heritage', 'coast'].includes(page) || page.startsWith('place/') ? 'active' : ''} aria-current={page === 'explore' ? 'page' : undefined}>{key}</button>
+              <div className="nav-discover-submenu" role="group" aria-label={t('discovery.nav')}>
+                <button type="button" onClick={() => go('heritage')} aria-current={page === 'heritage' ? 'page' : undefined}><Landmark size={16} />{t('discovery.heritage')}</button>
+                <button type="button" onClick={() => go('coast')} aria-current={page === 'coast' ? 'page' : undefined}><Waves size={16} />{t('discovery.coast')}</button>
+              </div>
+            </div> : <button type="button" key={id} onClick={() => go(id)} className={(page === id || (page === 'guide' && id === 'home')) ? 'active' : ''} aria-current={(page === id || (page === 'guide' && id === 'home')) ? 'page' : undefined}>{key}</button>)}
           </nav>
           <div className="nav-actions">
             <button type="button" className="nav-account-link" onClick={() => go('account')}>{lang === 'ar' ? 'حسابي' : 'My account'}</button>
@@ -217,7 +221,7 @@ function Shell({ meta }) {
         <div className="container footer-bottom"><span>{t('footer.copy', { year: new Date().getFullYear() })}</span><span>{t('footer.note')}</span></div>
       </footer>
       <nav className="mg-mobile-tabs" aria-label={lang === 'ar' ? 'التنقل السريع' : 'Quick navigation'}>
-        {[[ 'home', MessageCircle, t('nav.guide')], ['explore', Compass, t('nav.explore')], ['reviews', Star, t('nav.reviews')], ['planner', CalendarDays, t('nav.planner')]].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && page.startsWith('place/'))) ? 'active' : ''} aria-current={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && page.startsWith('place/'))) ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
+        {[[ 'home', MessageCircle, t('nav.guide')], ['explore', Compass, t('nav.explore')], ['reviews', Star, t('nav.reviews')], ['planner', CalendarDays, t('nav.planner')]].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && (['heritage', 'coast'].includes(page) || page.startsWith('place/')))) ? 'active' : ''} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
       </nav>
     </div>
   )

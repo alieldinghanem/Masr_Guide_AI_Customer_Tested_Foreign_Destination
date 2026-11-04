@@ -13,10 +13,10 @@ const entry = (id, city = 'Giza', category = 'Heritage', tags = ['history']) => 
 
 describe('category presentation', () => {
   it('ranks the Pyramids and Grand Egyptian Museum before other heritage places without mutating API data', () => {
-    const apiOrder = [entry('abu-simbel'), entry('st-catherine-monastery', 'Saint Catherine'), entry('bab-zuwayla', 'Cairo'), entry('hanging-church', 'Cairo'), entry('great-sphinx'), entry('other'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
+    const apiOrder = [entry('abu-simbel'), entry('st-catherine-monastery', 'Saint Catherine'), entry('bab-zuwayla', 'Cairo'), entry('hanging-church', 'Cairo'), entry('great-sphinx'), entry('other'), entry('ben-ezra-synagogue', 'Cairo'), entry('sultan-hassan-mosque', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
     expect(orderCategoryPlaces(apiOrder, 'heritage').map(place => place.id)).toEqual([
-      'giza-pyramids', 'grand-egyptian-museum', 'hanging-church',
-      'bab-zuwayla', 'st-catherine-monastery', 'great-sphinx', 'abu-simbel', 'other',
+      'giza-pyramids', 'grand-egyptian-museum', 'bab-zuwayla', 'great-sphinx', 'abu-simbel', 'other',
+      'sultan-hassan-mosque', 'hanging-church', 'st-catherine-monastery', 'ben-ezra-synagogue',
     ])
     expect(apiOrder[0].id).toBe('abu-simbel')
   })
@@ -55,11 +55,13 @@ describe('category presentation', () => {
   })
 
   it('uses the same landmark priority in the main Explore list', () => {
-    const places = [entry('karnak'), entry('st-catherine-monastery', 'Saint Catherine'), entry('hanging-church', 'Cairo'), entry('bab-zuwayla', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
+    const places = [entry('karnak'), entry('st-catherine-monastery', 'Saint Catherine'), entry('hanging-church', 'Cairo'), entry('bab-zuwayla', 'Cairo'), entry('ben-ezra-synagogue', 'Cairo'), entry('sultan-hassan-mosque', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
     render(<I18nProvider initial="en"><Explore places={places} cities={['Giza']} interests={['history']} highlight={null} setHighlight={vi.fn()} askQuestion={vi.fn()} openDetails={vi.fn()} /></I18nProvider>)
     expect([...document.querySelectorAll('.place-row .place-title')].map(el => el.textContent)).toEqual([
-      'giza-pyramids', 'grand-egyptian-museum', 'hanging-church', 'bab-zuwayla', 'st-catherine-monastery', 'karnak',
+      'giza-pyramids', 'grand-egyptian-museum', 'bab-zuwayla', 'karnak', 'sultan-hassan-mosque', 'hanging-church', 'st-catherine-monastery', 'ben-ezra-synagogue',
     ])
+    expect([...document.querySelectorAll('.mg-place-group-heading')].map(el => el.textContent)).toEqual(['Historic mosques', 'Churches & monasteries', 'Jewish synagogues'])
+    expect(screen.getByRole('link', { name: 'Beaches & sea' })).toHaveAttribute('href', '#/coast')
   })
 
   it('labels official coastal ideas in Arabic', () => {
@@ -70,12 +72,13 @@ describe('category presentation', () => {
   })
 
   it('shows the new Cairo heritage sites with individual photo credits', () => {
-    const places = [entry('bab-zuwayla', 'Cairo'), entry('hanging-church', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
+    const places = [entry('bab-zuwayla', 'Cairo'), entry('hanging-church', 'Cairo'), entry('ben-ezra-synagogue', 'Cairo'), entry('sultan-hassan-mosque', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
     render(<I18nProvider initial="ar"><CategoryPlaces type="heritage" places={places} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
     expect(screen.getByText('مصر عبر العصور')).toBeInTheDocument()
     expect([...document.querySelectorAll('.mg-place-card h2')].map(el => el.textContent)).toEqual([
-      'giza-pyramids', 'grand-egyptian-museum', 'hanging-church', 'bab-zuwayla',
+      'giza-pyramids', 'grand-egyptian-museum', 'bab-zuwayla', 'sultan-hassan-mosque', 'hanging-church', 'ben-ezra-synagogue',
     ])
-    expect(screen.getAllByRole('link', { name: /الصورة:/ })).toHaveLength(2)
+    expect([...document.querySelectorAll('.mg-religious-group h3')].map(el => el.textContent)).toEqual(['المساجد', 'الكنائس والأديرة', 'المعابد اليهودية'])
+    expect(screen.getAllByRole('link', { name: /الصورة:/ })).toHaveLength(3)
   })
 })

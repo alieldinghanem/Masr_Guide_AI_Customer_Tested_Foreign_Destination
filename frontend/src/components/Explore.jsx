@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { ArrowRight, ChevronDown, ChevronRight, Bookmark, BookmarkCheck, Clock3, Compass, ExternalLink, Landmark, MapPin, Search } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
-import { orderCategoryPlaces } from '../categoryFilters'
+import { getReligiousGroup, orderCategoryPlaces } from '../categoryFilters'
+import DiscoveryNav from './DiscoveryNav'
 
 const ALL = '__all__'
 
@@ -24,6 +25,7 @@ export default function Explore({ places, cities, interests, highlight, setHighl
         <h1>{t('explore.h1a')} <em>{t('explore.h1b')}</em></h1>
         <p>{t('explore.p')}</p>
       </div>
+      <DiscoveryNav current="explore" />
       <div className="filter-row">
         <label className="search-wrap"><Search size={18} />
           <input aria-label={t('explore.searchAria')} placeholder={t('explore.searchPlaceholder')} value={search} onChange={e => setSearch(e.target.value)} />
@@ -44,8 +46,9 @@ export default function Explore({ places, cities, interests, highlight, setHighl
       <div className="explore-layout">
         <div className="place-list">
           <div className="list-heading"><strong>{t('explore.count', { n: visible.length })}</strong><span>{t('explore.select')}</span></div>
-          {visible.map(p => (
-            <button type="button" className={`place-row ${current?.id === p.id ? 'chosen' : ''}`} key={p.id} onClick={() => setHighlight(p)}>
+          {visible.map((p, index) => <React.Fragment key={p.id}>
+            {getReligiousGroup(p) && getReligiousGroup(p) !== getReligiousGroup(visible[index - 1]) && <h2 className="mg-place-group-heading">{t(`religious.${getReligiousGroup(p)}`)}</h2>}
+            <button type="button" className={`place-row ${current?.id === p.id ? 'chosen' : ''}`} onClick={() => setHighlight(p)}>
               <div className="place-mini"><Landmark size={21} /></div>
               <div>
                 <small><MapPin size={12} />{cityName(p.city)} · {category(p.category)}</small>
@@ -55,7 +58,7 @@ export default function Explore({ places, cities, interests, highlight, setHighl
               </div>
               <ChevronRight className="place-arrow" size={18} />
             </button>
-          ))}
+          </React.Fragment>)}
           {visible.length === 0 && <div className="empty-state">{t('explore.empty')}</div>}
         </div>
         <aside className="place-detail">

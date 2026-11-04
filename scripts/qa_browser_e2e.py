@@ -57,12 +57,21 @@ def test_react(browser, label, width, height):
         expect(page.locator('.mg-chat-home .chat-panel')).to_be_visible()
         if width <= 620:
             expect(page.locator('.mg-mobile-tabs')).to_be_visible()
+            page.locator('.mobile-toggle').click()
+        else:
+            page.locator('.nav-discover').hover()
+        expect(page.locator('.nav-discover-submenu')).to_be_visible()
+        page.locator('.nav-discover-submenu').get_by_role('button', name='Beaches & sea').click()
+        expect(page).to_have_url(re.compile(r'#\/coast$'))
+        expect(page.get_by_role('heading', name='Beaches & coastal escapes')).to_be_visible()
+        expect(page.locator('.mg-discovery-nav').get_by_role('link', name='History & heritage')).to_be_visible()
         page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded')
         expect(page.locator('.mg-category-grid .mg-place-card').first).to_be_visible(timeout=15000)
-        assert [name.strip() for name in page.locator('.mg-category-grid .mg-place-card h2').all_text_contents()[:5]] == [
-            'Pyramids of Giza', 'Grand Egyptian Museum', 'The Hanging Church',
-            'Bab Zuwayla', "Saint Catherine's Monastery",
+        assert [name.strip() for name in page.locator('.mg-category-grid .mg-place-card h2').all_text_contents()[:3]] == [
+            'Pyramids of Giza', 'Grand Egyptian Museum', 'Bab Zuwayla',
         ]
+        assert page.locator('.mg-religious-group h3').all_text_contents() == ['Mosques', 'Churches & monasteries', 'Synagogues']
+        expect(page.locator('.mg-religious-group').last).to_contain_text('Ben Ezra Synagogue')
         # Real Chromium geometry (not jsdom): mobile cards must be readable,
         # one per row, with a generous image and 44px touch targets.
         if width <= 620:
@@ -210,9 +219,8 @@ def test_mobile_photo_layout(browser):
         page.goto(f'{URL}/#/heritage', wait_until='domcontentloaded', timeout=20000)
         cards = page.locator('.mg-category-grid .mg-place-card')
         expect(cards.nth(1)).to_be_visible(timeout=15000)
-        assert [name.strip() for name in cards.locator('h2').all_text_contents()[:5]] == [
-            'Pyramids of Giza', 'Grand Egyptian Museum', 'The Hanging Church',
-            'Bab Zuwayla', "Saint Catherine's Monastery",
+        assert [name.strip() for name in cards.locator('h2').all_text_contents()[:3]] == [
+            'Pyramids of Giza', 'Grand Egyptian Museum', 'Bab Zuwayla',
         ], 'The requested heritage sites must lead the catalog'
         for phone_width in (360, 390, 430):
             page.set_viewport_size({'width': phone_width, 'height': 844})

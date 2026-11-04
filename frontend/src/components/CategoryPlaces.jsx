@@ -3,7 +3,8 @@ import { ArrowUpRight, ExternalLink, Search, Landmark, Waves, MapPin, MessageCir
 import { useI18n } from '../i18n'
 import { LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming, EditorialImage } from './EditorialMedia'
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
-import { isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces } from '../categoryFilters'
+import { getReligiousGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, RELIGIOUS_GROUP_ORDER } from '../categoryFilters'
+import DiscoveryNav from './DiscoveryNav'
 
 
 /** Separate, data-driven collections. Results are sourced from /api/places,
@@ -21,6 +22,8 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
   }), [query, selection])
   const swimmingPlaces = coast ? visible.filter(isSwimmingBeach) : []
   const otherCoastalPlaces = coast ? visible.filter(place => !isSwimmingBeach(place)) : []
+  const secularPlaces = coast ? [] : visible.filter(place => !getReligiousGroup(place))
+  const religiousGroups = coast ? [] : RELIGIOUS_GROUP_ORDER.map(group => [group, visible.filter(place => getReligiousGroup(place) === group)]).filter(([, items]) => items.length)
   const coastalGuides = coast ? COASTAL_DESTINATIONS.filter(item =>
     [item.en, item.ar, item.regionEn, item.regionAr, item.spotEn, item.spotAr, item.noteEn, item.noteAr]
       .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) : []
@@ -45,6 +48,7 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
       <label className="mg-category-search"><Search size={18} aria-hidden="true"/><span className="sr-only">{ar ? 'ابحث عن مكان' : 'Search places'}</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder={ar ? 'ابحث عن مكان أو مدينة...' : 'Search places or cities...'} aria-label={ar ? 'ابحث عن مكان' : 'Search places'} /></label>
     </section>
     <div className="container mg-category-body">
+      <DiscoveryNav current={type} />
       <div className="mg-category-count" role="status">{coast ? (ar ? `${coastalGuides.length} وجهات شاطئية · ${swimmingPlaces.length} أماكن شاطئية في الدليل` : `${coastalGuides.length} beach destinations · ${swimmingPlaces.length} beach places in the catalog`) : (ar ? `${visible.length} مكان في الدليل` : `${visible.length} curated places`)}</div>
       {coast && coastalGuides.length > 0 && <section className="mg-coastal-guides" aria-labelledby="coastal-guides-title">
         <div className="mg-coastal-guides-head"><h2 id="coastal-guides-title">{ar ? 'وجهات شاطئية للنزول للمياه' : 'Beach destinations for swimming'}</h2><p>{ar ? 'اختار مدينة وشوف مثالًا لشاطئ فيها. تأكد من السماح بالسباحة والدخول وحالة البحر في يوم زيارتك.' : 'Choose a destination and see a beach example. Check swimming permission, access and sea conditions on the day you visit.'}</p></div>
@@ -62,7 +66,14 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
         <p>{ar ? 'مواقع غوص ومراسي ومعالم على البحر؛ لا نعرضها كشواطئ سباحة.' : 'Dive sites, marinas and waterfront landmarks; these are not listed as swimming beaches.'}</p>
         {placeCards(otherCoastalPlaces)}
       </section>}
-      {!coast && placeCards(visible)}
+      {!coast && secularPlaces.length > 0 && placeCards(secularPlaces)}
+      {!coast && religiousGroups.length > 0 && <section className="mg-religious-places" aria-labelledby="religious-places-title">
+        <h2 id="religious-places-title">{ar ? 'دور العبادة التاريخية' : 'Historic places of worship'}</h2>
+        {religiousGroups.map(([group, items]) => <section className="mg-religious-group" key={group} aria-labelledby={`religious-${group}`}>
+          <h3 id={`religious-${group}`}>{ar ? ({ mosques: 'المساجد', churches: 'الكنائس والأديرة', synagogues: 'المعابد اليهودية' }[group]) : ({ mosques: 'Mosques', churches: 'Churches & monasteries', synagogues: 'Synagogues' }[group])}</h3>
+          {placeCards(items)}
+        </section>)}
+      </section>}
       {!selection.length && !query.trim() && <p className="mg-category-empty">{ar ? 'بيانات الأماكن قيد التحميل. جرّب إعادة الاتصال بالخادم.' : 'The place catalogue is not available yet. Check your connection to the backend.'}</p>}
       {!visible.length && !coastalGuides.length && query.trim() && <p className="mg-category-empty">{ar ? 'مفيش أماكن مطابقة. جرّب بحث مختلف.' : 'No places match that search. Try another term.'}</p>}
     </div>

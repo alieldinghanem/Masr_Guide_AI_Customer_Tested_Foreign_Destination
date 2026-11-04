@@ -51,6 +51,18 @@ describe('hash routing', () => {
     expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'Explore Egypt' })).toHaveAttribute('aria-current', 'page')
     expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI guide' })).not.toHaveAttribute('aria-current')
   })
+
+  it('opens heritage and beaches from Explore Egypt while keeping the main navigation', async () => {
+    const user = await boot()
+    const nav = within(screen.getByRole('navigation', { name: 'Primary navigation' }))
+    await user.click(nav.getByRole('button', { name: 'Beaches & sea' }))
+    expect(window.location.hash).toBe('#/coast')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Beaches & coastal escapes' })).toBeInTheDocument()
+    await user.click(nav.getByRole('button', { name: 'History & heritage' }))
+    expect(window.location.hash).toBe('#/heritage')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Historical places' })).toBeInTheDocument()
+    expect(nav.getByRole('button', { name: 'Explore Egypt' })).toHaveClass('active')
+  })
 })
 
 describe('Discover state', () => {

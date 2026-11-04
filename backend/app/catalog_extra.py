@@ -112,6 +112,13 @@ EXTRA = {
         "tip": "Pair it with other Old Cairo sites and check current visiting arrangements before going.",
         "tip_ar": "اجمع زيارتها مع معالم مصر القديمة، وتحقق من ترتيبات الزيارة الحالية قبل الذهاب.",
     },
+    "ben-ezra-synagogue": {
+        "name_ar": "معبد بن عزرا اليهودي",
+        "summary_ar": "كنيس يهودي تاريخي في مصر القديمة، مرتبط بوثائق جنيزة القاهرة.",
+        "details": "Ben Ezra is a historic synagogue in Old Cairo near the Hanging Church. Its geniza preserved documents studied as the Cairo Geniza. The site is a heritage attraction, not a currently active synagogue; check the official venue page for visit details.",
+        "tip": "Combine it with nearby Old Cairo sites and check current visiting arrangements before going.",
+        "tip_ar": "يمكنك زيارته مع معالم مصر القديمة القريبة؛ تحقق من ترتيبات الزيارة قبل الذهاب.",
+    },
     "bab-zuwayla": {
         "name_ar": "باب زويلة",
         "summary_ar": "بوابة تاريخية باقية من السور الجنوبي للقاهرة الفاطمية، عند الطرف الجنوبي لشارع المعز.",

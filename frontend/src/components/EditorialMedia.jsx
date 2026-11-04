@@ -1,7 +1,6 @@
 import React from 'react'
 
-// Every photographed attraction below has a unique filename that was validated
-// against Wikimedia Commons' MediaWiki imageinfo API on 2026-11-02.
+// Every photographed attraction below has a unique Wikimedia Commons filename.
 // Do not substitute a city-wide image for a specific unrelated attraction.
 // Each Commons file page records the source and licence; new images with
 // required attribution have visible credit links on their place pages.
@@ -19,6 +18,7 @@ export const PHOTO_FILES = {
   "al-azhar-park": "Al-Azhar Park Cairo (2).jpg",
   "coptic-cairo": "Cairo - Coptic area - Hanging Church from courtyard.JPG",
   "hanging-church": "Hanging Church Cairo.jpg",
+  "ben-ezra-synagogue": "Cairo - Coptic area - Ben Ezra Synagogue.JPG",
   "bab-zuwayla": "Cairo, bab zuweila 01.JPG",
   "museum-of-islamic-art": "Museum of Islamic Art Cairo DSCF7680.jpg",
   "gayer-anderson-museum": "Gayer-Anderson Museum, Cairo 01.jpg",
@@ -75,6 +75,7 @@ export const LANDMARK_FRAMING = {
   'khan-el-khalili': ['50% 46%', '50% 51%'],
   'coptic-cairo': ['50% 50%', '50% 55%'],
   'hanging-church': ['50% 54%', '50% 57%'],
+  'ben-ezra-synagogue': ['50% 52%', '50% 56%'],
   'bab-zuwayla': ['50% 53%', '50% 56%'],
   'ibn-tulun-mosque': ['50% 65%', '50% 67%'],
   'sultan-hassan-mosque': ['50% 55%', '50% 59%'],
@@ -117,6 +118,10 @@ export const PHOTO_CREDITS = {
   'hanging-church': {
     author: 'Radosław Botev', license: 'CC BY 3.0 PL',
     url: 'https://commons.wikimedia.org/wiki/File:Hanging_Church_Cairo.jpg',
+  },
+  'ben-ezra-synagogue': {
+    author: 'herr müller', license: 'CC BY-SA 4.0',
+    url: 'https://commons.wikimedia.org/wiki/File:Cairo_-_Coptic_area_-_Ben_Ezra_Synagogue.JPG',
   },
   'bab-zuwayla': {
     author: 'Sailko', license: 'CC BY 3.0',

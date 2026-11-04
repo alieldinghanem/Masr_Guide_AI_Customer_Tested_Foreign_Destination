@@ -356,6 +356,13 @@
   ]
  },
  {
+  "lang": "ar",
+  "q": "احكيلي عن معبد بن عزرا اليهودي في مصر القديمة",
+  "expect": [
+   "ben-ezra-synagogue"
+  ]
+ },
+ {
   "lang": "en",
   "q": "How do I renew my passport in Canada?",
   "expect": []
