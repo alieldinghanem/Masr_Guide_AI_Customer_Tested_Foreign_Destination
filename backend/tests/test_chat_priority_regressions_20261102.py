@@ -8,6 +8,20 @@ from app.schemas import ChatTurn, ConsultRequest
 from app.travel_agent import consult_travel
 
 
+def test_arrival_intro_asks_for_trip_details_even_when_gemini_is_configured(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-only-key')
+    initialize()
+    for message, language, expected in (
+        ("I'm coming to Egypt soon", 'English', 'How many days'),
+        ('أنا جاي مصر قريب', 'Arabic', 'كام يوم'),
+    ):
+        result = consult_travel(ConsultRequest(message=message, language=language))
+        assert result['mode'] == 'needs-clarification'
+        assert result['itinerary'] is None and result['trip_state'] is None
+        assert expected in result['answer']
+
+
 def _allocation(reply):
     return dict(Counter(day['city'] for day in reply['itinerary']['days']))
 

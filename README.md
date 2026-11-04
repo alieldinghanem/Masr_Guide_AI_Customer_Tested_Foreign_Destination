@@ -108,7 +108,7 @@ Or, run `RUN_STARTUP_WINDOWS.bat` from the repository root (opens two windows an
 
 ### Gemini (optional)
 
-Copy `backend/.env.example` to `backend/.env` and set **your NEW, private** `GEMINI_API_KEY`. `GEMINI_MODEL=gemini-2.5-flash` pins the requested model. Turn on `GEMINI_SEARCH_GROUNDING=true` to send Google Search as an optional model tool; a live search must be confirmed using returned grounding metadata. Read `GEMINI_SEARCH_GROUNDING_START_HERE_AR.md` for testing, sources, costs, and terms. **Never commit `.env`, screenshots with secrets, or leaked keys.** Without Gemini, the offline-mode catalogue guide and planning engine still work.
+Copy `backend/.env.example` to `backend/.env` and set **your NEW, private** `GEMINI_API_KEY`. `GEMINI_MODEL=gemini-3.1-flash-lite` selects the model verified on the current free project; availability and quotas vary by project. Turn on `GEMINI_SEARCH_GROUNDING=true` only after reviewing its quotas and terms; a live search must be confirmed using returned grounding metadata. Read `GEMINI_SEARCH_GROUNDING_START_HERE_AR.md` for details. Google's free tier may use prompts to improve its products; avoid personal data. **Never commit `.env`, screenshots with secrets, or leaked keys.** Without Gemini, the local catalogue guide and planning engine still work.
 
 ### Staff CMS (optional)
 

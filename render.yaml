@@ -23,7 +23,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.1-flash-lite
       # Off by default to avoid unexpected costs. Enable after reviewing usage/terms.
       - key: GEMINI_SEARCH_GROUNDING
         value: 'false'

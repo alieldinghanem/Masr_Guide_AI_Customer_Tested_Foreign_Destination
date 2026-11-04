@@ -22,7 +22,7 @@
 ## GitHub / HR Demo
 
 1. Unzip and open the `Masr_Guide_AI` project root.
-2. Configure `backend/.env` **locally** (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-flash-latest`) with a new, private key. Never commit the file.
+2. Configure `backend/.env` **locally** (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.1-flash-lite`) with a new, private key. Never commit the file.
 3. Run `RUN_STARTUP_WINDOWS.bat`; open `http://localhost:5173`.
 4. Demo discovery pages, tourism content, places, greeting, transport advice, Arabic 20-day travel planning, saved traveler accounts, chat save/restore and show the `/#/project` case study.
 5. Verify frontend locally before the first push:

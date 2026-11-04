@@ -22,7 +22,8 @@ def test_production_can_select_a_provider_and_preserves_both_api_keys():
 
 def test_production_search_flag_is_passed_through_but_opt_in():
     text = _prod_compose()
-    assert "GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}" in text
+    assert "GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}" in text
+    assert "NEON_DATABASE_URL: ${NEON_DATABASE_URL:-}" in text
     assert "GEMINI_SEARCH_GROUNDING: ${GEMINI_SEARCH_GROUNDING:-false}" in text
 
 
@@ -36,7 +37,7 @@ def test_production_retains_storage_and_backup_release_gates():
 
 def test_render_preview_cannot_silently_use_legacy_model_or_omit_search_toggle():
     text = (COMPOSE.parent / "render.yaml").read_text(encoding="utf-8")
-    assert "value: gemini-2.5-flash" in text
+    assert "value: gemini-3.1-flash-lite" in text
     assert "key: GEMINI_SEARCH_GROUNDING" in text
     assert "key: AI_PROVIDER" in text
     assert "key: OPENAI_API_KEY" in text

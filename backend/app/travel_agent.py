@@ -886,6 +886,26 @@ def consult_travel(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    arrival_intro = re.search(
+        r"^\s*(?:i(?:'m| am|'ll| will)?\s+)?"
+        r'(?:coming|traveling|travelling|going)\s+to\s+egypt\b|'
+        r"^\s*(?:i(?:'m| am|'ll| will)?\s+)?visiting\s+egypt\b|"
+        r'^\s*(?:(?:انا|أنا)\s+)?(?:جاي|جاى|هزور|بزور|مسافر)\s+(?:على\s+)?مصر\b',
+        lowered,
+    )
+    if not state and not cities and total_days(message) is None and arrival_intro:
+        answer = (
+            'أهلًا بيك في مصر! هتقعد كام يوم، ومين مسافر معاك، وأنهي مدن أو أماكن تحب تزورها؟ '
+            'أقدر أجهز لك خطة بعد ما تحدد التفاصيل دي.'
+            if request.language == 'Arabic' else
+            'Bienvenue en Égypte ! Combien de jours restez-vous, avec qui voyagez-vous et quelles villes '
+            'souhaitez-vous visiter ? Je pourrai préparer un itinéraire avec ces précisions.'
+            if request.language == 'French' else
+            'Welcome to Egypt! How many days are you staying, who is traveling with you, '
+            'and which cities or places would you like to visit? I can build a trip once you tell me.'
+        )
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+                'trip_state': None, 'itinerary': None}
     if (not state and not cities and not unsupported and
             (duration := total_days(message)) is not None and 1 <= duration <= 30 and
             not re.search(r'\b(?:plan|itinerary|trip|holiday|voyage|suggest|recommend|propose)\b|'

@@ -37,7 +37,7 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
     if not key:
         raise ValueError('GEMINI_API_KEY is not configured')
     # Restrict dynamic model names to alphanumeric model IDs: no arbitrary URL injection.
-    model = os.getenv('GEMINI_MODEL', 'gemini-flash-latest').strip()
+    model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
     # The API receives genuine conversation roles, rather than a textual
@@ -109,7 +109,7 @@ def search_grounding_enabled() -> bool:
 
 
 def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200, history=None) -> dict:
-    """Call Gemini 2.5 Flash with Google Search and expose source provenance.
+    """Call the configured Gemini model with Google Search and expose source provenance.
 
     ``grounded`` is true only when the provider returns usable web citations.
     Merely requesting the tool is *not* proof that Google Search ran.
@@ -118,7 +118,7 @@ def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200,
     key = gemini_key()
     if not key:
         raise ValueError('GEMINI_API_KEY is not configured')
-    model = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash').strip()
+    model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
     # Reuse the same role-preserving conversation rules as generate().

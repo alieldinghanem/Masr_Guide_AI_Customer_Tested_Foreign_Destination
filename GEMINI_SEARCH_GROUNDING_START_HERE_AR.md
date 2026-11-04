@@ -1,4 +1,4 @@
-# Masr Guide AI — Gemini 2.5 Flash + Google Search Grounding
+# Masr Guide AI — Gemini 3.1 Flash Lite + Google Search Grounding
 
 ## ما الجديد؟
 
@@ -14,13 +14,13 @@
 
 ```dotenv
 AI_PROVIDER=gemini
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 GEMINI_API_KEY=PUT_YOUR_KEY_LOCALLY
 GEMINI_SEARCH_GROUNDING=true
 ```
 
 نسخ `.env.example` ثم تحرير `.env`، ولا تضع مفتاحًا سريًا داخل الشات أو في GitHub.  
-**بيئة المستخدم المجانية** قد تسمح بنحو 500 grounded prompts يوميًا للنموذج 2.5 Flash، حسب خطة Google وحصصها المتغيرة. تدقيق التكلفة من صفحة تسعير Google قبل تفعيل الفوترة. لا ترسل معلومات شخصية/سجلات مسافرين حقيقيين للفئة المجانية من دون مراجعة شروط معالجة البيانات.
+**النسخة المنشورة حاليًا لا تفعّل Google Search Grounding.** لا تفترض أن حصة النموذج هي حصة البحث؛ راجع حدود كل منهما في لوحة Google قبل تفعيل الأداة، وراجع التسعير قبل إضافة وسيلة دفع. قد تستخدم Google نصوص الفئة المجانية لتحسين منتجاتها، لذا لا تُرسل معلومات شخصية حساسة.
 
 ### تشغيل API محليًا
 

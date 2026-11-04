@@ -49,18 +49,18 @@ foreach ($line in $lines) {
     if ($line -match '^\s*GEMINI_API_KEY\s*=') {
         if (-not $foundKey) { $out.Add('GEMINI_API_KEY=' + $key); $foundKey = $true }
     } elseif ($line -match '^\s*GEMINI_MODEL\s*=') {
-        if (-not $foundModel) { $out.Add('GEMINI_MODEL=gemini-2.5-flash'); $foundModel = $true }
+        if (-not $foundModel) { $out.Add('GEMINI_MODEL=gemini-3.1-flash-lite'); $foundModel = $true }
     } elseif ($line -match '^\s*AI_PROVIDER\s*=') {
         if (-not $foundProvider) { $out.Add('AI_PROVIDER=gemini'); $foundProvider = $true }
     } elseif ($line -match '^\s*GEMINI_SEARCH_GROUNDING\s*=') {
-        if (-not $foundSearch) { $out.Add('GEMINI_SEARCH_GROUNDING=true'); $foundSearch = $true }
+        if (-not $foundSearch) { $out.Add('GEMINI_SEARCH_GROUNDING=false'); $foundSearch = $true }
     } else {
         $out.Add($line)
     }
 }
 if (-not $foundKey) { $out.Add('GEMINI_API_KEY=' + $key) }
-if (-not $foundModel) { $out.Add('GEMINI_MODEL=gemini-2.5-flash') }
-if (-not $foundSearch) { $out.Add('GEMINI_SEARCH_GROUNDING=true') }
+if (-not $foundModel) { $out.Add('GEMINI_MODEL=gemini-3.1-flash-lite') }
+if (-not $foundSearch) { $out.Add('GEMINI_SEARCH_GROUNDING=false') }
 if (-not $foundProvider) { $out.Add('AI_PROVIDER=gemini') }
 
 # Write UTF-8 without BOM (works with python-dotenv).
@@ -70,7 +70,7 @@ Write-Host '[OK] Gemini key configured locally in backend/.env.' -ForegroundColo
 Write-Host '[INFO] Checking real Gemini API connection...' -ForegroundColor Cyan
 
 # Minimal, harmless live request; do not echo the key or the raw provider error.
-$endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+$endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent'
 $body = @{
     contents = @(@{ role = 'user'; parts = @(@{ text = 'Respond with the word OK only.' }) })
     generationConfig = @{ maxOutputTokens = 64 }
