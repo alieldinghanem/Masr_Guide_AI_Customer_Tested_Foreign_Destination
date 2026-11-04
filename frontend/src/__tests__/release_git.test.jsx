@@ -52,7 +52,8 @@ describe('GitHub release fixes', () => {
     for (const key of ['/cities', '/places', '/health']) {
       expect(paths.filter(path => path.endsWith(key))).toHaveLength(2)
     }
-    expect(paths).toHaveLength(9)
+    expect(paths.filter(path => path.endsWith('/ratings'))).toHaveLength(1)
+    expect(paths).toHaveLength(10)
   })
 
   it('clears the chat when requested', async () => {

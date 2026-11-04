@@ -27,6 +27,7 @@ from .schemas import ChatRequest, PlanRequest, ConsultRequest, TripState
 from .accounts import router as account_router, setup as setup_accounts
 from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
+from .ratings import router as ratings_router, setup as setup_ratings
 
 # Read the backend-local .env for local development; environment variables take priority.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
@@ -78,6 +79,7 @@ async def lifespan(app: FastAPI):
     initialize()
     setup_accounts()
     setup_commerce()
+    setup_ratings()
     yield
 
 app = FastAPI(title="Masr Guide AI", version="7.8.1", lifespan=lifespan,
@@ -87,6 +89,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", 
                    allow_headers=["Content-Type", "Authorization"], allow_credentials=False)
 app.include_router(account_router)
 app.include_router(commerce_router)
+app.include_router(ratings_router)
 # Outer ASGI guard measures actual received bytes, not only the advertised length.
 app.add_middleware(LimitApiBody)
 
@@ -110,7 +113,7 @@ async def protect_sensitive_endpoints(request: Request, call_next):
                             content={'detail': 'Too many requests. Please try again later.'},
                             headers={'Retry-After': str(denied), 'Cache-Control': 'no-store'})
     response = await call_next(request)
-    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/')):
+    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/', '/api/ratings')):
         response.headers['Cache-Control'] = 'no-store'
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'DENY')

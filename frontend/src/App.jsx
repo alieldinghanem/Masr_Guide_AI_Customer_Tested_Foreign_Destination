@@ -86,6 +86,26 @@ function Shell({ meta }) {
     return () => { active = false }
   }, [travelerSession])
   const [discovery, setDiscovery] = useState({ destinations: [], experiences: [], essentials: [] })
+  const [ratings, setRatings] = useState({})
+  const [ratingsTemporary, setRatingsTemporary] = useState(false)
+  useEffect(() => {
+    let active = true
+    api('/ratings').then(data => {
+      if (active) { setRatings(data.ratings || {}); setRatingsTemporary(!!data.temporary_storage) }
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
+  const rate = async (targetId, stars) => {
+    let visitorId = localStorage.getItem('masr-guide-rating-visitor-id')
+    if (!visitorId) {
+      visitorId = crypto.randomUUID()
+      localStorage.setItem('masr-guide-rating-visitor-id', visitorId)
+    }
+    const result = await api(`/ratings/${encodeURIComponent(targetId)}`, { method: 'POST', body: { visitor_id: visitorId, rating: stars } })
+    localStorage.setItem(`masr-guide-rating:${targetId}`, String(stars))
+    setRatings(previous => ({ ...previous, [targetId]: { average: result.average, count: result.count } }))
+    return result
+  }
   useEffect(() => {
     let live = true
     Promise.allSettled([
@@ -186,15 +206,15 @@ function Shell({ meta }) {
         </div>
       )}
       {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
-      {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openPlace={openPlace} askQuestion={askQuestion} />}
-      {page === 'coast' && <CategoryPlaces type="coast" places={places} openPlace={openPlace} askQuestion={askQuestion} />}
+      {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openPlace={openPlace} askQuestion={askQuestion} ratings={ratings} onRate={rate} />}
+      {page === 'coast' && <CategoryPlaces type="coast" places={places} openPlace={openPlace} askQuestion={askQuestion} ratings={ratings} onRate={rate} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'experiences' && <Experiences experiences={discovery.experiences} places={places} onExplore={exploreTheme} askQuestion={askQuestion} />}
       {page === 'essentials' && <Essentials items={discovery.essentials} />}
-      {page === 'reviews' && <TravelerReviews onExplore={() => go('explore')} />}
+      {page === 'reviews' && <TravelerReviews onExplore={() => go('explore')} places={places} ratings={ratings} onRate={rate} temporaryStorage={ratingsTemporary} />}
       {page === 'saved' && <Saved places={places} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={openPlace} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
       {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} openDetails={openDetails} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
-      {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go('explore')} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} />}
+      {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go('explore')} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} ratings={ratings} onRate={rate} />}
       {page === 'planner' && <Planner cities={cities} interests={interests} openPlace={openPlace} />}
       {page === 'account' && <Account registrationEnabled={meta.registrationEnabled} onOpenPlanner={() => go('planner')} onSignOut={clearTravelerUi} onSignIn={next => { setSavedIds([]); setFavoritesError(''); setTravelerSession(next) }} />}
       {page === 'stories' && <Stories go={go} />}

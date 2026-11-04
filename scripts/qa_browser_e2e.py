@@ -252,6 +252,29 @@ def test_mobile_photo_layout(browser):
         context.close()
 
 
+def test_visitor_ratings(browser):
+    """Exercise a real browser vote, persistence across reload, and rating order."""
+    context = browser.new_context(viewport={'width': 1366, 'height': 900})
+    context.add_init_script("localStorage.setItem('masr-guide-lang', 'en')")
+    page = context.new_page()
+    try:
+        page.goto(f'{URL}/#/coast', wait_until='domcontentloaded', timeout=20000)
+        marsa = page.locator('.mg-coastal-guide').filter(has_text='Marsa Alam')
+        expect(marsa).to_be_visible(timeout=15000)
+        marsa.get_by_role('button', name='Rate Marsa Alam 5 out of 5').click()
+        expect(marsa.locator('.mg-rating-summary')).to_contain_text('5 / 5 · 1 rating')
+        page.reload(wait_until='domcontentloaded')
+        marsa = page.locator('.mg-coastal-guide').filter(has_text='Marsa Alam')
+        expect(marsa.locator('.mg-rating-summary')).to_contain_text('5 / 5 · 1 rating', timeout=15000)
+        page.get_by_role('combobox', name='Sort by').select_option('rated')
+        expect(page.locator('.mg-coastal-guide h3').first).to_have_text('Marsa Alam')
+        page.goto(f'{URL}/#/reviews', wait_until='domcontentloaded')
+        expect(page.locator('.reviews-rank li').first).to_contain_text('Marsa Alam', timeout=15000)
+        print('PASS visitor ratings: real vote, reload persistence and highest-rated sort')
+    finally:
+        context.close()
+
+
 def run():
     with sync_playwright() as p:
         exe = os.getenv('BROWSER_EXECUTABLE') or shutil.which('chromium') or shutil.which('google-chrome')
@@ -259,6 +282,7 @@ def run():
         try:
             test_demo(browser)
             test_mobile_photo_layout(browser)
+            test_visitor_ratings(browser)
             # Must be the compiled React entry point served by the backend.
             test_react(browser, 'desktop', 1366, 900)
             test_react(browser, 'mobile', 390, 844)

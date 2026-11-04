@@ -829,6 +829,28 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .mg-religious-places>h2 { margin:0 0 20px; color:var(--mg-ink); font-size:clamp(1.4rem,3vw,2rem); }
 .mg-religious-group { margin-top:26px; }
 .mg-religious-group h3 { margin:0 0 13px; color:var(--mg-primary); font-size:18px; }
+.mg-rating-widget { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:12px 0; color:#755c4d; }
+.mg-rating-summary { flex-basis:100%; font-size:12px; font-weight:750; }
+.mg-rating-stars { display:flex; gap:1px; }
+.mg-rating-stars button { display:grid; place-items:center; width:38px; height:42px; border:1px solid transparent; border-radius:7px; background:#fff8ef; color:#bf6a2c; padding:0; }
+.mg-rating-stars button:hover,.mg-rating-stars button[aria-pressed=true] { background:#ffeadb; }
+.mg-rating-yours { font-size:11px; }
+.mg-rating-error { flex-basis:100%; color:#a52b20!important; font-size:12px; }
+.mg-coast-sort { display:flex; align-items:center; gap:9px; width:fit-content; margin-top:16px; color:var(--mg-ink); font-size:13px; font-weight:750; }
+.mg-coast-sort select,.reviews-rate select { min-height:44px; border:1px solid var(--mg-line); border-radius:8px; background:#fff; color:var(--mg-ink); padding:8px 12px; }
+.reviews-storage-note { margin-top:14px; padding:13px; border-radius:9px; background:#fff4e9; color:#79513a; font-size:12px; }
+.reviews-rate,.reviews-rank { margin-top:28px; padding:clamp(20px,4vw,32px); border:1px solid var(--mg-line); border-radius:16px; background:#fff; }
+.reviews-rate h2,.reviews-rank h2 { margin:0 0 16px; font-size:22px; }
+.reviews-rate label { display:grid; gap:8px; color:var(--mg-ink); font-size:13px; font-weight:750; }
+.reviews-rate select { width:100%; max-width:520px; }
+.reviews-rate .mg-rating-widget { margin-top:19px; }
+.reviews-rank ol { padding:0; margin:0; list-style:none; }
+.reviews-rank li { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--mg-line); }
+.reviews-rank li span { flex:1; }
+.reviews-rank li strong { color:var(--mg-primary); }
+.reviews-rank li small { color:var(--mg-muted); }
+.reviews-rank .reviews-empty { box-shadow:none; margin-top:0; }
+@media(max-width:620px) { .reviews-rank li { flex-wrap:wrap; } .reviews-rank li span { flex-basis:100%; } }
 @media(max-width:1230px) { .navigation.is-open .nav-discover-submenu { display:flex; flex-direction:column; position:static; min-width:0; margin-inline-start:14px; padding:2px 0 2px 10px; border:0; border-inline-start:2px solid var(--mg-line); border-radius:0; box-shadow:none; } }
 @media(max-width:620px) { .mg-discovery-nav a { flex:1 1 140px; justify-content:center; padding:8px 9px; font-size:12px; } }
 

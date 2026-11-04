@@ -5,16 +5,19 @@ import { LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming, EditorialImage } fro
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
 import { getReligiousGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, RELIGIOUS_GROUP_ORDER } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
+import RatingWidget from './RatingWidget'
+import { sortCoastalGuides } from '../ratingOrder'
 
 
 /** Separate, data-driven collections. Results are sourced from /api/places,
  * never represented as live tickets, prices or bookable inventory.
  */
-export default function CategoryPlaces({ type, places = [], openPlace, askQuestion }) {
+export default function CategoryPlaces({ type, places = [], openPlace, askQuestion, ratings = {}, onRate }) {
   const { lang, placeName, cityName } = useI18n()
   const ar = lang === 'ar'
   const coast = type === 'coast'
   const [query, setQuery] = useState('')
+  const [sort, setSort] = useState('editorial')
   const selection = useMemo(() => orderCategoryPlaces(places.filter(place => matchesPlaceCategory(place, type)), type), [places, type])
   const visible = useMemo(() => selection.filter(place => {
     const text = [place.name, place.name_ar, place.city, place.category, place.description, place.summary_ar].join(' ').toLocaleLowerCase()
@@ -24,9 +27,9 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
   const otherCoastalPlaces = coast ? visible.filter(place => !isSwimmingBeach(place)) : []
   const secularPlaces = coast ? [] : visible.filter(place => !getReligiousGroup(place))
   const religiousGroups = coast ? [] : RELIGIOUS_GROUP_ORDER.map(group => [group, visible.filter(place => getReligiousGroup(place) === group)]).filter(([, items]) => items.length)
-  const coastalGuides = coast ? COASTAL_DESTINATIONS.filter(item =>
+  const coastalGuides = coast ? sortCoastalGuides(COASTAL_DESTINATIONS.filter(item =>
     [item.en, item.ar, item.regionEn, item.regionAr, item.spotEn, item.spotAr, item.noteEn, item.noteAr]
-      .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) : []
+      .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())), ratings, sort) : []
   const placeCards = items => <div className="mg-category-grid">
     {items.map(place => <article className="mg-place-card" key={place.id}>
       <div className="mg-place-photo" aria-hidden="true" style={getLandmarkFraming(place.id)}><EditorialImage src={LANDMARK_MEDIA[place.id]} alt="" className="mg-place-img" /><span className="mg-place-symbol">{coast && isSwimmingBeach(place) ? <Waves size={20} /> : <Landmark size={20} />}</span></div>
@@ -34,6 +37,7 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
         <div className="mg-place-location"><MapPin size={13}/>{cityName(place.city)}</div>
         <h2>{placeName(place)}</h2>
         <p>{ar ? (place.summary_ar || place.description) : place.description}</p>
+        <RatingWidget targetId={place.id} name={placeName(place)} summary={ratings[place.id]} onRate={onRate} />
         <div className="mg-place-actions"><button type="button" onClick={() => openPlace(place)}>{ar ? 'تفاصيل المكان' : 'View details'} <ArrowUpRight size={15}/></button><button type="button" title={ar ? 'اسأل المساعد' : 'Ask AI'} aria-label={`${ar ? 'اسأل المساعد عن' : 'Ask AI about'} ${placeName(place)}`} onClick={() => askQuestion(ar ? `احكيلي عن ${placeName(place)} وإزاي أضيفه لرحلتي؟` : `Tell me about ${place.name} and how to add it to my itinerary.`)}><MessageCircle size={17}/></button></div>
         {PHOTO_CREDITS[place.id] && <a className="mg-photo-credit" href={PHOTO_CREDITS[place.id].url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {PHOTO_CREDITS[place.id].author} · {PHOTO_CREDITS[place.id].license}</a>}
       </div>
@@ -51,9 +55,9 @@ export default function CategoryPlaces({ type, places = [], openPlace, askQuesti
       <DiscoveryNav current={type} />
       <div className="mg-category-count" role="status">{coast ? (ar ? `${coastalGuides.length} وجهات شاطئية · ${swimmingPlaces.length} أماكن شاطئية في الدليل` : `${coastalGuides.length} beach destinations · ${swimmingPlaces.length} beach places in the catalog`) : (ar ? `${visible.length} مكان في الدليل` : `${visible.length} curated places`)}</div>
       {coast && coastalGuides.length > 0 && <section className="mg-coastal-guides" aria-labelledby="coastal-guides-title">
-        <div className="mg-coastal-guides-head"><h2 id="coastal-guides-title">{ar ? 'وجهات شاطئية للنزول للمياه' : 'Beach destinations for swimming'}</h2><p>{ar ? 'اختار مدينة وشوف مثالًا لشاطئ فيها. تأكد من السماح بالسباحة والدخول وحالة البحر في يوم زيارتك.' : 'Choose a destination and see a beach example. Check swimming permission, access and sea conditions on the day you visit.'}</p></div>
+        <div className="mg-coastal-guides-head"><h2 id="coastal-guides-title">{ar ? 'وجهات شاطئية للنزول للمياه' : 'Beach destinations for swimming'}</h2><p>{ar ? 'اختار مدينة وشوف مثالًا لشاطئ فيها. تأكد من السماح بالسباحة والدخول وحالة البحر في يوم زيارتك.' : 'Choose a destination and see a beach example. Check swimming permission, access and sea conditions on the day you visit.'}</p><label className="mg-coast-sort">{ar ? 'الترتيب' : 'Sort by'} <select value={sort} onChange={event => setSort(event.target.value)}><option value="editorial">{ar ? 'الترتيب المقترح' : 'Recommended order'}</option><option value="rated">{ar ? 'الأعلى تقييمًا' : 'Highest visitor rating'}</option></select></label></div>
         <div className="mg-coastal-guides-grid">{coastalGuides.map(item => <article className="mg-coastal-guide" key={item.id}>
-          <span>{ar ? item.regionAr : item.regionEn}</span><h3>{ar ? item.ar : item.en}</h3><p className="mg-coastal-example"><strong>{ar ? 'مثال لشاطئ: ' : 'Beach example: '}</strong>{ar ? item.spotAr : item.spotEn}</p><p className="mg-coastal-note">{ar ? item.noteAr : item.noteEn}</p><a href={item.url} target="_blank" rel="noopener noreferrer">{ar ? 'مصدر معلومات الوجهة' : 'Destination source'} <ExternalLink size={16} aria-hidden="true" /></a>
+          <span>{ar ? item.regionAr : item.regionEn}</span><h3>{ar ? item.ar : item.en}</h3><p className="mg-coastal-example"><strong>{ar ? 'مثال لشاطئ: ' : 'Beach example: '}</strong>{ar ? item.spotAr : item.spotEn}</p><p className="mg-coastal-note">{ar ? item.noteAr : item.noteEn}</p><RatingWidget targetId={`coast:${item.id}`} name={ar ? item.ar : item.en} summary={ratings[`coast:${item.id}`]} onRate={onRate} /><a href={item.url} target="_blank" rel="noopener noreferrer">{ar ? 'مصدر معلومات الوجهة' : 'Destination source'} <ExternalLink size={16} aria-hidden="true" /></a>
         </article>)}</div>
       </section>}
       {coast && swimmingPlaces.length > 0 && <section className="mg-coast-group" aria-labelledby="swimming-beaches-title">

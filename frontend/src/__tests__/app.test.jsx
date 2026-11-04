@@ -74,9 +74,21 @@ describe('navigation and language', () => {
     expect(within(welcome).getByRole('button', { name: 'Safety & help' })).toBeInTheDocument()
     await user.click(within(welcome).getByRole('button', { name: 'Traveler reviews' }))
     expect(window.location.hash).toBe('#/reviews')
-    expect(screen.getByRole('heading', { name: 'No traveler reviews published yet' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'No visitor ratings yet' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Rate a place or beach destination' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Explore places in Egypt' }))
     expect(window.location.hash).toBe('#/explore')
+  })
+
+  it('lets a visitor rate a coastal destination and updates the public ranking', async () => {
+    const { user, calls } = await setup()
+    await user.click(nav('Traveler reviews'))
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Choose a destination' }), 'coast:marsa-alam')
+    await user.click(screen.getByRole('button', { name: 'Rate Marsa Alam 5 out of 5' }))
+    await waitFor(() => expect(calls.some(call => call.path === '/ratings/coast%3Amarsa-alam' && call.body?.rating === 5)).toBe(true))
+    expect(await screen.findByText('Your rating: 5 / 5')).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).toHaveTextContent('Marsa Alam')
+    expect(screen.getByRole('listitem')).toHaveTextContent('5 / 5')
   })
 
   it('offers source-backed emergency contacts and scenario steps in both languages', async () => {
@@ -102,7 +114,7 @@ describe('Discover', () => {
     expect(window.location.hash).toBe('#/place/karnak')
     expect(screen.getByRole('heading', { level: 1, name: 'Karnak Temple Complex' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Place reference' })).toHaveAttribute('href', 'https://example.org/karnak')
-    expect(screen.getByText('No verified traveler reviews have been published for this place yet.')).toBeInTheDocument()
+    expect(screen.getByText('Rate this place from 1 to 5 stars. Visitor ratings are not verified visits.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save place' }))
     expect(screen.getByRole('button', { name: 'Remove saved place' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Explore Egypt' }))

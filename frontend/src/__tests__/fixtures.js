@@ -39,6 +39,7 @@ export const planFor = (body, extra = {}) => ({
 /** Stub window.fetch with an in-memory API. Returns the list of recorded calls. */
 export function mockApi({ chat, chatStatus = 200, failNetwork = false } = {}) {
   const calls = []
+  const ratingVotes = new Map()
   vi.stubGlobal('fetch', vi.fn(async (url, opts = {}) => {
     if (failNetwork) throw new TypeError('Failed to fetch')
     const path = String(url).replace(/^\/api/, '')
@@ -48,6 +49,18 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false } = {}) {
     if (path === '/cities') return reply({ cities: CITIES, interests: INTERESTS, city_names_ar: CITY_NAMES_AR, interest_names_ar: {} })
     if (path === '/places') return reply({ places: PLACES })
     if (path === '/health') return reply({ status: 'ok', guide_mode: 'offline-preview' })
+    if (path === '/ratings' && (!opts.method || opts.method === 'GET')) {
+      const ratings = {}
+      for (const [target, votes] of ratingVotes) ratings[target] = { average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size }
+      return reply({ ratings, temporary_storage: true })
+    }
+    if (path.startsWith('/ratings/') && opts.method === 'POST') {
+      const target = decodeURIComponent(path.slice('/ratings/'.length))
+      const votes = ratingVotes.get(target) || new Map()
+      votes.set(body.visitor_id, body.rating)
+      ratingVotes.set(target, votes)
+      return reply({ target_id: target, average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size, your_rating: body.rating, temporary_storage: true })
+    }
     if (path === '/plan') return reply(planFor(body))
     if (path === '/chat' || path === '/consult') {
       if (chatStatus !== 200) return reply({ detail: 'nope' }, chatStatus)

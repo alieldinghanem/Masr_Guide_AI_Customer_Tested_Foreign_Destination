@@ -3,8 +3,9 @@ import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, MapPin, MessageCircle
 import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
 import { EditorialImage, LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming } from './EditorialMedia'
+import RatingWidget from './RatingWidget'
 
-export default function PlaceDetails({ place, onBack, askQuestion, saved, toggleSaved }) {
+export default function PlaceDetails({ place, onBack, askQuestion, saved, toggleSaved, ratings = {}, onRate }) {
   const { lang, placeName, placeSummary, cityName, category } = useI18n()
   const ar = lang === 'ar'
   if (!place) return <main className="container place-full-page"><h1>{ar ? 'المكان غير موجود في الدليل' : 'Place not found in the guide'}</h1><button type="button" onClick={onBack}>{ar ? 'ارجع لاستكشاف مصر' : 'Back to Explore Egypt'}</button></main>
@@ -21,6 +22,6 @@ export default function PlaceDetails({ place, onBack, askQuestion, saved, toggle
     </div>
     <div className="place-full-grid"><section><h2>{ar ? 'عن المكان' : 'About this place'}</h2><p>{placeSummary(place)}</p>{!ar && place.details && <p>{place.details}</p>}{(ar ? place.tip_ar : place.tip) && <div className="place-advice"><strong>{ar ? 'نصيحة للزيارة' : 'Visiting advice'}</strong><p>{ar ? place.tip_ar : place.tip}</p></div>}<p className="place-unverified">{ar ? 'تحقق من المواعيد والأسعار وإمكانية الوصول من الجهة الرسمية قبل الزيارة.' : 'Check hours, prices and accessibility with the official venue before visiting.'}</p><a href={place.source_url} target="_blank" rel="noopener noreferrer">{ar ? 'مرجع المكان' : 'Place reference'} <ExternalLink size={15} aria-hidden="true" /></a></section>
       <section><h2>{ar ? 'الموقع على الخريطة' : 'Location on map'}</h2><iframe title={ar ? `خريطة ${title}` : `Map of ${title}`} src={getMapUrl(place)} loading="lazy" referrerPolicy="no-referrer" /></section></div>
-    <section className="place-reviews-empty"><h2>{ar ? 'تقييمات المسافرين' : 'Traveler reviews'}</h2><p>{ar ? 'لا توجد تقييمات موثقة منشورة لهذا المكان حتى الآن.' : 'No verified traveler reviews have been published for this place yet.'}</p></section>
+    <section className="place-reviews-empty"><h2>{ar ? 'تقييمات المسافرين' : 'Traveler ratings'}</h2><p>{ar ? 'قيّم المكان من 1 إلى 5 نجوم. التقييمات من زوار الموقع ولم نتحقق من زيارتهم.' : 'Rate this place from 1 to 5 stars. Visitor ratings are not verified visits.'}</p><RatingWidget targetId={place.id} name={title} summary={ratings[place.id]} onRate={onRate} /></section>
   </main>
 }

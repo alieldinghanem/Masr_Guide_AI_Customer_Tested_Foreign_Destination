@@ -54,6 +54,15 @@ describe('category presentation', () => {
     expect(screen.queryByText('No places match that search. Try another term.')).not.toBeInTheDocument()
   })
 
+  it('keeps recommended beach order by default and can sort rated destinations first', async () => {
+    const user = userEvent.setup()
+    render(<I18nProvider initial="en"><CategoryPlaces type="coast" places={[]} ratings={{ 'coast:marsa-alam': { average: 4.8, count: 12 } }} openPlace={vi.fn()} askQuestion={vi.fn()} onRate={vi.fn()} /></I18nProvider>)
+    const names = () => [...document.querySelectorAll('.mg-coastal-guide h3')].map(el => el.textContent)
+    expect(names()[0]).toBe('Sharm El Sheikh')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Sort by' }), 'rated')
+    expect(names()[0]).toBe('Marsa Alam')
+  })
+
   it('uses the same landmark priority in the main Explore list', () => {
     const places = [entry('karnak'), entry('st-catherine-monastery', 'Saint Catherine'), entry('hanging-church', 'Cairo'), entry('bab-zuwayla', 'Cairo'), entry('ben-ezra-synagogue', 'Cairo'), entry('sultan-hassan-mosque', 'Cairo'), entry('grand-egyptian-museum'), entry('giza-pyramids')]
     render(<I18nProvider initial="en"><Explore places={places} cities={['Giza']} interests={['history']} highlight={null} setHighlight={vi.fn()} askQuestion={vi.fn()} openDetails={vi.fn()} /></I18nProvider>)
