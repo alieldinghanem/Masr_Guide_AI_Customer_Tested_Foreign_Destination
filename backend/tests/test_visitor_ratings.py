@@ -93,3 +93,34 @@ def test_account_export_and_deletion_include_reviews(client, member):
     assert client.get(target).json()['count'] == 0
     assert client.get('/api/ratings').json()['ratings'] == {}
     assert client.post(target, json={'comment': 'Another comment.'}, headers=headers).status_code == 401
+
+
+def test_confirmed_file_storage_keeps_account_and_review_across_restart(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import accounts
+    from app.main import app
+
+    monkeypatch.setattr(accounts, '_DB', tmp_path / 'traveler.sqlite3')
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'tourism.sqlite3'))
+    monkeypatch.setenv('APP_ENV', 'portfolio')
+    monkeypatch.setenv('MASR_DURABLE_STORAGE_CONFIRMED', 'true')
+    email = f'persist-{uuid4().hex}@example.org'
+    password = 'Long-Test-Password-2026'
+    with TestClient(app) as first:
+        assert first.get('/api/health').json()['registration_enabled'] is True
+        created = first.post('/api/auth/register', json={'email': email, 'password': password})
+        assert created.status_code == 201
+        headers = {'Authorization': f"Bearer {created.json()['token']}"}
+        assert first.post('/api/ratings/giza-pyramids', json={'rating': 5}, headers=headers).status_code == 200
+        assert first.post('/api/ratings/giza-pyramids/comments', json={'comment': 'A memorable visit.'}, headers=headers).status_code == 200
+
+    with TestClient(app) as restarted:
+        login = restarted.post('/api/auth/login', json={'email': email, 'password': password})
+        assert login.status_code == 200
+        headers = {'Authorization': f"Bearer {login.json()['token']}"}
+        assert restarted.get('/api/ratings').json() == {
+            'ratings': {'giza-pyramids': {'average': 5.0, 'count': 1}},
+            'temporary_storage': False,
+        }
+        assert restarted.get('/api/ratings/giza-pyramids/comments').json()['comments'][0]['comment'] == 'A memorable visit.'
+        assert restarted.get('/api/ratings/mine', headers=headers).json()['ratings']['giza-pyramids'] == 5

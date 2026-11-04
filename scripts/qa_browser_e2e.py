@@ -11,9 +11,41 @@ Never claim React E2E passed when this script only executed the /demo tests.
 import os
 import re
 import shutil
+import json
 from playwright.sync_api import sync_playwright, expect
 
 URL = os.getenv('FRONTEND_URL', 'http://127.0.0.1:8000').rstrip('/')
+
+
+def test_country_language(browser):
+    # Intercept the country lookup before the browser sends a request. This
+    # exercises the compiled UI without disclosing the test machine's IP.
+    for country, expected, browser_locale in (
+        ('EG', 'ar', 'en-US'), ('SA', 'ar', 'en-US'),
+        ('US', 'en', 'ar-EG'), ('FR', 'en', 'ar-EG'),
+    ):
+        context = browser.new_context(locale=browser_locale)
+        requests = []
+        def country_reply(route):
+            requests.append(route.request.url)
+            route.fulfill(status=200, content_type='application/json', body=json.dumps({'country': country}))
+        context.route('https://api.country.is/', country_reply)
+        page = context.new_page()
+        try:
+            page.goto(f'{URL}/#/home', wait_until='domcontentloaded', timeout=20000)
+            page.wait_for_function("code => sessionStorage.getItem('masr-guide-visitor-country-v1') === code", arg=country, timeout=10000)
+            expect(page.locator('html')).to_have_attribute('lang', expected)
+            expect(page.locator('html')).to_have_attribute('dir', 'rtl' if expected == 'ar' else 'ltr')
+            assert len(requests) == 1, f'Expected one intercepted lookup for {country}'
+            if country == 'US':
+                page.locator('.lang-toggle').click()
+                expect(page.locator('html')).to_have_attribute('lang', 'ar')
+                page.reload(wait_until='domcontentloaded')
+                expect(page.locator('html')).to_have_attribute('lang', 'ar')
+                assert len(requests) == 1, 'Manual choice should skip another country lookup'
+        finally:
+            context.close()
+    print('PASS country-language browser integration: simulated EG/SA/US/FR and saved manual choice; no third-party lookup')
 
 
 def test_demo(browser):
@@ -349,6 +381,7 @@ def run():
         exe = os.getenv('BROWSER_EXECUTABLE') or shutil.which('chromium') or shutil.which('google-chrome')
         browser = p.chromium.launch(headless=True, args=['--no-sandbox'], **({'executable_path':exe} if exe else {}))
         try:
+            test_country_language(browser)
             test_demo(browser)
             test_mobile_photo_layout(browser)
             test_visitor_ratings(browser)
