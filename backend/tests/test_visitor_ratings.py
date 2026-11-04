@@ -1,4 +1,5 @@
 from uuid import uuid4
+
 import pytest
 
 
@@ -11,27 +12,44 @@ def rating_limit_isolation(monkeypatch):
             del _guard_hits[key]
 
 
-def test_visitors_can_rate_catalog_and_coastal_guides_without_duplicate_votes(client):
-    voter = str(uuid4())
-    second_voter = str(uuid4())
+@pytest.fixture
+def member(client, tmp_path, monkeypatch):
+    from app import accounts
+    monkeypatch.setattr(accounts, '_DB', tmp_path / 'accounts.sqlite3')
+    accounts.setup()
+
+    def register():
+        email = f'qa-{uuid4().hex}@example.org'
+        response = client.post('/api/auth/register', json={'email': email, 'password': 'Long-Test-Password-2026'})
+        assert response.status_code == 201
+        return {'Authorization': f"Bearer {response.json()['token']}"}, response.json()['user']
+
+    return register
+
+
+def test_account_required_and_client_cannot_claim_an_identity(client, member):
+    target = '/api/ratings/giza-pyramids'
+    assert client.post(target, json={'rating': 5}).status_code == 401
+    assert client.post(target + '/comments', json={'comment': 'Beautiful place.'}).status_code == 401
+    headers, _ = member()
+    assert client.post(target, json={'rating': 5, 'visitor_id': str(uuid4())}, headers=headers).status_code == 422
+    assert client.post(target + '/comments', json={'comment': 'Beautiful place.', 'name': 'Someone else'}, headers=headers).status_code == 422
+
+
+def test_members_rate_and_edit_without_duplicate_votes(client, member):
+    first, _ = member()
+    second, _ = member()
+    target = '/api/ratings/giza-pyramids'
     assert client.get('/api/ratings').json()['ratings'] == {}
-    first = client.post('/api/ratings/giza-pyramids', json={'visitor_id': voter, 'rating': 5})
-    assert first.status_code == 200
-    assert first.json()['count'] == 1
-    assert first.json()['average'] == 5.0
-    edited = client.post('/api/ratings/giza-pyramids', json={'visitor_id': voter, 'rating': 3})
-    assert edited.status_code == 200
-    assert edited.json()['count'] == 1
-    assert edited.json()['average'] == 3.0
-    other = client.post('/api/ratings/giza-pyramids', json={'visitor_id': second_voter, 'rating': 5})
-    assert other.status_code == 200
-    assert other.json()['count'] == 2
-    assert other.json()['average'] == 4.0
-    coast = client.post('/api/ratings/coast:sharm-el-sheikh', json={'visitor_id': voter, 'rating': 4})
-    assert coast.status_code == 200
-    assert coast.json()['count'] == 1
+    assert client.post(target, json={'rating': 5}, headers=first).json()['count'] == 1
+    edited = client.post(target, json={'rating': 3}, headers=first).json()
+    assert (edited['average'], edited['count']) == (3.0, 1)
+    assert client.get('/api/ratings/mine', headers=first).json()['ratings']['giza-pyramids'] == 3
+    assert client.get('/api/ratings/mine').status_code == 401
+    other = client.post(target, json={'rating': 5}, headers=second).json()
+    assert (other['average'], other['count']) == (4.0, 2)
+    assert client.post('/api/ratings/coast:sharm-el-sheikh', json={'rating': 4}, headers=first).json()['count'] == 1
     listing = client.get('/api/ratings')
-    assert listing.status_code == 200
     assert listing.headers['cache-control'] == 'no-store'
     assert listing.json()['ratings'] == {
         'giza-pyramids': {'average': 4.0, 'count': 2},
@@ -39,51 +57,39 @@ def test_visitors_can_rate_catalog_and_coastal_guides_without_duplicate_votes(cl
     }
 
 
-def test_rating_validation_and_unknown_targets(client):
-    voter = str(uuid4())
+def test_review_validation_catalog_rebuild_and_storage_notice(client, member):
+    from app.database import initialize
+    headers, _ = member()
     for rating in (0, 6, 'five'):
-        assert client.post('/api/ratings/giza-pyramids', json={'visitor_id': voter, 'rating': rating}).status_code == 422
-    assert client.post('/api/ratings/giza-pyramids', json={'visitor_id': 'not-a-uuid', 'rating': 5}).status_code == 422
-    assert client.post('/api/ratings/no-such-place', json={'visitor_id': voter, 'rating': 5}).status_code == 404
-    assert client.post('/api/ratings/coast:no-such-place', json={'visitor_id': voter, 'rating': 5}).status_code == 404
-
-
-def test_ratings_survive_catalog_rebuild_and_expose_temporary_storage(client):
-    from app.database import initialize
-    voter = str(uuid4())
-    assert client.post('/api/ratings/ben-ezra-synagogue', json={'visitor_id': voter, 'rating': 5}).status_code == 200
-    initialize()
-    listing = client.get('/api/ratings').json()
-    assert listing['ratings']['ben-ezra-synagogue'] == {'average': 5.0, 'count': 1}
-    assert listing['temporary_storage'] is True
-
-
-def test_visitor_comments_are_visible_editable_and_survive_catalog_rebuild(client):
-    from app.database import initialize
-    voter = str(uuid4())
-    target = '/api/ratings/giza-pyramids/comments'
-    first = client.post(target, json={'visitor_id': voter, 'name': 'Traveler', 'comment': 'The pyramids were memorable.'})
-    assert first.status_code == 200
-    assert first.json()['count'] == 1
-    assert first.json()['comments'][0]['comment'] == 'The pyramids were memorable.'
-    edited = client.post(target, json={'visitor_id': voter, 'name': 'Traveler', 'comment': 'Go early in the morning.'})
-    assert edited.status_code == 200
-    assert edited.json()['count'] == 1
-    assert edited.json()['comments'][0]['comment'] == 'Go early in the morning.'
-    initialize()
-    listing = client.get(target)
-    assert listing.status_code == 200
-    assert listing.json()['count'] == 1
-    assert listing.json()['temporary_storage'] is True
-    assert 'voter_hash' not in str(listing.json())
-
-
-def test_comments_reject_links_bad_text_and_unknown_places(client):
-    voter = str(uuid4())
-    target = '/api/ratings/coast:marsa-alam/comments'
-    valid = client.post(target, json={'visitor_id': voter, 'name': 'Guest', 'comment': 'Lovely coastline.'})
-    assert valid.status_code == 200
-    for comment in ('https://spam.example', 'mail me a@b.com', '    '):
-        assert client.post(target, json={'visitor_id': voter, 'name': 'Guest', 'comment': comment}).status_code == 422
-    assert client.post(target, json={'visitor_id': voter, 'name': '   A  ', 'comment': 'Lovely coastline.'}).status_code == 422
+        assert client.post('/api/ratings/giza-pyramids', json={'rating': rating}, headers=headers).status_code == 422
+    assert client.post('/api/ratings/no-such-place', json={'rating': 5}, headers=headers).status_code == 404
     assert client.get('/api/ratings/no-such-place/comments').status_code == 404
+    assert client.post('/api/ratings/ben-ezra-synagogue', json={'rating': 5}, headers=headers).status_code == 200
+    target = '/api/ratings/giza-pyramids/comments'
+    for comment in ('https://spam.example', 'mail me a@b.com', '    '):
+        assert client.post(target, json={'comment': comment}, headers=headers).status_code == 422
+    assert client.post(target, json={'comment': 'The pyramids were memorable.'}, headers=headers).status_code == 200
+    edited = client.post(target, json={'comment': 'Go early in the morning.'}, headers=headers).json()
+    assert edited['count'] == 1
+    assert edited['comments'][0]['comment'] == 'Go early in the morning.'
+    assert edited['comments'][0]['name'].startswith('Traveler #')
+    initialize()
+    assert client.get('/api/ratings').json()['ratings']['ben-ezra-synagogue'] == {'average': 5.0, 'count': 1}
+    assert client.get(target).json()['temporary_storage'] is True
+
+
+def test_account_export_and_deletion_include_reviews(client, member):
+    headers, user = member()
+    target = '/api/ratings/coast:marsa-alam/comments'
+    assert client.post(target, json={'comment': 'Lovely coastline.'}, headers=headers).status_code == 200
+    assert client.post('/api/ratings/coast:marsa-alam', json={'rating': 4}, headers=headers).status_code == 200
+    assert user['email'] not in str(client.get(target).json())
+    exported = client.get('/api/my/export', headers=headers).json()
+    assert exported['visitor_reviews']['comments'][0]['comment'] == 'Lovely coastline.'
+    assert exported['visitor_reviews']['ratings'][0]['rating'] == 4
+    deleted = client.request('DELETE', '/api/my/account', json={
+        'password': 'Long-Test-Password-2026', 'confirmation': 'DELETE MY ACCOUNT'}, headers=headers)
+    assert deleted.status_code == 200
+    assert client.get(target).json()['count'] == 0
+    assert client.get('/api/ratings').json()['ratings'] == {}
+    assert client.post(target, json={'comment': 'Another comment.'}, headers=headers).status_code == 401

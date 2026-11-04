@@ -5,7 +5,7 @@ import { COASTAL_DESTINATIONS } from '../coastalDestinations'
 import RatingWidget from './RatingWidget'
 import VisitorComments from './VisitorComments'
 
-export default function TravelerReviews({ onExplore, places = [], ratings = {}, onRate, temporaryStorage = false }) {
+export default function TravelerReviews({ onExplore, places = [], ratings = {}, myRatings = {}, onRate, temporaryStorage = false, session, onSignIn, registrationEnabled = true }) {
   const { t, lang, placeName } = useI18n()
   const ar = lang === 'ar'
   const [chosen, setChosen] = useState('')
@@ -31,7 +31,7 @@ export default function TravelerReviews({ onExplore, places = [], ratings = {}, 
           <optgroup label={t('reviews.places')}>{catalog.map(item => <option value={item.id} key={item.id}>{item.label}</option>)}</optgroup>
         </select>
       </label>
-      {selected && <><RatingWidget targetId={selected.id} name={selected.label} summary={ratings[selected.id]} onRate={onRate} /><VisitorComments targetId={selected.id} /></>}
+      {selected && <><RatingWidget targetId={selected.id} name={selected.label} summary={ratings[selected.id]} yourRating={myRatings[selected.id]} onRate={onRate} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} /><VisitorComments targetId={selected.id} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} /></>}
     </section>
     <section className="reviews-rank" aria-labelledby="reviews-rank-title">
       <h2 id="reviews-rank-title">{t('reviews.rank.title')}</h2>

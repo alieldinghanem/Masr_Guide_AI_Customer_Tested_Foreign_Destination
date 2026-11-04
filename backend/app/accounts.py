@@ -324,6 +324,8 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
                         (user['id'],)).fetchone()
         if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
             raise HTTPException(403, detail='Incorrect current password')
+        from .ratings import delete_account_reviews
+        delete_account_reviews(user['id'])
         c.execute('DELETE FROM account_users WHERE id=?', (user['id'],))
     return {'deleted': True}
 
@@ -390,11 +392,13 @@ def export_account_data(user=Depends(current_user)):
                                   (user['id'],)).fetchall()
         favorites = c.execute('SELECT place_id,created_at FROM account_favorites WHERE user_id=? ORDER BY created_at,place_id',
                               (user['id'],)).fetchall()
+    from .ratings import account_reviews
     return {
         'format': 'masr-guide-traveler-export-v1',
         'exported_at': _now().isoformat(),
         'profile': {'email': profile['email'], 'created_at': profile['created_at']},
         'favorites': [dict(row) for row in favorites],
+        'visitor_reviews': account_reviews(user['id']),
         'trips': [dict(id=row['id'], title=row['title'], itinerary=json.loads(row['itinerary']),
                        created_at=row['created_at'], updated_at=row['updated_at']) for row in trips],
         'conversations': [dict(id=row['id'], title=row['title'],

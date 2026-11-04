@@ -253,11 +253,18 @@ def test_mobile_photo_layout(browser):
 
 
 def test_visitor_ratings(browser):
-    """Exercise a real browser vote, persistence across reload, and rating order."""
+    """Exercise an account-owned vote, persistence across reload, and rating order."""
     context = browser.new_context(viewport={'width': 1366, 'height': 900})
     context.add_init_script("localStorage.setItem('masr-guide-lang', 'en')")
     page = context.new_page()
     try:
+        from uuid import uuid4
+        page.goto(f'{URL}/#/account', wait_until='domcontentloaded', timeout=20000)
+        page.get_by_role('button', name='Create an account').click()
+        page.get_by_label('Email').fill(f'rating-qa-{uuid4().hex[:12]}@example.org')
+        page.get_by_label('Password').fill('QA-test-account-Password-2026')
+        page.get_by_role('button', name='Register').click()
+        expect(page.get_by_text('Signed in as')).to_be_visible(timeout=15000)
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded', timeout=20000)
         marsa = page.locator('.mg-coastal-guide').filter(has_text='Marsa Alam')
         expect(marsa).to_be_visible(timeout=15000)
@@ -288,7 +295,16 @@ def test_photo_details_and_comments(browser):
         expect(page.locator('.place-full-photo img')).to_be_visible()
         expect(page.get_by_role('heading', name='Rate this place')).to_be_visible()
         expect(page.get_by_role('heading', name=re.compile('Visitor comments'))).to_be_visible()
-        page.get_by_role('textbox', name='Display name').fill('Browser visitor')
+        assert page.get_by_role('textbox', name='Display name').count() == 0
+        assert page.get_by_role('button', name='Post comment').count() == 0
+        page.locator('.mg-visitor-comments').get_by_role('button', name='Sign in').click()
+        expect(page).to_have_url(re.compile(r'#/account$'))
+        from uuid import uuid4
+        page.get_by_role('button', name='Create an account').click()
+        page.get_by_label('Email').fill(f'comment-qa-{uuid4().hex[:12]}@example.org')
+        page.get_by_label('Password').fill('QA-test-account-Password-2026')
+        page.get_by_role('button', name='Register').click()
+        expect(page).to_have_url(re.compile(r'#/place/giza-pyramids$'))
         page.get_by_role('textbox', name='Your comment about this place').fill('The photo and place details are helpful.')
         page.get_by_role('button', name='Post comment').click()
         expect(page.locator('.mg-comment-list')).to_contain_text('The photo and place details are helpful.')
@@ -300,7 +316,7 @@ def test_photo_details_and_comments(browser):
         page.locator('.place-back').click()
         expect(page).to_have_url(re.compile(r'#/explore$'))
         expect(page.locator('.detail-photo')).to_be_visible(timeout=15000)
-        print('PASS place details: photo click, top stars, public comment, reload and illustrated Explore panel')
+        print('PASS place details: photo click, top stars, account-gated comment, reload and illustrated Explore panel')
     finally:
         context.close()
 

@@ -12,7 +12,7 @@ import { sortCoastalGuides } from '../ratingOrder'
 /** Separate, data-driven collections. Results are sourced from /api/places,
  * never represented as live tickets, prices or bookable inventory.
  */
-export default function CategoryPlaces({ type, places = [], openDetails, openPlace, askQuestion, ratings = {}, onRate }) {
+export default function CategoryPlaces({ type, places = [], openDetails, openPlace, askQuestion, ratings = {}, myRatings = {}, onRate, session, onSignIn, registrationEnabled = true }) {
   const { lang, placeName, cityName } = useI18n()
   const ar = lang === 'ar'
   const coast = type === 'coast'
@@ -37,7 +37,7 @@ export default function CategoryPlaces({ type, places = [], openDetails, openPla
         <div className="mg-place-location"><MapPin size={13}/>{cityName(place.city)}</div>
         <h2>{placeName(place)}</h2>
         <p>{ar ? (place.summary_ar || place.description) : place.description}</p>
-        <RatingWidget targetId={place.id} name={placeName(place)} summary={ratings[place.id]} onRate={onRate} />
+        <RatingWidget targetId={place.id} name={placeName(place)} summary={ratings[place.id]} yourRating={myRatings[place.id]} onRate={onRate} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} />
         <div className="mg-place-actions"><button type="button" onClick={() => (openDetails || openPlace)?.(place)}>{ar ? 'تفاصيل المكان' : 'View details'} <ArrowUpRight size={15}/></button><button type="button" title={ar ? 'اسأل المساعد' : 'Ask AI'} aria-label={`${ar ? 'اسأل المساعد عن' : 'Ask AI about'} ${placeName(place)}`} onClick={() => askQuestion(ar ? `احكيلي عن ${placeName(place)} وإزاي أضيفه لرحلتي؟` : `Tell me about ${place.name} and how to add it to my itinerary.`)}><MessageCircle size={17}/></button></div>
         {PHOTO_CREDITS[place.id] && <a className="mg-photo-credit" href={PHOTO_CREDITS[place.id].url} target="_blank" rel="noopener noreferrer">{ar ? 'الصورة' : 'Photo'}: {PHOTO_CREDITS[place.id].author} · {PHOTO_CREDITS[place.id].license}</a>}
       </div>
@@ -57,7 +57,7 @@ export default function CategoryPlaces({ type, places = [], openDetails, openPla
       {coast && coastalGuides.length > 0 && <section className="mg-coastal-guides" aria-labelledby="coastal-guides-title">
         <div className="mg-coastal-guides-head"><h2 id="coastal-guides-title">{ar ? 'وجهات شاطئية للنزول للمياه' : 'Beach destinations for swimming'}</h2><p>{ar ? 'اختار مدينة وشوف مثالًا لشاطئ فيها. تأكد من السماح بالسباحة والدخول وحالة البحر في يوم زيارتك.' : 'Choose a destination and see a beach example. Check swimming permission, access and sea conditions on the day you visit.'}</p><label className="mg-coast-sort">{ar ? 'الترتيب' : 'Sort by'} <select value={sort} onChange={event => setSort(event.target.value)}><option value="editorial">{ar ? 'الترتيب المقترح' : 'Recommended order'}</option><option value="rated">{ar ? 'الأعلى تقييمًا' : 'Highest visitor rating'}</option></select></label></div>
         <div className="mg-coastal-guides-grid">{coastalGuides.map(item => <article className="mg-coastal-guide" key={item.id}>
-          <span>{ar ? item.regionAr : item.regionEn}</span><h3>{ar ? item.ar : item.en}</h3><p className="mg-coastal-example"><strong>{ar ? 'مثال لشاطئ: ' : 'Beach example: '}</strong>{ar ? item.spotAr : item.spotEn}</p><p className="mg-coastal-note">{ar ? item.noteAr : item.noteEn}</p><RatingWidget targetId={`coast:${item.id}`} name={ar ? item.ar : item.en} summary={ratings[`coast:${item.id}`]} onRate={onRate} /><a href={item.url} target="_blank" rel="noopener noreferrer">{ar ? 'مصدر معلومات الوجهة' : 'Destination source'} <ExternalLink size={16} aria-hidden="true" /></a>
+          <span>{ar ? item.regionAr : item.regionEn}</span><h3>{ar ? item.ar : item.en}</h3><p className="mg-coastal-example"><strong>{ar ? 'مثال لشاطئ: ' : 'Beach example: '}</strong>{ar ? item.spotAr : item.spotEn}</p><p className="mg-coastal-note">{ar ? item.noteAr : item.noteEn}</p><RatingWidget targetId={`coast:${item.id}`} name={ar ? item.ar : item.en} summary={ratings[`coast:${item.id}`]} yourRating={myRatings[`coast:${item.id}`]} onRate={onRate} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} /><a href={item.url} target="_blank" rel="noopener noreferrer">{ar ? 'مصدر معلومات الوجهة' : 'Destination source'} <ExternalLink size={16} aria-hidden="true" /></a>
         </article>)}</div>
       </section>}
       {coast && swimmingPlaces.length > 0 && <section className="mg-coast-group" aria-labelledby="swimming-beaches-title">

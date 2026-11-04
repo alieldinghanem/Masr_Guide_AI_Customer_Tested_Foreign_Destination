@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 import { isValidItinerary } from '../tripValidation'
+import { useI18n } from '../i18n'
 
 async function request(path, method = 'GET', payload, token, ifMatch) {
   // Browsers reject a request body on GET/HEAD; omitted body must stay undefined.
@@ -27,6 +28,8 @@ export function getSession() {
 }
 
 export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onOpenPlanner = () => {}, registrationEnabled = true }) {
+  const { lang } = useI18n()
+  const ar = lang === 'ar'
   const [session, setSession] = useState(getSession)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -178,20 +181,20 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
 
   return (
     <main className="page-wrap container account-page">
-      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>My Travel Account</h1><p>Save Egypt itineraries in your account. Portfolio/demo hosting can erase stored data on restart; never rely on this preview for important travel plans.</p></div>
+      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك. بيانات النسخة التجريبية قد تختفي بعد إعادة تشغيل الموقع.' : 'Save Egypt itineraries and share reviews from your account. Portfolio/demo hosting can erase stored data on restart; never rely on this preview for important travel plans.'}</p></div>
       {error && <p role="alert" className="account-error">{error}</p>}
       {!session ? (
         <form className="account-panel" onSubmit={signIn}>
-          <h2>{signup ? 'Create an account' : 'Sign in'}</h2>
-          <label>Email<input required autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
-          <label>Password<input required minLength={12} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
-          <small>Use at least 12 characters. This is an MVP account system; do not reuse passwords from other services.</small>
-          <button className="btn primary" disabled={busy} type="submit">{busy ? 'Please wait…' : signup ? 'Register' : 'Sign in'}</button>
-          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? 'Already have an account?' : 'Create an account'}</button> : <p role="status">Registration is disabled on this temporary-storage public preview. Existing users can sign in only on durable deployments.</p>}
+          <h2>{signup ? (ar ? 'إنشاء حساب' : 'Create an account') : (ar ? 'تسجيل الدخول' : 'Sign in')}</h2>
+          <label>{ar ? 'البريد الإلكتروني' : 'Email'}<input required autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+          <label>{ar ? 'كلمة المرور' : 'Password'}<input required minLength={12} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+          <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى. يمكنك استخدام عنوان Gmail كبريد إلكتروني؛ تسجيل Google بضغطة واحدة غير مفعّل حاليًا.' : 'Use at least 12 characters and do not reuse another password. A Gmail address works as an email address; one-click Google sign-in is not enabled yet.'}</small>
+          <button className="btn primary" disabled={busy} type="submit">{busy ? (ar ? 'انتظر...' : 'Please wait…') : signup ? (ar ? 'إنشاء الحساب' : 'Register') : (ar ? 'تسجيل الدخول' : 'Sign in')}</button>
+          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
         </form>
       ) : (
         <section className="account-panel">
-          <div className="account-bar"><p>Signed in as <strong>{session.user.email}</strong></p><button className="btn secondary" onClick={signOut}>Sign out</button></div>
+          <div className="account-bar"><p>{ar ? 'تم تسجيل الدخول بالبريد' : 'Signed in as'} <strong>{session.user.email}</strong></p><button className="btn secondary" onClick={signOut}>{ar ? 'تسجيل الخروج' : 'Sign out'}</button></div>
           <h2>Save the itinerary from My Trip Planner</h2>
           <p>{currentPlan ? `${currentPlan.days.length}-day itinerary available to save.` : 'Create and save an itinerary in the Planner first, then return here.'}</p>
           <label>Trip title<input maxLength={120} minLength={2} value={title} onChange={e => setTitle(e.target.value)} /></label>
@@ -205,9 +208,9 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
             <button className="btn secondary" onClick={() => setSelected(null)}>Close</button></div>}
           <section className="account-delete-section" aria-label="Delete account">
             <h2>Account privacy</h2>
-            <p>Download a JSON copy of your saved trips, favorites, and AI conversations. This export does not contain passwords or session tokens.</p>
+            <p>Download a JSON copy of your saved trips, favorites, AI conversations, ratings, and comments. This export does not contain passwords or session tokens.</p>
             <button type="button" className="btn secondary" disabled={busy} onClick={exportMyData}>Download my account data</button>
-            <p>Deleting your account permanently removes your saved trips, conversations, and sessions. Partner inquiries submitted separately are not linked to this account.</p>
+            <p>Deleting your account permanently removes your saved trips, conversations, sessions, ratings, and comments. Partner inquiries submitted separately are not linked to this account.</p>
             {!deletionOpen ? <button type="button" className="btn secondary" onClick={() => setDeletionOpen(true)}>Delete my account</button> : (
               <form onSubmit={deleteMyAccount}>
                 <label>Confirm with your current password<input required type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>

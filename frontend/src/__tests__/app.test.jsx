@@ -15,6 +15,9 @@ const setup = async opts => {
   await waitFor(() => expect(calls.some(c => c.path === '/places')).toBe(true))
   return { calls, user }
 }
+const signedIn = () => sessionStorage.setItem('masr-account-session-v4', JSON.stringify({
+  token: 'test-member-token', user: { id: 'member-1', email: 'traveler@example.org' }
+}))
 const nav = name => {
   const arabic = document.documentElement.lang === 'ar'
   const primary = within(screen.getByRole('navigation', { name: arabic ? 'التنقل الرئيسي' : 'Primary navigation' }))
@@ -80,13 +83,15 @@ describe('navigation and language', () => {
     expect(window.location.hash).toBe('#/explore')
   })
 
-  it('lets a visitor rate a coastal destination and updates the public ranking', async () => {
+  it('lets a signed-in member rate a coastal destination and updates the public ranking', async () => {
+    signedIn()
     const { user, calls } = await setup()
     await user.click(nav('Traveler reviews'))
     await user.selectOptions(screen.getByRole('combobox', { name: 'Choose a destination' }), 'coast:marsa-alam')
     await user.click(screen.getByRole('button', { name: 'Rate Marsa Alam 5 out of 5' }))
     await waitFor(() => expect(calls.some(call => call.path === '/ratings/coast%3Amarsa-alam' && call.body?.rating === 5)).toBe(true))
     expect(await screen.findByText('Your rating: 5 / 5')).toBeInTheDocument()
+    expect(calls.find(call => call.path === '/ratings/coast%3Amarsa-alam' && call.method === 'POST').authorization).toBe('Bearer test-member-token')
     expect(screen.getByRole('listitem')).toHaveTextContent('Marsa Alam')
     expect(screen.getByRole('listitem')).toHaveTextContent('5 / 5')
   })
@@ -122,18 +127,31 @@ describe('Discover', () => {
     expect(window.location.hash).toBe('#/explore')
   })
 
-  it('opens a photographed heritage place directly and lets visitors comment below its rating', async () => {
+  it('opens a photographed heritage place and requires an account for comments', async () => {
     const { user, calls } = await setup()
     await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Historical places' }))
     await user.click(await screen.findByRole('button', { name: 'More details about Karnak Temple Complex' }))
     expect(window.location.hash).toBe('#/place/karnak')
     expect(screen.getByRole('img', { name: 'Karnak Temple Complex' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Rate this place' })).toBeInTheDocument()
-    await user.type(screen.getByRole('textbox', { name: 'Display name' }), 'Visitor')
+    expect(screen.queryByRole('textbox', { name: 'Display name' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Post comment' })).not.toBeInTheDocument()
+    expect(calls.some(call => call.path === '/ratings/karnak/comments' && call.method === 'POST')).toBe(false)
+    await user.click(within(screen.getByRole('main')).getAllByRole('button', { name: 'Sign in' })[0])
+    expect(window.location.hash).toBe('#/account')
+  })
+
+  it('lets a signed-in member comment without entering a public name', async () => {
+    signedIn()
+    const { user, calls } = await setup()
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Historical places' }))
+    await user.click(await screen.findByRole('button', { name: 'More details about Karnak Temple Complex' }))
     await user.type(screen.getByRole('textbox', { name: 'Your comment about this place' }), 'A great place to visit early.')
     await user.click(screen.getByRole('button', { name: 'Post comment' }))
     expect(await screen.findByText('A great place to visit early.')).toBeInTheDocument()
-    expect(calls.some(call => call.path === '/ratings/karnak/comments' && call.method === 'POST')).toBe(true)
+    const posted = calls.find(call => call.path === '/ratings/karnak/comments' && call.method === 'POST')
+    expect(posted.authorization).toBe('Bearer test-member-token')
+    expect(posted.body).toEqual({ comment: 'A great place to visit early.' })
     await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Historical places' }))
     expect(window.location.hash).toBe('#/heritage')
   })
