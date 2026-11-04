@@ -40,6 +40,11 @@ describe('category presentation', () => {
     const places = [entry('qaitbay', 'Alexandria', 'Heritage'), entry('ras-mohammed', 'Sharm El Sheikh', 'Nature', ['beaches']), entry('naama-bay', 'Sharm El Sheikh', 'Beach', ['beaches']), entry('giftun-island', 'Hurghada', 'Nature', ['beaches']), entry('dahab-lagoon', 'Dahab', 'Beach', ['beaches'])]
     render(<I18nProvider initial="en"><CategoryPlaces type="coast" places={places} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
     expect(screen.getByText('10 beach destinations · 2 beach places in the catalog')).toBeInTheDocument()
+    const guidePhotos = [...document.querySelectorAll('.mg-coastal-guide-photo')]
+    expect(guidePhotos).toHaveLength(10)
+    expect(new Set(guidePhotos.map(photo => photo.getAttribute('src'))).size).toBe(10)
+    expect(guidePhotos.every(photo => photo.getAttribute('alt') && photo.getAttribute('src').startsWith('/assets/coast/'))).toBe(true)
+    expect(document.querySelectorAll('.mg-coastal-photo-credit')).toHaveLength(10)
     expect([...document.querySelectorAll('.mg-coastal-guide h3')].map(el => el.textContent)).toEqual([
       'Sharm El Sheikh', 'North Coast & Alamein', 'Alexandria', 'Marsa Matruh', 'Marsa Alam',
       'Hurghada', 'Dahab', 'Ain Sokhna', 'Nuweiba', 'Safaga',

@@ -98,6 +98,13 @@ def test_react(browser, label, width, height):
         expect(page.locator('#swimming-beaches-title')).to_be_visible(timeout=15000)
         expect(page.locator('#coastal-other-title')).to_be_visible(timeout=15000)
         assert page.locator('.mg-coastal-guide').count() == 10
+        photos = page.locator('.mg-coastal-guide-photo')
+        expect(photos).to_have_count(10)
+        for photo in photos.all():
+            photo.scroll_into_view_if_needed()
+            photo.evaluate('(image) => image.decode()')
+            assert photo.evaluate('(image) => image.naturalWidth >= 600'), 'Beach destination photo did not load'
+        assert page.locator('.mg-coastal-photo-credit').count() == 10
         assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
         page.goto(f'{URL}/#/home', wait_until='domcontentloaded')

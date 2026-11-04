@@ -802,6 +802,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .mg-coastal-guides-head p { margin:0; color:var(--mg-muted); line-height:1.6; }
 .mg-coastal-guides-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
 .mg-coastal-guide { display:flex; flex-direction:column; min-width:0; padding:1.25rem; border:1px solid var(--mg-line); border-radius:14px; background:#fff; }
+.mg-coastal-guide-photo { display:block; width:100%; height:185px; margin-bottom:15px; border-radius:9px; object-fit:cover; background:#e8f2f1; }
+.mg-coastal-photo-credit { margin-top:8px; color:var(--mg-muted); font-size:11px; line-height:1.45; }
+.mg-coastal-guide .mg-coastal-photo-credit a { display:inline; min-height:0; margin:0; color:var(--mg-muted); font-size:inherit; text-decoration:underline; }
 .mg-coastal-guide>span { color:var(--mg-primary); font-size:.77rem; font-weight:750; }
 .mg-coastal-guide h3 { margin:.45rem 0; color:var(--mg-ink); font-size:1.2rem; }
 .mg-coastal-guide p { margin:0 0 1rem; color:var(--mg-muted); line-height:1.5; }

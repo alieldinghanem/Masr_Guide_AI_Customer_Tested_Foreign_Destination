@@ -3,6 +3,7 @@ import { ArrowUpRight, ExternalLink, Search, Landmark, Waves, MapPin, MessageCir
 import { useI18n } from '../i18n'
 import { LANDMARK_MEDIA, PHOTO_CREDITS, getLandmarkFraming, EditorialImage } from './EditorialMedia'
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
+import { COASTAL_MEDIA } from '../coastalMedia'
 import { getReligiousGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, RELIGIOUS_GROUP_ORDER } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
 import RatingWidget from './RatingWidget'
@@ -57,7 +58,9 @@ export default function CategoryPlaces({ type, places = [], openDetails, openPla
       {coast && coastalGuides.length > 0 && <section className="mg-coastal-guides" aria-labelledby="coastal-guides-title">
         <div className="mg-coastal-guides-head"><h2 id="coastal-guides-title">{ar ? 'وجهات شاطئية للنزول للمياه' : 'Beach destinations for swimming'}</h2><p>{ar ? 'اختار مدينة وشوف مثالًا لشاطئ فيها. تأكد من السماح بالسباحة والدخول وحالة البحر في يوم زيارتك.' : 'Choose a destination and see a beach example. Check swimming permission, access and sea conditions on the day you visit.'}</p><label className="mg-coast-sort">{ar ? 'الترتيب' : 'Sort by'} <select value={sort} onChange={event => setSort(event.target.value)}><option value="editorial">{ar ? 'الترتيب المقترح' : 'Recommended order'}</option><option value="rated">{ar ? 'الأعلى تقييمًا' : 'Highest visitor rating'}</option></select></label></div>
         <div className="mg-coastal-guides-grid">{coastalGuides.map(item => <article className="mg-coastal-guide" key={item.id}>
+          <img className="mg-coastal-guide-photo" src={COASTAL_MEDIA[item.id].photo} alt={ar ? COASTAL_MEDIA[item.id].ar : COASTAL_MEDIA[item.id].en} loading="lazy" decoding="async" />
           <span>{ar ? item.regionAr : item.regionEn}</span><h3>{ar ? item.ar : item.en}</h3><p className="mg-coastal-example"><strong>{ar ? 'مثال لشاطئ: ' : 'Beach example: '}</strong>{ar ? item.spotAr : item.spotEn}</p><p className="mg-coastal-note">{ar ? item.noteAr : item.noteEn}</p><RatingWidget targetId={`coast:${item.id}`} name={ar ? item.ar : item.en} summary={ratings[`coast:${item.id}`]} yourRating={myRatings[`coast:${item.id}`]} onRate={onRate} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} /><a href={item.url} target="_blank" rel="noopener noreferrer">{ar ? 'مصدر معلومات الوجهة' : 'Destination source'} <ExternalLink size={16} aria-hidden="true" /></a>
+          <div className="mg-coastal-photo-credit">{ar ? 'الصورة: ' : 'Photo: '}<a href={COASTAL_MEDIA[item.id].source} target="_blank" rel="noopener noreferrer">{COASTAL_MEDIA[item.id].author}</a> · <a href={COASTAL_MEDIA[item.id].licenseUrl} target="_blank" rel="noopener noreferrer">{COASTAL_MEDIA[item.id].license}</a></div>
         </article>)}</div>
       </section>}
       {coast && swimmingPlaces.length > 0 && <section className="mg-coast-group" aria-labelledby="swimming-beaches-title">
