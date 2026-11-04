@@ -90,6 +90,31 @@ def test_hyphenated_english_family_trip_keeps_context_on_replacement(tmp_path, m
     assert _allocation(second) == {'Cairo': 5, 'Luxor': 2, 'Sharm El Sheikh': 7}
 
 
+def test_duration_followup_waits_for_cities_then_uses_context(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    direct = consult_travel(ConsultRequest(message='With my family for 14 days.', language='English'))
+    assert direct['mode'] == 'needs-clarification' and direct['trip_state'] is None
+    for greeting, duration, destinations, language in (
+        ("I'm coming to Egypt soon.", 'With my family for 14 days.', 'Cairo, Luxor and Hurghada.', 'English'),
+        ('أنا جاي مصر قريب', 'هقعد ١٤ يوم مع عيلتي', 'القاهرة والأقصر والغردقة', 'Arabic'),
+    ):
+        first = consult_travel(ConsultRequest(message=greeting, language=language))
+        history = [ChatTurn(role='user', content=greeting), ChatTurn(role='assistant', content=first['answer'])]
+        pending = consult_travel(ConsultRequest(message=duration, language=language, history=history))
+        assert pending['mode'] == 'needs-clarification'
+        assert pending['trip_state'] is None
+        assert pending['itinerary'] is None
+        history += [ChatTurn(role='user', content=duration), ChatTurn(role='assistant', content=pending['answer'])]
+        complete = consult_travel(ConsultRequest(message=destinations, language=language, history=history))
+        assert complete['mode'] == 'local-planner'
+        assert complete['trip_state']['days'] == 14
+        assert complete['trip_state']['family'] is True
+        assert {'Cairo', 'Luxor', 'Hurghada'} <= set(_allocation(complete))
+
+
 def test_explicit_arabic_extension_of_shared_phase_preserves_other_cities(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)

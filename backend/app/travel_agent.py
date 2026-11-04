@@ -448,7 +448,7 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
     else:
         phases = [{'kind': 'history' if history else 'mixed', 'days': days,
                    'cities': historic_cities or cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
-    family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
+    family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|عيلتي|عائلتي|أسرتي|اسرتي|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
     return {'days': days, 'phases': phases, 'pace': 'balanced', 'family': family, 'budget_egp': budget_egp,
             'accessibility_needs': needs_accessibility(message)}
 
@@ -858,6 +858,18 @@ def consult_travel(request):
     available = {p['city'] for p in all_places()}
     state = request.trip_state.model_dump() if request.trip_state else None
     cities = mentioned_cities(message, available)
+    if not state and cities and total_days(message) is None and request.history:
+        previous_assistant = next((turn.content for turn in reversed(request.history) if turn.role == 'assistant'), '')
+        previous_user = next((turn.content for turn in reversed(request.history) if turn.role == 'user'), '')
+        if (('Which cities would you like to include?' in previous_assistant or
+             'تحب تزور أنهي مدن؟' in previous_assistant or
+             'Quelles villes souhaitez-vous visiter ?' in previous_assistant)
+                and total_days(previous_user) is not None and not mentioned_cities(previous_user, available)):
+            # The visitor is answering our own city question. Carry forward
+            # only their last duration/family turn, never the assistant text.
+            message = re.sub(r'[ً-ٰٟ]', '', previous_user) + ' ' + message
+            lowered = message.lower()
+            cities = mentioned_cities(message, available)
     # Never silently substitute unsupported destinations with Cairo.
     unsupported = sorted(set(_explicit_non_egypt_destination(message)) |
                          {canonical for alias, canonical in _CITY_ALIASES.items()
@@ -874,6 +886,19 @@ def consult_travel(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    if (not state and not cities and not unsupported and
+            (duration := total_days(message)) is not None and 1 <= duration <= 30 and
+            not re.search(r'\b(?:plan|itinerary|trip|holiday|voyage|suggest|recommend|propose)\b|'
+                          r'خطط|اعمل\s+(?:رحلة|برنامج)|برنامج|خطة|رحلة|اقترح|اقتراح', lowered)):
+        answer = (
+            f'فهمت إن الرحلة {duration} يوم. تحب تزور أنهي مدن؟ لسه ما عملتش خطة قبل ما تحددها.'
+            if request.language == 'Arabic' else
+            f'Je note {duration} jours. Quelles villes souhaitez-vous visiter ? Aucun itinéraire n’a encore été créé.'
+            if request.language == 'French' else
+            f'I have {duration} days for your trip. Which cities would you like to include? I have not created an itinerary yet.'
+        )
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+                'trip_state': None, 'itinerary': None}
     # A traveler can ask about a hotel or airport while an itinerary is open.
     # Such questions must NOT be treated as mutations simply because they
     # mention children, a budget, or possessive words like "معايا".
