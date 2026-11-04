@@ -44,7 +44,7 @@ class PostgresConnection:
             # Serialize the favorites cap check as SQLite does.
             query = 'SELECT pg_advisory_xact_lock(83712631)'
         else:
-            query = query.replace('?', '%s').replace(
+            query = query.replace('%', '%%').replace('?', '%s').replace(
                 'DEFAULT CURRENT_TIMESTAMP', 'DEFAULT (CURRENT_TIMESTAMP::TEXT)')
         try:
             return self._db.execute(query, params)
