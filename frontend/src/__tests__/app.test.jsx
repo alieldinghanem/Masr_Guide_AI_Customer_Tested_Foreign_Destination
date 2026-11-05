@@ -132,6 +132,19 @@ describe('navigation and language', () => {
     expect(screen.getByRole('textbox', { name: 'Ask the tour guide' })).toHaveFocus()
   })
 
+  it('returns to an existing planning chat without repeating the starter prompt', async () => {
+    const { user, calls } = await setup()
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Plan with the guide' }))
+    await screen.findByText('Karnak is a huge temple complex.')
+    await user.click(nav('Traveler community'))
+    await user.click(screen.getByRole('button', { name: 'Plan in chat' }))
+    expect(window.location.hash).toBe('#/home')
+    expect(screen.getByRole('textbox', { name: 'Ask the tour guide' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: 'Ask the tour guide' })).toHaveFocus()
+    expect(calls.filter(call => call.path === '/consult')).toHaveLength(1)
+  })
+
   it('offers source-backed emergency contacts and scenario steps in both languages', async () => {
     const { user } = await setup()
     await user.click(nav('Travel safety'))

@@ -20,7 +20,7 @@ const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag
 const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
 const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +45,9 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   useEffect(() => {
     if (prompt === t('guide.planningPrompt')) promptInputRef.current?.focus()
   }, [prompt, t])
+  useEffect(() => {
+    if (composeFocusKey > 0) promptInputRef.current?.focus()
+  }, [composeFocusKey])
 
   const submitQuestion = async question => {
     if (busy || question.length < 2) return

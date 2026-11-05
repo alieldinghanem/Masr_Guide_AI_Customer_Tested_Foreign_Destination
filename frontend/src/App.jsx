@@ -40,6 +40,7 @@ function Shell({ meta }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [guideMode, setGuideMode] = useState(meta.guideMode)
   const [guideDraft, setGuideDraft] = useState('')
+  const [composeFocusKey, setComposeFocusKey] = useState(0)
   // Keep chat history for this browser session while moving between app sections.
   const [guideMessages, setGuideMessages] = useState(() => {
     try {
@@ -160,7 +161,7 @@ function Shell({ meta }) {
   }
   useEffect(() => { document.title = `${page.startsWith('place/') ? (meta.places.find(place => place.id === page.slice(6))?.[lang === 'ar' ? 'name_ar' : 'name'] || t('nav.exploreEgypt')) : page.startsWith('coast/') ? (COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))?.[lang === 'ar' ? 'ar' : 'en'] || t('discovery.coast')) : page === 'account' ? 'My Account' : ({home: lang === 'ar' ? 'المرشد الذكي' : 'AI Travel Guide', heritage: lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places', coast: lang === 'ar' ? 'الشواطئ' : 'Beaches', destinations: lang === 'ar' ? 'الترشيحات' : 'Recommendations', essentials: lang === 'ar' ? 'نصائح السفر' : 'Travel Tips', stories:'Egypt Travel Journal', offers:'Verified Partner Experiences', partners:'Partner With Us', staff:'Staff Studio', project:'Project Case Study',budget:'Travel Budget' }[page] || t(`nav.${page}`))} · Masr Guide AI` }, [page, t, lang, meta.places])
   const askQuestion = q => { setGuideDraft(q); go('home') }
-  const startPlanning = () => { setGuideDraft(t('guide.planningPrompt')); go('home') }
+  const startPlanning = () => { if (!guideMessages.length) setGuideDraft(t('guide.planningPrompt')); setComposeFocusKey(key => key + 1); go('home') }
   // Opening a place from elsewhere remounts Discover so stale search/filters cannot hide it.
   const openPlace = p => { setHighlight(p); setExploreInterest(null); setExploreKey(k => k + 1); go('explore') }
   const openDetails = p => { if (p?.id && meta.places.some(place => place.id === p.id)) { setDetailReturnPage(page); go(`place/${p.id}`) } }
@@ -216,7 +217,7 @@ function Shell({ meta }) {
           <button className="btn secondary" type="button" onClick={meta.retry}>{t('nav.retry')}</button>
         </div>
       )}
-      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
+      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} composeFocusKey={composeFocusKey} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
       {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openDetails={openDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'coast' && <CategoryPlaces type="coast" places={places} openDetails={openDetails} openCoastalDetails={openCoastalDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
