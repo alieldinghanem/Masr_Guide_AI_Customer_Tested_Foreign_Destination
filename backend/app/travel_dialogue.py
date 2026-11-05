@@ -6,6 +6,7 @@ verification always happen first. This module is not used without a provider key
 """
 import json
 import os
+import re
 from fastapi import HTTPException
 
 from .catalog_extra import CITY_AR
@@ -40,7 +41,7 @@ def narrate_verified_trip(message: str, language: str, state: dict,
     phase_summary = []
     for phase in state['phases']:
         phase_summary.append({'cities': phase['cities'], 'days': phase['days'],
-                              'kind': phase['kind']})
+                              'kind': phase['kind'], 'interests': phase['interests']})
     examples = []
     for day in itinerary.get('days', []):
         stops = [stop['place']['name'] for stop in day.get('stops', [])[:2]]
@@ -62,9 +63,9 @@ def narrate_verified_trip(message: str, language: str, state: dict,
         'Speak naturally in ' + language + '. In Arabic, friendly Egyptian colloquial is fine. '
         'Your job is to have a two-way discussion about an already validated '
         'itinerary built by the server. The JSON itinerary is authoritative. '
-        'You may explain trade-offs, propose a flexible morning/evening rhythm '
-        'and ask ONE relevant preference question at the end. '
-        'Keep to 2-4 brief sentences, NOT a list or a repeated full itinerary. '
+        'You may explain trade-offs and propose a flexible morning/evening rhythm. '
+        'Do not ask a question; the server appends a follow-up that it can act on. '
+        'Keep to 2-3 brief sentences, NOT a list or a repeated full itinerary. '
         'Never claim you booked, saved, changed or confirmed anything. '
         'Do not claim exact venue opening times, tickets, hotel prices, live '
         'traffic, guaranteed accessibility or transport schedules; no invented '
@@ -79,6 +80,11 @@ def narrate_verified_trip(message: str, language: str, state: dict,
     try:
         answer = generator(prompt, instructions, max_tokens=550, history=history)
         if not isinstance(answer, str) or len(answer.strip()) < 15:
+            return None, None
+        # A provider can ignore the no-question instruction. Keep the server's
+        # actionable follow-up as the only question the visitor must answer.
+        answer = re.sub(r'(?:^|(?<=[.!؟]))\s*[^.!؟\n]*[?؟]\s*$', '', answer.strip()).strip()
+        if len(answer) < 15:
             return None, None
         # Never treat model narration as an authoritative itinerary result.
         return answer.strip()[:1500], provider + '-dialogue+local-planner'

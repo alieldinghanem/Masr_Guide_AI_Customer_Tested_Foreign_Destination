@@ -23,7 +23,10 @@ def test_no_model_key_keeps_offline_deterministic_itinerary(monkeypatch):
     original = {'answer': 'Three Cairo days.', 'mode': 'local-planner',
                 'trip_state': state, 'itinerary': itinerary}
     reply = _with_verified_dialogue(ConsultRequest(message='Plan Cairo trip'), 'Plan Cairo trip', original)
-    assert reply == original
+    assert reply['trip_state'] == state and reply['itinerary'] == itinerary
+    assert reply['mode'] == 'local-planner'
+    assert reply['answer'].startswith(original['answer'])
+    assert 'do you prefer museums and history or markets and local food?' in reply['answer']
 
 
 def test_configured_model_adds_human_style_without_mutating_validated_state(monkeypatch):
@@ -61,4 +64,8 @@ def test_upstream_failure_never_drops_valid_trip(monkeypatch):
     monkeypatch.setattr(travel_dialogue, 'generate', down)
     state, plan = _trip()
     raw = {'mode': 'local-planner', 'answer': 'Trip prepared', 'itinerary': plan, 'trip_state': state}
-    assert _with_verified_dialogue(ConsultRequest(message='Plan Cairo trip'), 'Plan Cairo trip', raw) == raw
+    reply = _with_verified_dialogue(ConsultRequest(message='Plan Cairo trip'), 'Plan Cairo trip', raw)
+    assert reply['trip_state'] == state and reply['itinerary'] == plan
+    assert reply['mode'] == 'local-planner'
+    assert reply['answer'].startswith(raw['answer'])
+    assert 'do you prefer museums and history or markets and local food?' in reply['answer']

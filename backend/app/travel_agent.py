@@ -560,10 +560,11 @@ def _transition_error(previous: dict, updated: dict, message: str, available: se
     if len(phases) != len(previous['phases']):
         return 'unrequested phase structure change'
     coastal = {'Hurghada', 'Sharm El Sheikh', 'Dahab', 'Alexandria'}
+    requested_interests = _interest_edit(previous, message, available)
     old_cities = [p['cities'] for p in previous['phases']]
     new_cities = [p['cities'] for p in phases]
-    for old, new in zip(previous['phases'], phases):
-        if new['kind'] != old['kind'] or new['interests'] != old['interests']:
+    for index, (old, new) in enumerate(zip(previous['phases'], phases)):
+        if new['kind'] != old['kind'] or new['interests'] != requested_interests.get(index, old['interests']):
             return 'unrequested phase type or interests change'
         if new['days'] < len(new['cities']) or not new['cities'] or len(new['cities']) != len(set(new['cities'])):
             return 'invalid number of days or duplicate cities'
@@ -594,7 +595,8 @@ def _transition_error(previous: dict, updated: dict, message: str, available: se
     if previous['family'] != updated['family'] and not re.search(r'(?:kids?|children|family|طفلين|طفلان|عيلة|عائلة)', message.lower()):
         return 'unrequested family preference update'
     if previous['pace'] != updated['pace']:
-        return 'unrequested pace update'
+        if _pace_edit(previous, message, available) != updated['pace']:
+            return 'unrequested pace update'
     if previous.get('accessibility_needs', False) != updated.get('accessibility_needs', False):
         return 'unrequested accessibility requirement change'
     if previous.get('lighter_cities', []) != updated.get('lighter_cities', []):
@@ -699,11 +701,92 @@ def _lighter_city_request(message: str, state: dict, available: set[str]) -> str
     return named[0] if len(named) == 1 and named[0] in planned else None
 
 
+def _interest_edit(state: dict, message: str, available: set[str]) -> dict[int, list[str]]:
+    """Turn explicit feedback into a bounded change to existing trip interests."""
+    text = message.lower().strip(' .!?؟،')
+    opinion = bool(re.search(
+        r'\b(?:i|we)\s+(?:prefer|like|love|want)\b|\b(?:prefer|focus on|prioriti[sz]e|more)\b|'
+        r'je préfère|nous préférons|j.aime|plus de|'
+        r'أفضل|افضل|أحب|احب|بحب|عايز|أريد|اريد|ركز|أكتر|اكثر', text,
+    ))
+    bare_choice = text in {'museums', 'museum', 'history', 'markets', 'market', 'food',
+                           'musées', 'musees', 'marchés', 'marches', 'cuisine', 'histoire',
+                           'المتاحف', 'متاحف', 'الآثار', 'الاثار', 'الأسواق', 'الاسواق', 'اسواق', 'الأكل', 'الاكل'}
+    if not (opinion or bare_choice):
+        return {}
+    if re.search(r'\bmuseums?\b|musées|musees|متاحف|المتاحف', text):
+        interests = ['museums']
+    elif re.search(r'\b(?:markets?|food)\b|marchés|marches|cuisine|أسواق|اسواق|الأكل|الاكل', text):
+        interests = ['food']
+    elif re.search(r'\bhistory\b|histoire|آثار|اثار', text):
+        interests = ['history']
+    else:
+        return {}
+    named = mentioned_cities(message, available)
+    if named:
+        # A phase may contain multiple cities. Do not change Luxor when the
+        # visitor asked specifically for Cairo; ask for scope instead.
+        targets = [i for i, phase in enumerate(state['phases'])
+                   if len(phase['cities']) == 1 and phase['cities'][0] in named and phase['kind'] != 'beach']
+        if len(targets) != len(named):
+            return {}
+    else:
+        targets = [i for i, phase in enumerate(state['phases']) if phase['kind'] != 'beach']
+    return {index: interests for index in targets}
+
+
+def _pace_edit(state: dict, message: str, available: set[str]) -> str | None:
+    """Only a whole-trip pace request may alter the global pace setting."""
+    text = message.lower()
+    if mentioned_cities(message, available):
+        return None
+    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة', text):
+        return 'relaxed'
+    if re.search(r'\b(?:more packed|faster pace|more activities)\b|وتيرة أسرع|زيارات أكتر|زيارات اكثر', text):
+        return 'packed'
+    if re.search(r'\b(?:balanced pace|keep it balanced)\b|وتيرة متوازنة|خليها متوازنة', text):
+        return 'balanced'
+    return None
+
+
+def _feedback_question(state: dict, language: str, message: str, available: set[str]) -> str:
+    land = any(phase['kind'] != 'beach' for phase in state['phases'])
+    if land and _interest_edit(state, message, available):
+        return ('تحب وتيرة الرحلة كلها أهدى، ولا التوزيع الحالي مناسب؟' if language == 'Arabic' else
+                'Préférez-vous un rythme plus tranquille pour tout le voyage, ou le rythme actuel vous convient-il ?' if language == 'French' else
+                'Would you like the whole trip at a more relaxed pace, or is the current pace right for you?')
+    if land and not _pace_edit(state, message, available):
+        return ('في أيام المدن التاريخية، تفضّل المتاحف والآثار ولا الأسواق والأكل المحلي؟' if language == 'Arabic' else
+                'Dans les villes historiques, préférez-vous les musées et l’histoire, ou les marchés et la cuisine locale ?' if language == 'French' else
+                'For the historic cities, do you prefer museums and history or markets and local food?')
+    return ('هل توزيع الأيام مناسب، ولا تحب تعديل يوم أو مدينة محددة؟' if language == 'Arabic' else
+            'Cette répartition des jours vous convient-elle, ou souhaitez-vous modifier une ville ou un jour précis ?' if language == 'French' else
+            'Does this day split work for you, or would you like to change a specific city or day?')
+
+
+def _route_choices(days: int, language: str) -> str:
+    if language == 'Arabic':
+        return (f'فهمت إن الرحلة {days} يوم. تحب تزور أنهي مدن؟ '
+                'لو محتار، أقترح القاهرة والأقصر للآثار، أو القاهرة والغردقة لو عايز آثار وبحر. '
+                'لسه ما عملتش خطة قبل ما تحدد اختيارك.')
+    if language == 'French':
+        return (f'Je note {days} jours. Quelles villes souhaitez-vous visiter ? '
+                'Je propose Le Caire et Louxor pour l’histoire, ou Le Caire et Hurghada pour l’histoire et la mer. '
+                'Je n’ai pas encore créé d’itinéraire.')
+    return (f'I have {days} days for your trip. Which cities would you like to include? '
+            'I suggest Cairo and Luxor for history, or Cairo and Hurghada for history and the sea. '
+            'I have not created an itinerary until you choose.')
+
+
 def _apply_edit(state, message, cities, hint, available):
     updated = deepcopy(state)
     lighter_city = _lighter_city_request(message, state, available)
     if lighter_city:
         updated['lighter_cities'] = list(dict.fromkeys([*state.get('lighter_cities', []), lighter_city]))
+    for index, interests in _interest_edit(state, message, available).items():
+        updated['phases'][index]['interests'] = interests
+    if pace := _pace_edit(state, message, available):
+        updated['pace'] = pace
     new_days = total_days(message)
     explicit_beach = _explicit_phase_days(message, 'beach')
     explicit_culture = _explicit_phase_days(message, 'culture')
@@ -877,10 +960,11 @@ def _with_verified_dialogue(request, message: str, response: dict) -> dict:
         message, request.language, response['trip_state'],
         response['itinerary'], request.history
     )
-    if narrative:
-        return {**response, 'answer': narrative + '\n\n' + response['answer'],
-                'mode': mode}
-    return response
+    answer = narrative + '\n\n' + response['answer'] if narrative else response['answer']
+    if not re.search(r'(?:هل الميزانية تشمل|does the budget include|does that budget include)', answer, re.I):
+        available = {place['city'] for place in all_places()}
+        answer += '\n\n' + _feedback_question(response['trip_state'], request.language, message, available)
+    return {**response, 'answer': answer, 'mode': mode or response['mode']}
 
 
 def consult_travel(request):
@@ -895,6 +979,22 @@ def consult_travel(request):
     available = {p['city'] for p in all_places()}
     state = request.trip_state.model_dump() if request.trip_state else None
     cities = mentioned_cities(message, available)
+    if not state and not cities and total_days(message) is None and request.history:
+        choice = re.fullmatch(r'\s*(?:الاختيار\s*)?(الأول|الاول|الثاني)|\s*(?:first|second)(?:\s+option)?|\s*option\s*[12]|\s*(?:premier|première|deuxième)(?:\s+choix)?', lowered.strip(' .!?؟'))
+        if choice:
+            previous_assistant = next((turn.content for turn in reversed(request.history) if turn.role == 'assistant'), '')
+            previous_user = next((turn.content for turn in reversed(request.history) if turn.role == 'user'), '')
+            offered = (('القاهرة والأقصر' in previous_assistant and 'القاهرة والغردقة' in previous_assistant) or
+                       ('Cairo and Luxor for history' in previous_assistant and
+                        'Cairo and Hurghada for history and the sea' in previous_assistant) or
+                       ('Le Caire et Louxor' in previous_assistant and 'Le Caire et Hurghada' in previous_assistant))
+            duration = total_days(previous_user)
+            if offered and duration is not None and 1 <= duration <= 30 and not mentioned_cities(previous_user, available):
+                first = bool(re.search(r'الأول|الاول|first|premier|première|1', choice.group(0)))
+                chosen = 'القاهرة والأقصر' if first else 'القاهرة والغردقة'
+                message = previous_user + ' ' + chosen
+                lowered = message.lower()
+                cities = mentioned_cities(message, available)
     if not state and cities and total_days(message) is None and request.history:
         previous_assistant = next((turn.content for turn in reversed(request.history) if turn.role == 'assistant'), '')
         previous_user = next((turn.content for turn in reversed(request.history) if turn.role == 'user'), '')
@@ -923,6 +1023,43 @@ def consult_travel(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    if state and re.fullmatch(r'\s*(?:تمام|موافق|ماشي|حلو|كويس|ok|okay|looks good|sounds good|yes)[.!؟\s]*', lowered):
+        answer = ('تمام، الخطة الحالية زي ما هي. لو عندك رأي في الأنشطة أو وتيرة السفر، قولّي وأنا أعدّلها مع الحفاظ على الأيام والمدن.'
+                  if request.language == 'Arabic' else
+                  'D’accord, je garde votre itinéraire actuel. Dites-moi si vous voulez modifier les activités ou le rythme.'
+                  if request.language == 'French' else
+                  'Sounds good. I kept your itinerary unchanged. Tell me if you want to adjust the activities or pace.')
+        return {'answer': answer, 'mode': 'local-assistant', 'sources': [], 'trip_state': state, 'itinerary': None}
+    if state and re.fullmatch(r'\s*(?:مش عاجبني|ما عجبنيش|مش مناسب|i don.t like it|not what i want|not happy with it)[.!؟\s]*', lowered):
+        answer = ('فاهمك. إيه اللي تحب نغيّره: المدن، توزيع الأيام، نوع الأنشطة، ولا وتيرة الرحلة؟ هحافظ على الخطة الحالية لحد ما تحدد.'
+                  if request.language == 'Arabic' else
+                  'I understand. Which part should change: cities, day split, activities, or travel pace? Your current trip is unchanged.')
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+    if (state and not re.search(r'\b(?:extend|increase|move|transfer|replace|swap)\b|زود|زيد|انقل|بدل|غير|غيّر', lowered)
+            and re.search(r'\b(?:prefer|want|more)\b[^.!?]{0,25}\b(?:beach|sea)\b|(?:أحب|احب|عايز|أفضل|افضل)[^.!؟]{0,20}بحر|بحر\s+(?:أكتر|اكثر)', lowered)):
+        beach_days = sum(phase['days'] for phase in state['phases'] if phase['kind'] == 'beach')
+        if request.language == 'Arabic':
+            answer = (f'في خطتك الحالية {beach_days} أيام بحر. تحب تزود إجمالي الرحلة، ولا تنقل أيامًا من مدينة محددة؟ '
+                      'قلّي عدد الأيام والمدينة البحرية اللي تفضلها.' if beach_days else
+                      'أقترح الغردقة أو شرم الشيخ للبحر. كام يوم تحب تخصص لها؟ '
+                      'وهتزود إجمالي الرحلة ولا تنقل الأيام من مدينة محددة؟')
+        else:
+            answer = (f'Your current trip has {beach_days} beach days. Would you extend the total trip or move days from a named city? '
+                      'Tell me the number of days and your preferred coastal city.' if beach_days else
+                      'I suggest Hurghada or Sharm El Sheikh for the sea. How many days would you like there, '
+                      'and should the total trip grow or should they come from a named city?')
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+    if state and cities and not _interest_edit(state, message, available) and re.search(
+            r'(?:prefer|focus on|أفضل|افضل|أحب|احب|بحب|عايز|أريد|اريد)[^.!؟]{0,45}'
+            r'(?:museums?|markets?|food|history|متاحف|المتاحف|أسواق|اسواق|الأكل|الاكل|آثار|اثار)', lowered):
+        shared = next((phase['cities'] for phase in state['phases']
+                       if len(phase['cities']) > 1 and any(city in phase['cities'] for city in cities)), None)
+        if shared:
+            names = ' و'.join(CITY_AR.get(city, city) for city in shared) if request.language == 'Arabic' else ' and '.join(shared)
+            answer = (f'{names} في جزء واحد من الخطة. لو عايز التفضيل عليهما معًا، قل: «أفضل المتاحف في الأيام التاريخية». لم أغيّر الأنشطة بعد.'
+                      if request.language == 'Arabic' else
+                      f'{names} share one itinerary segment. To apply the preference to both, say: "I prefer museums in the historic cities." I have not changed any stops yet.')
+            return {'answer': answer, 'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
     arrival_intro = re.search(
         r"^\s*(?:i(?:'m| am|'ll| will)?\s+)?"
         r'(?:coming|traveling|travelling|going)\s+to\s+egypt\b|'
@@ -947,15 +1084,14 @@ def consult_travel(request):
             (duration := total_days(message)) is not None and 1 <= duration <= 30 and
             not re.search(r'\b(?:plan|itinerary|trip|holiday|voyage|suggest|recommend|propose)\b|'
                           r'خطط|اعمل\s+(?:رحلة|برنامج)|برنامج|خطة|رحلة|اقترح|اقتراح', lowered)):
-        answer = (
-            f'فهمت إن الرحلة {duration} يوم. تحب تزور أنهي مدن؟ لسه ما عملتش خطة قبل ما تحددها.'
-            if request.language == 'Arabic' else
-            f'Je note {duration} jours. Quelles villes souhaitez-vous visiter ? Aucun itinéraire n’a encore été créé.'
-            if request.language == 'French' else
-            f'I have {duration} days for your trip. Which cities would you like to include? I have not created an itinerary yet.'
-        )
-        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+        return {'answer': _route_choices(duration, request.language), 'mode': 'needs-clarification', 'sources': [],
                 'trip_state': None, 'itinerary': None}
+    generic_duration = total_days(message)
+    if (not state and not cities and not unsupported and generic_duration is not None and
+            1 <= generic_duration <= 20 and not wants_history(message) and not wants_beach(message) and
+            re.search(r'\b(?:plan|itinerary|trip|holiday|voyage)\b|خطط|رحلة|برنامج|خطة|خطه', lowered)):
+        return {'answer': _route_choices(generic_duration, request.language),
+                'mode': 'needs-clarification', 'sources': [], 'trip_state': None, 'itinerary': None}
     # A traveler can ask about a hotel or airport while an itinerary is open.
     # Such questions must NOT be treated as mutations simply because they
     # mention children, a budget, or possessive words like "معايا".
@@ -998,6 +1134,7 @@ def consult_travel(request):
         r'عيلة|عائلة|family|kids?|children)', lowered))
     is_edit = bool(state and (edit_words or
                            _lighter_city_request(message, state, available) or
+                           _interest_edit(state, message, available) or _pace_edit(state, message, available) or
                            ((budget_value is not None or budget_usd_value is not None or family_update) and not service_question) or
                            (not service_question and total_days(message) is not None and
                             (declared_total or any(k in lowered for k in
@@ -1322,6 +1459,21 @@ def consult_travel(request):
         intro = 'Your editable itinerary is ready below. I used curated catalogue stops and approximate transfer allowances.'
         disclaimer = '\nNo live prices or bookings are included.'
     answer = intro + '\n' + '\n'.join(summaries) + disclaimer
+    if state and any(before['interests'] != after['interests']
+                     for before, after in zip(state['phases'], validated.model_dump()['phases'])):
+        choice = _interest_edit(state, message, available)
+        focus = next(iter(choice.values()), [])
+        focus_ar = {'museums': 'المتاحف', 'food': 'الأسواق والأكل المحلي', 'history': 'الآثار'}
+        focus_en = {'museums': 'museums', 'food': 'markets and local food', 'history': 'historical sites'}
+        focus_fr = {'museums': 'les musées', 'food': 'les marchés et la cuisine locale', 'history': 'les sites historiques'}
+        label = (focus_ar if request.language == 'Arabic' else focus_fr if request.language == 'French' else focus_en).get(focus[0], focus[0]) if focus else ''
+        answer += (f'\nعدّلت اقتراحات الأنشطة حسب تفضيلك لـ{label}.' if request.language == 'Arabic' else
+                   f'\nJ’ai adapté les visites à votre préférence pour {label}.' if request.language == 'French' else
+                   f'\nI updated the suggested stops around your preference for {label}.')
+    if state and validated.pace != state['pace']:
+        answer += ('\nخلّيت وتيرة الرحلة أهدى مع الحفاظ على المدن والأيام.' if request.language == 'Arabic' else
+                   '\nJ’ai ajusté le rythme sans changer les villes ni le nombre de jours.' if request.language == 'French' else
+                   '\nI changed the trip pace while keeping the same cities and days.')
     requested_lighter_city = _lighter_city_request(message, state, available) if state else None
     if requested_lighter_city:
         city_label = CITY_AR.get(requested_lighter_city, requested_lighter_city) if request.language == 'Arabic' else requested_lighter_city
