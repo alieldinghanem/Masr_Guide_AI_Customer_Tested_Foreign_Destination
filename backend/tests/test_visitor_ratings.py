@@ -78,6 +78,24 @@ def test_review_validation_catalog_rebuild_and_storage_notice(client, member):
     assert client.get(target).json()['temporary_storage'] is True
 
 
+def test_public_community_feed_shows_account_comments_without_identity(client, member):
+    headers, user = member()
+    target = '/api/ratings/coast:marsa-alam/comments'
+    assert client.get('/api/ratings/recent-comments').json() == {'comments': []}
+    posted = client.post(target, json={'comment': 'Check the beach access before visiting.'}, headers=headers)
+    assert posted.status_code == 200
+    feed = client.get('/api/ratings/recent-comments')
+    assert feed.status_code == 200
+    assert feed.json()['comments'] == [{
+        'target_id': 'coast:marsa-alam',
+        'name': posted.json()['comments'][0]['name'],
+        'comment': 'Check the beach access before visiting.',
+        'updated_at': posted.json()['comments'][0]['updated_at'],
+    }]
+    assert user['email'] not in str(feed.json())
+    assert user['id'] not in str(feed.json())
+
+
 def test_account_export_and_deletion_include_reviews(client, member):
     headers, user = member()
     target = '/api/ratings/coast:marsa-alam/comments'

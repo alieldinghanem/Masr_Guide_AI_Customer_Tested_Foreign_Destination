@@ -63,6 +63,11 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrat
       }
       return reply({ ratings })
     }
+    if (path === '/ratings/recent-comments') {
+      const comments = [...visitorComments.entries()].flatMap(([target_id, entries]) =>
+        [...entries.values()].map(item => ({ target_id, ...item })))
+      return reply({ comments })
+    }
     if (/^\/ratings\/[^/]+\/comments$/.test(path)) {
       const target = decodeURIComponent(path.slice('/ratings/'.length, -'/comments'.length))
       const comments = visitorComments.get(target) || new Map()

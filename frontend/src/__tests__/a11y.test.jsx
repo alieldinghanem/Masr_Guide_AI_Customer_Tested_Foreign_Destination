@@ -13,7 +13,7 @@ const audit = async () => {
   return result.violations.map(v => `${v.id}: ${v.help} -> ${v.nodes.map(n => n.target.join(' ')).join(' | ')}`)
 }
 
-const PAGES = [['Chat', 'AI guide', 'المرشد الذكي'], ['Explore', 'Explore Egypt', 'اكتشف مصر'], ['Reviews', 'Traveler reviews', 'تقييمات المسافرين'], ['Safety', 'Travel safety', 'السلامة والمساعدة'], ['Trip planner', 'Trip planner', 'مخطط الرحلات']]
+const PAGES = [['Chat', 'AI guide', 'المرشد الذكي'], ['Explore', 'Explore Egypt', 'اكتشف مصر'], ['Community', 'Traveler community', 'مجتمع المسافرين'], ['Safety', 'Travel safety', 'السلامة والمساعدة'], ['Trip planner', 'Trip planner', 'مخطط الرحلات']]
 
 describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
   it.each(PAGES)('%s page has no axe violations', async (_name, en, ar) => {
@@ -23,10 +23,10 @@ describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
     await waitFor(() => expect(calls.some(c => c.path === '/health')).toBe(true))
     const user = userEvent.setup()
     const primary = within(screen.getByRole('navigation', { name: lang === 'ar' ? 'التنقل الرئيسي' : 'Primary navigation' }))
-    const action = _name === 'Trip planner'
-      ? screen.getByRole('button', { name: lang === 'ar' ? 'خطط لرحلتك' : 'Plan a trip' })
-      : primary.getByRole('button', { name: [en, ar][i] })
-    await user.click(action)
+    if (_name === 'Trip planner') {
+      await user.click(primary.getByRole('button', { name: lang === 'ar' ? 'المرشد الذكي' : 'AI guide' }))
+      await user.click(screen.getByRole('button', { name: lang === 'ar' ? 'تفضل تختار بنفسك؟ افتح مخطط الرحلات' : 'Prefer choosing options? Open the trip planner' }))
+    } else await user.click(primary.getByRole('button', { name: [en, ar][i] }))
     if (_name === 'Trip planner') {   // audit the page with a generated result too
       await user.click(screen.getByRole('button', { name: lang === 'en' ? 'Generate my itinerary' : 'أنشئ جدولي' }))
       await screen.findByText(lang === 'en' ? 'English disclaimer' : 'إخلاء مسؤولية بالعربية')

@@ -120,6 +120,16 @@ def my_ratings(user=Depends(current_user)):
     return {'ratings': {row['target_id']: row['rating'] for row in rows}}
 
 
+@router.get('/recent-comments')
+def recent_comments():
+    """Public place discussions for the traveler community; never expose account IDs."""
+    with closing(_connect_reviews()) as db:
+        rows = db.execute('''SELECT target_id, display_name AS name, comment, updated_at
+                             FROM visitor_comments WHERE voter_hash LIKE 'account:%'
+                             ORDER BY updated_at DESC, voter_hash DESC LIMIT 12''').fetchall()
+    return {'comments': [dict(row) for row in rows]}
+
+
 @router.post('/{target_id}')
 def submit_rating(target_id: str, vote: RatingVote, user=Depends(current_user)):
     if not _valid_target(target_id):

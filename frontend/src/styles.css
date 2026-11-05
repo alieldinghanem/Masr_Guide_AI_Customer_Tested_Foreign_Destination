@@ -699,6 +699,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .guide-start-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:16px; }
 .guide-start-actions button { border:1px solid #edcfb9; background:#fff9f5; color:#8a3d13; border-radius:10px; min-height:44px; padding:9px 12px; font-weight:700; text-align:center; }
 .guide-start-actions button:hover { background:#ffeadb; }
+.guide-manual-planner { display:block; margin:6px auto 0; padding:8px; border:0; background:transparent; color:var(--mg-primary); font:inherit; font-size:12px; font-weight:700; text-decoration:underline; cursor:pointer; }
+.guide-manual-planner:focus-visible { outline:3px solid var(--mg-primary); outline-offset:2px; }
 .guide-start-actions button:focus-visible,.chat-cloud-tools summary:focus-visible { outline:3px solid var(--mg-primary); outline-offset:3px; }
 .nav-safety { display:none; align-items:center; justify-content:center; border:0; background:#fff3e9; color:var(--mg-primary); border-radius:9px; min-width:42px; min-height:42px; }
 .traveler-reviews { min-height:65vh; max-width:900px; padding-block:55px 90px; }
@@ -856,6 +858,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .mg-coast-sort select,.reviews-rate select { min-height:44px; border:1px solid var(--mg-line); border-radius:8px; background:#fff; color:var(--mg-ink); padding:8px 12px; }
 .reviews-storage-note { margin-top:14px; padding:13px; border-radius:9px; background:#fff4e9; color:#79513a; font-size:12px; }
 .reviews-rate,.reviews-rank { margin-top:28px; padding:clamp(20px,4vw,32px); border:1px solid var(--mg-line); border-radius:16px; background:#fff; }
+.community-feed { margin-top:28px; }
+.community-feed h2 { margin:0 0 15px; color:var(--mg-ink); font-size:23px; }
+.community-feed-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.community-feed-grid article { min-width:0; padding:18px; border:1px solid var(--mg-line); border-radius:14px; background:#fff; }
+.community-feed-grid span { color:var(--mg-primary); font-size:12px; font-weight:750; }
+.community-feed-grid h3 { margin:6px 0; font-size:17px; }
+.community-feed-grid p { color:var(--mg-ink); line-height:1.6; overflow-wrap:anywhere; }
+.community-feed-grid button { min-height:44px; padding:8px 0; border:0; background:transparent; color:var(--mg-primary); font:inherit; font-weight:750; cursor:pointer; }
+.community-feed-grid button:hover { text-decoration:underline; }
+.community-feed-empty { padding:22px; border:1px solid var(--mg-line); border-radius:14px; background:#fff; color:var(--mg-muted); }
 .reviews-rate h2,.reviews-rank h2 { margin:0 0 16px; font-size:22px; }
 .reviews-rate label { display:grid; gap:8px; color:var(--mg-ink); font-size:13px; font-weight:750; }
 .reviews-rate select { width:100%; max-width:520px; }
@@ -866,7 +878,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .reviews-rank li strong { color:var(--mg-primary); }
 .reviews-rank li small { color:var(--mg-muted); }
 .reviews-rank .reviews-empty { box-shadow:none; margin-top:0; }
-@media(max-width:620px) { .reviews-rank li { flex-wrap:wrap; } .reviews-rank li span { flex-basis:100%; } }
+@media(max-width:620px) { .reviews-rank li { flex-wrap:wrap; } .reviews-rank li span { flex-basis:100%; } .community-feed-grid { grid-template-columns:minmax(0,1fr); } }
 .mg-place-photo { width:100%; padding:0; border:0; cursor:pointer; text-align:start; }
 .mg-place-photo:hover .mg-place-img,.detail-photo:hover .mg-place-img { transform:scale(1.035); }
 .mg-place-photo .mg-place-img,.detail-photo .mg-place-img { transition:transform .2s ease; }

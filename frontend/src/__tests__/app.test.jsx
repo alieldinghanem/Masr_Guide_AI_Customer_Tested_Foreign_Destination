@@ -69,14 +69,17 @@ describe('navigation and language', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /اكتشف مصر بطريقتك/ })).toBeInTheDocument()
   })
 
-  it('offers four real start actions and an honest traveler reviews page', async () => {
+  it('offers a chat planning action and a place-based traveler community', async () => {
     const { user } = await setup()
     const welcome = screen.getByRole('log', { name: 'Conversation' })
-    expect(within(welcome).getByRole('button', { name: 'Plan my trip' })).toBeInTheDocument()
+    expect(within(welcome).getByRole('button', { name: 'Plan with the guide' })).toBeInTheDocument()
     expect(within(welcome).getByRole('button', { name: 'Explore Egypt' })).toBeInTheDocument()
     expect(within(welcome).getByRole('button', { name: 'Safety & help' })).toBeInTheDocument()
-    await user.click(within(welcome).getByRole('button', { name: 'Traveler reviews' }))
+    expect(screen.getByRole('button', { name: 'Prefer choosing options? Open the trip planner' })).toBeInTheDocument()
+    await user.click(within(welcome).getByRole('button', { name: 'Traveler community' }))
     expect(window.location.hash).toBe('#/reviews')
+    expect(screen.getByRole('heading', { level: 1, name: 'Traveler community' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Latest traveler tips' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'No visitor ratings yet' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Rate a place or beach destination' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Explore places in Egypt' }))
@@ -86,7 +89,7 @@ describe('navigation and language', () => {
   it('lets a signed-in member rate a coastal destination and updates the public ranking', async () => {
     signedIn()
     const { user, calls } = await setup()
-    await user.click(nav('Traveler reviews'))
+    await user.click(nav('Traveler community'))
     await user.selectOptions(screen.getByRole('combobox', { name: 'Choose a destination' }), 'coast:marsa-alam')
     await user.click(screen.getByRole('button', { name: 'Rate Marsa Alam 5 out of 5' }))
     await waitFor(() => expect(calls.some(call => call.path === '/ratings/coast%3Amarsa-alam' && call.body?.rating === 5)).toBe(true))
@@ -94,6 +97,39 @@ describe('navigation and language', () => {
     expect(calls.find(call => call.path === '/ratings/coast%3Amarsa-alam' && call.method === 'POST').authorization).toBe('Bearer test-member-token')
     expect(screen.getByRole('listitem')).toHaveTextContent('Marsa Alam')
     expect(screen.getByRole('listitem')).toHaveTextContent('5 / 5')
+  })
+
+  it('shows a newly posted place tip in the community feed and opens its discussion', async () => {
+    signedIn()
+    const { user } = await setup()
+    await user.click(nav('Traveler community'))
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Choose a destination' }), 'coast:marsa-alam')
+    await user.type(screen.getByRole('textbox', { name: 'Your comment about this place' }), 'Check beach access before you go.')
+    await user.click(screen.getByRole('button', { name: 'Post comment' }))
+    const feed = document.querySelector('.community-feed')
+    expect(await within(feed).findByText('Check beach access before you go.')).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Choose a destination' }), 'karnak')
+    await user.click(within(feed).getByRole('button', { name: 'Open this place discussion' }))
+    expect(screen.getByRole('combobox', { name: 'Choose a destination' })).toHaveValue('coast:marsa-alam')
+  })
+
+  it('starts trip planning in chat and keeps the manual planner as an option', async () => {
+    const { user, calls } = await setup()
+    const primary = within(screen.getByRole('navigation', { name: 'Primary navigation' }))
+    expect(primary.queryByRole('button', { name: 'Trip planner' })).not.toBeInTheDocument()
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Plan with the guide' }))
+    await waitFor(() => expect(calls.find(call => call.path === '/consult')?.body?.message).toBe('I want to plan a trip to Egypt. Help me choose the length, cities and interests one step at a time.'))
+    expect(window.location.hash).not.toBe('#/planner')
+  })
+
+  it('opens the chat with a planning draft from the header action', async () => {
+    const { user } = await setup()
+    await user.click(nav('Explore Egypt'))
+    await user.click(screen.getByRole('button', { name: 'Plan in chat' }))
+    expect(window.location.hash).toBe('#/home')
+    expect(screen.getByRole('textbox', { name: 'Ask the tour guide' })).toHaveValue('I want to plan a trip to Egypt. Help me choose the length, cities and interests one step at a time.')
+    expect(screen.getByRole('textbox', { name: 'Ask the tour guide' })).toHaveFocus()
   })
 
   it('offers source-backed emergency contacts and scenario steps in both languages', async () => {
@@ -178,7 +214,8 @@ describe('Discover', () => {
 describe('Planner', () => {
   it('sends the request (route optimisation + language) and renders travel info and warnings', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Trip planner'))
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Prefer choosing options? Open the trip planner' }))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     expect(await screen.findByText(/Your suggested/)).toBeInTheDocument()
     const post = calls.find(c => c.path === '/plan')
@@ -191,7 +228,8 @@ describe('Planner', () => {
 
   it('validates days versus cities before calling the API', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Trip planner'))
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Prefer choosing options? Open the trip planner' }))
     await user.click(screen.getByRole('button', { name: 'Giza' }))   // 2 cities now (Cairo is not in fixtures)
     await user.click(screen.getByRole('button', { name: 'Luxor' }))
     const days = screen.getByLabelText(/Number of days/)
@@ -203,7 +241,8 @@ describe('Planner', () => {
 
   it('regenerates the plan in the new language when the UI language changes', async () => {
     const { calls, user } = await setup()
-    await user.click(nav('Trip planner'))
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Prefer choosing options? Open the trip planner' }))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     await screen.findByText('English disclaimer')
     await user.click(screen.getByRole('button', { name: 'Switch to Arabic' }))
@@ -216,7 +255,8 @@ describe('Planner', () => {
 
   it('saves to localStorage and clears the saved plan', async () => {
     const { user } = await setup()
-    await user.click(nav('Trip planner'))
+    await user.click(nav('AI guide'))
+    await user.click(screen.getByRole('button', { name: 'Prefer choosing options? Open the trip planner' }))
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     await user.click(await screen.findByRole('button', { name: 'Save this plan' }))
     expect(localStorage.getItem('masr-guide-plan-v1')).toContain('"days"')

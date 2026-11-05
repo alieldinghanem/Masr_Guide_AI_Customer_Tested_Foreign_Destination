@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useI18n } from '../i18n'
 
-export default function VisitorComments({ targetId, session, onSignIn, registrationEnabled = true }) {
+export default function VisitorComments({ targetId, session, onSignIn, onPosted, registrationEnabled = true }) {
   const { lang } = useI18n()
   const ar = lang === 'ar'
   const [items, setItems] = useState([])
@@ -29,6 +29,7 @@ export default function VisitorComments({ targetId, session, onSignIn, registrat
         method: 'POST', body: { comment: comment.trim() }, token: session?.token,
       })
       setItems(data.comments || []); setCount(data.count || 0); setComment(''); setSent(true)
+      onPosted?.()
     } catch (err) {
       setError(err.status === 401 ? (ar ? 'انتهت جلسة الدخول. سجّل دخولك مرة ثانية.' : 'Your session expired. Please sign in again.') : err.status === 429 ? (ar ? 'طلبات كثيرة. حاول بعد دقيقة.' : 'Too many requests. Try again in a minute.')
         : (ar ? 'تعذّر إرسال التعليق. اكتب تعليقًا بدون روابط وحاول تاني.' : 'Could not post your comment. Write a comment without links, then retry.'))

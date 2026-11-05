@@ -33,6 +33,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
   const messagesRef = useRef(null)
+  const promptInputRef = useRef(null)
   useEffect(() => {
     const log = messagesRef.current
     if (log) log.scrollTop = log.scrollHeight
@@ -41,6 +42,9 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   const serviceState = mode === 'provider-error' ? 'error' : AI_ACTIVE_MODES.has(mode) ? 'ai' : AI_CONFIGURED_MODES.has(mode) ? 'configured' : 'local'
   const answerArabic = language === 'Arabic'
   const answerCity = city => answerArabic ? cityNameAr(city) : city
+  useEffect(() => {
+    if (prompt === t('guide.planningPrompt')) promptInputRef.current?.focus()
+  }, [prompt, t])
 
   const submitQuestion = async question => {
     if (busy || question.length < 2) return
@@ -225,8 +229,8 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               <h3>{t('guide.welcomeTitle')}</h3>
               <p>{t('guide.welcomeText')}</p>
               <div className="guide-start-actions">
-                {[['planner', 'guide.action.plan'], ['explore', 'guide.action.explore'], ['reviews', 'guide.action.reviews'], ['essentials', 'guide.action.safety']].map(([route, key]) =>
-                  <button key={route} type="button" onClick={() => onNavigate?.(route)}>{t(key)}</button>)}
+                {[['plan', 'guide.action.plan'], ['explore', 'guide.action.explore'], ['reviews', 'guide.action.reviews'], ['essentials', 'guide.action.safety']].map(([route, key]) =>
+                  <button key={route} type="button" onClick={() => route === 'plan' ? submitQuestion(t('guide.planningPrompt')) : onNavigate?.(route)}>{t(key)}</button>)}
               </div>
             </div>}
             {messages.map((m, i) => (
@@ -257,10 +261,11 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
             <ErrorNote text={error} />
             {error && prompt.trim().length >= 2 && <button className="chat-retry" type="button" disabled={busy} onClick={() => submitQuestion(prompt.trim())}>{t('guide.retry')}</button>}
             <form onSubmit={send}>
-              <input aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
+              <input ref={promptInputRef} aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
               <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
             </form>
             <small>{t('guide.privacy')}</small>
+            <button type="button" className="guide-manual-planner" onClick={() => onNavigate?.('planner')}>{t('guide.manualPlanner')}</button>
           </div>
           {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
             <div className="consult-heading">

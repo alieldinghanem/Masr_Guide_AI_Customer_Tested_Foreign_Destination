@@ -22,6 +22,20 @@ def test_arrival_intro_asks_for_trip_details_even_when_gemini_is_configured(tmp_
         assert expected in result['answer']
 
 
+def test_chat_planning_starter_asks_for_duration_without_inventing_it(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    for message, language, expected in (
+        ('I want to plan a trip to Egypt. Help me choose the length, cities and interests one step at a time.', 'English', 'How many days'),
+        ('عايز أخطط رحلة لمصر. ساعدني أحدد المدة والمدن والاهتمامات خطوة بخطوة.', 'Arabic', 'كم يوم'),
+    ):
+        reply = consult_travel(ConsultRequest(message=message, language=language))
+        assert expected in reply['answer']
+        assert reply['itinerary'] is None and reply['trip_state'] is None
+
+
 def _allocation(reply):
     return dict(Counter(day['city'] for day in reply['itinerary']['days']))
 
