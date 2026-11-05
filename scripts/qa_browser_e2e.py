@@ -127,8 +127,10 @@ def test_react(browser, label, width, height):
             page.set_viewport_size({'width': width, 'height': height})
             print('PASS mobile imagery: 360/390/430px single column, crop, tap targets and overflow')
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
-        expect(page.locator('#swimming-beaches-title')).to_be_visible(timeout=15000)
-        expect(page.locator('#coastal-other-title')).to_be_visible(timeout=15000)
+        expect(page.locator('.mg-coastal-guides')).to_be_visible(timeout=15000)
+        expect(page.locator('.mg-coastal-guides-grid > article')).to_have_count(17)
+        assert page.locator('.mg-coast-group').count() == 0, 'Coastal places must appear in one list'
+        assert page.get_by_role('link', name='Destination source').count() == 0
         assert page.locator('.mg-coastal-guide').count() == 10
         photos = page.locator('.mg-coastal-guide-photo')
         expect(photos).to_have_count(10)
@@ -137,10 +139,16 @@ def test_react(browser, label, width, height):
             photo.evaluate('(image) => image.decode()')
             assert photo.evaluate('(image) => image.naturalWidth >= 600'), 'Beach destination photo did not load'
         assert page.locator('.mg-coastal-photo-credit').count() == 10
-        assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
+        assert page.locator('.mg-coastal-guides-grid .mg-place-card').count() == 7
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
         assert page.get_by_text('Citadel of Qaitbay').count() == 0, 'Historic fortress must appear under heritage, not beaches'
         assert page.get_by_text('Montaza Gardens').count() == 0, 'Seaside gardens are not a beach activity'
+        page.get_by_role('button', name='More details about Marsa Alam').click()
+        expect(page).to_have_url(re.compile(r'#/coast/marsa-alam$'))
+        expect(page.get_by_role('heading', name='Marsa Alam', exact=True)).to_be_visible()
+        expect(page.get_by_role('heading', name='Visitor comments')).to_be_visible()
+        page.get_by_role('button', name='Beaches & coastal places').click()
+        expect(page).to_have_url(re.compile(r'#/coast$'))
         page.goto(f'{URL}/#/home', wait_until='domcontentloaded')
         page.locator('.lang-toggle').click()
         expect(page.locator('html')).to_have_attribute('dir', 'rtl')
@@ -302,12 +310,11 @@ def test_mobile_photo_layout(browser):
         expect(page.locator('html')).to_have_attribute('dir', 'rtl')
         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 2'), 'RTL overflow'
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
-        coast = page.locator('.mg-category-grid .mg-place-card')
-        expect(page.locator('#swimming-beaches-title')).to_be_visible(timeout=15000)
-        expect(page.locator('#coastal-other-title')).to_be_visible(timeout=15000)
+        coast = page.locator('.mg-coastal-guides-grid .mg-place-card')
+        expect(page.locator('.mg-coastal-guides')).to_be_visible(timeout=15000)
         expect(coast.nth(1)).to_be_visible(timeout=15000)
         assert page.locator('.mg-coastal-guide').count() == 10, 'All requested coastal destinations must be shown'
-        assert page.locator('[aria-labelledby="swimming-beaches-title"] .mg-place-card').count() == 2
+        assert coast.count() == 7
         assert coast.nth(0).locator('h2').inner_text() == 'خليج نعمة'
         assert abs(coast.nth(0).bounding_box()['x'] - coast.nth(1).bounding_box()['x']) < 2, 'Coast mobile cards must stack'
         print('PASS mobile photo QA: 360/390/430px, Arabic RTL, unique Ibn Tulun framing, heritage/coast')
