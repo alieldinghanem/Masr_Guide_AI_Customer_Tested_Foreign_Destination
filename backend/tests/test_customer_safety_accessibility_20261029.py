@@ -60,6 +60,21 @@ def test_first_time_family_week_builds_trip_instead_of_generic_advice(client):
     assert 'لم يُحفظ' in result['answer']
 
 
+def test_generic_week_without_cities_still_requests_destination_choices(client):
+    result = ask(client, 'Plan a week in Egypt')
+    assert result['mode'] == 'needs-clarification'
+    assert result['trip_state'] is None
+    assert result['itinerary'] is None
+
+
+def test_explicit_english_family_week_builds_provisional_trip(client):
+    result = ask(client, 'Suggest a 7-day family itinerary in Egypt with two kids')
+    assert result['trip_state']['days'] == 7
+    assert result['trip_state']['family'] is True
+    assert len(result['itinerary']['days']) == 7
+    assert 'provisional' in result['answer'].lower()
+
+
 def test_french_plan_is_answered_in_french(client):
     result = ask(client, 'Je vais au Caire avec mes enfants pour 5 jours, peux-tu proposer un programme?')
     assert result['trip_state']['days'] == 5
