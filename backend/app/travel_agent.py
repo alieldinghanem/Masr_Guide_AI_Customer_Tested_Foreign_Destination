@@ -150,6 +150,8 @@ def _full_reallocation(state: dict, message: str, available: set[str]) -> dict |
     rebuilt['family'] = state['family']
     rebuilt['pace'] = state['pace']
     rebuilt['accessibility_needs'] = state.get('accessibility_needs', False)
+    rebuilt['lighter_cities'] = [city for city in state.get('lighter_cities', [])
+                                 if city in {name for phase in rebuilt['phases'] for name in phase['cities']}]
     return rebuilt
 
 
@@ -595,6 +597,13 @@ def _transition_error(previous: dict, updated: dict, message: str, available: se
         return 'unrequested pace update'
     if previous.get('accessibility_needs', False) != updated.get('accessibility_needs', False):
         return 'unrequested accessibility requirement change'
+    if previous.get('lighter_cities', []) != updated.get('lighter_cities', []):
+        requested_city = _lighter_city_request(message, previous, available)
+        planned_after = {city for phase in updated['phases'] for city in phase['cities']}
+        retained = [city for city in previous.get('lighter_cities', []) if city in planned_after]
+        expected = list(dict.fromkeys([*retained, requested_city])) if requested_city else retained
+        if updated.get('lighter_cities', []) != expected:
+            return 'unrequested city activity change'
     return None
 
 
@@ -677,8 +686,24 @@ def _explicit_day_transfer(state: dict, message: str, available: set[str]) -> di
     return updated
 
 
+def _lighter_city_request(message: str, state: dict, available: set[str]) -> str | None:
+    """Recognize a request to reduce activity in exactly one existing city."""
+    if not re.search(
+        r'\b(?:easier|lighter|less\s+busy|slower|gentler|fewer\s+(?:stops|visits)|relaxed)\b|'
+        r'خفف|أخف|اخف|أهدى|اهدى|مريح|أقل\s+(?:زيارات|أماكن)|اقل\s+(?:زيارات|اماكن)',
+        message.lower(), re.I,
+    ):
+        return None
+    named = mentioned_cities(message, available)
+    planned = {city for phase in state['phases'] for city in phase['cities']}
+    return named[0] if len(named) == 1 and named[0] in planned else None
+
+
 def _apply_edit(state, message, cities, hint, available):
     updated = deepcopy(state)
+    lighter_city = _lighter_city_request(message, state, available)
+    if lighter_city:
+        updated['lighter_cities'] = list(dict.fromkeys([*state.get('lighter_cities', []), lighter_city]))
     new_days = total_days(message)
     explicit_beach = _explicit_phase_days(message, 'beach')
     explicit_culture = _explicit_phase_days(message, 'culture')
@@ -766,6 +791,8 @@ def _apply_edit(state, message, cities, hint, available):
         if receiver is not None and donor is not None:
             updated['phases'][receiver]['days'] += 1
             updated['phases'][donor]['days'] -= 1
+    planned_after = {city for phase in updated['phases'] for city in phase['cities']}
+    updated['lighter_cities'] = [city for city in updated.get('lighter_cities', []) if city in planned_after]
     return updated
 
 
@@ -805,12 +832,22 @@ def _make_plan(state: dict, lang: str):
             item = dict(entry)
             item['day'] += offset
             item['phase_kind'] = segment['kind']
+            if item['city'] in state.get('lighter_cities', []):
+                stops = list(item['stops'])
+                while stops and (len(stops) > 2 or
+                        sum(stop['suggested_visit_minutes'] for stop in stops) + max(0, len(stops) - 1) * 30 > 240):
+                    stops.pop()
+                if len(stops) < len(item['stops']):
+                    item['stops'] = stops
+                    item['estimated_activity_minutes'] = sum(s['suggested_visit_minutes'] for s in stops) + max(0, len(stops) - 1) * 30
+                    item['note'] = ('Lighter day; removed extra stops. Treat the rest as free time.' if lang == 'en'
+                                    else 'يوم أخف؛ حذفت الزيارات الزائدة وتركت وقتًا حرًا.')
             days.append(item)
         route.extend(part['route'])
         warnings.extend(part['warnings'])
         travel_minutes += part['total_travel_minutes']
-        total_places += sum(len(day['stops']) for day in part['days'])
-        for entry in part['days']:
+        total_places += sum(len(day['stops']) for day in days[offset:])
+        for entry in days[offset:]:
             for stop in entry['stops']:
                 p = stop['place']
                 if p['id'] not in {x['id'] for x in sources}:
@@ -960,6 +997,7 @@ def consult_travel(request):
         r'(?:with (?:two|2) (?:kids|children)|(?:مع |عندي |معايا )?(?:طفلين|طفلان)|'
         r'عيلة|عائلة|family|kids?|children)', lowered))
     is_edit = bool(state and (edit_words or
+                           _lighter_city_request(message, state, available) or
                            ((budget_value is not None or budget_usd_value is not None or family_update) and not service_question) or
                            (not service_question and total_days(message) is not None and
                             (declared_total or any(k in lowered for k in
@@ -1197,6 +1235,11 @@ def consult_travel(request):
             return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
                     'trip_state': state, 'itinerary': None}
         if updated == state:
+            if _lighter_city_request(message, state, available):
+                return {'answer': ('أيام المدينة دي بالفعل أخف، ولم أغيّر مدة الرحلة أو باقي المدن.'
+                                   if request.language == 'Arabic' else
+                                   'Those city days are already lighter. The trip length and other cities are unchanged.'),
+                        'mode': 'local-assistant', 'sources': [], 'trip_state': state, 'itinerary': None}
             return {'answer': 'لم أتمكن من فهم التعديل. قل مثلاً: بدل الغردقة بشرم الشيخ، أو زود يوم للأقصر.'
                     if request.language == 'Arabic' else
                     'I could not identify a supported change. Try: Replace Hurghada with Sharm El Sheikh, or add one day to Luxor.',
@@ -1279,6 +1322,13 @@ def consult_travel(request):
         intro = 'Your editable itinerary is ready below. I used curated catalogue stops and approximate transfer allowances.'
         disclaimer = '\nNo live prices or bookings are included.'
     answer = intro + '\n' + '\n'.join(summaries) + disclaimer
+    requested_lighter_city = _lighter_city_request(message, state, available) if state else None
+    if requested_lighter_city:
+        city_label = CITY_AR.get(requested_lighter_city, requested_lighter_city) if request.language == 'Arabic' else requested_lighter_city
+        answer += (f'\nخففت أيام {city_label} إلى زيارتين على الأكثر في اليوم مع وقت راحة. '
+                   f'إجمالي الرحلة {validated.days} يوم وباقي المدن كما هي.' if request.language == 'Arabic' else
+                   f'\nI made {city_label} days lighter, with at most two stops per day and time to rest. '
+                   f'The trip remains {validated.days} days, and the other cities are unchanged.')
     # Make the simplifying calendar assumption visible before a visitor books.
     # A month without precise travel dates is NOT a confirmed calendar duration.
     month_mentioned = bool(re.search(

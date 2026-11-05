@@ -16,11 +16,11 @@ function restoredConsultation() {
   } catch { return { state: null, plan: null } }
 }
 
-const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
-const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
+const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
+const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
 const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, configuredGuideMode, setGuideMode, openTrip, onNavigate, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -39,7 +39,13 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
     if (log) log.scrollTop = log.scrollHeight
   }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
-  const serviceState = mode === 'provider-error' ? 'error' : AI_ACTIVE_MODES.has(mode) ? 'ai' : AI_CONFIGURED_MODES.has(mode) ? 'configured' : 'local'
+  const serviceState = mode === 'provider-error' ? 'error'
+    : mode === 'offline-fallback' ? 'local'
+    : AI_ACTIVE_MODES.has(mode) ? 'ai'
+    : AI_CONFIGURED_MODES.has(mode) ? 'configured'
+    : AI_CONFIGURED_MODES.has(configuredGuideMode)
+      ? messages.some(message => AI_ACTIVE_MODES.has(message.mode)) ? 'ai' : 'configured'
+      : 'local'
   const answerArabic = language === 'Arabic'
   const answerCity = city => answerArabic ? cityNameAr(city) : city
   useEffect(() => {

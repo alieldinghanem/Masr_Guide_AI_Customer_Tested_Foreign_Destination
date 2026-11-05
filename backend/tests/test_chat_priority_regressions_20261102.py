@@ -118,6 +118,60 @@ def test_hyphenated_english_family_trip_keeps_context_on_replacement(tmp_path, m
     assert _allocation(second) == {'Cairo': 5, 'Luxor': 2, 'Sharm El Sheikh': 7}
 
 
+def test_lighter_cairo_family_followup_keeps_city_days_and_other_stops(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    first = consult_travel(ConsultRequest(
+        message='We are a family visiting Egypt for 14 days. Please split the trip between Cairo, Luxor, and Hurghada.',
+        language='English',
+    ))
+    second = consult_travel(ConsultRequest(
+        message='Can we make the Cairo part easier for our children without changing the 14-day total?',
+        language='English', trip_state=first['trip_state'],
+    ))
+    assert second['trip_state']['days'] == 14
+    assert second['trip_state']['family'] is True
+    assert second['trip_state']['lighter_cities'] == ['Cairo']
+    assert _allocation(second) == _allocation(first)
+    assert 'Cairo days lighter' in second['answer']
+    before = {day['day']: day for day in first['itinerary']['days']}
+    for day in second['itinerary']['days']:
+        old = before[day['day']]
+        if day['city'] == 'Cairo':
+            assert len(day['stops']) <= 2
+            assert day['estimated_activity_minutes'] <= 240
+            assert len(day['stops']) <= len(old['stops'])
+        else:
+            assert day['stops'] == old['stops']
+    assert second['itinerary']['total_places'] == sum(len(day['stops']) for day in second['itinerary']['days'])
+    assert {source['id'] for source in second['itinerary']['sources']} == {
+        stop['place']['id'] for day in second['itinerary']['days'] for stop in day['stops']
+    }
+
+    again = consult_travel(ConsultRequest(message='Make Cairo days lighter, please', language='English',
+                                           trip_state=second['trip_state']))
+    assert again['trip_state'] == second['trip_state'] and again['itinerary'] is None
+
+
+def test_arabic_lighter_city_followup_does_not_move_days(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    initialize()
+    first = consult_travel(ConsultRequest(
+        message='رحلة ٧ أيام: ٣ أيام في القاهرة، ويومين الأقصر، ويومين الغردقة', language='Arabic',
+    ))
+    second = consult_travel(ConsultRequest(
+        message='خفف زيارات القاهرة للأطفال وخلي إجمالي الرحلة ٧ أيام', language='Arabic',
+        trip_state=first['trip_state'],
+    ))
+    assert second['trip_state']['lighter_cities'] == ['Cairo']
+    assert _allocation(second) == _allocation(first)
+    assert 'خففت أيام القاهرة' in second['answer']
+
+
 def test_duration_followup_waits_for_cities_then_uses_context(tmp_path, monkeypatch):
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'travel.sqlite3'))
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
