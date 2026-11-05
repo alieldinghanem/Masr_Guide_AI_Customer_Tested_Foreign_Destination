@@ -792,11 +792,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   .v3-head-essentials+.v3-content { padding-top:16px; }
 }
 
-.mg-coastal-guides { margin-top:clamp(2rem,5vw,3.5rem); }
+.mg-coastal-guides { margin-top:clamp(1rem,3vw,2rem); }
 .mg-category-count:has(button) { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 .mg-category-count button { border:0; background:transparent; color:var(--mg-primary); font:inherit; font-weight:750; min-height:44px; cursor:pointer; }
 .mg-category-count button:hover { text-decoration:underline; }
-.mg-coastal-guides-head { margin-bottom:1rem; }
+.mg-coastal-guides-head { display:flex; justify-content:flex-end; margin-bottom:1rem; }
 .mg-coastal-guides h2 { margin:0 0 .4rem; color:var(--mg-ink); font-size:clamp(1.4rem,3vw,2rem); }
 .mg-coastal-guides h2 { scroll-margin-top:1rem; }
 .mg-coastal-guides-head p { margin:0; color:var(--mg-muted); line-height:1.6; }

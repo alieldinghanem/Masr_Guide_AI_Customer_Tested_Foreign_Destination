@@ -105,7 +105,7 @@ describe('category presentation', () => {
   it('labels official coastal ideas in Arabic', () => {
     render(<I18nProvider initial="ar"><CategoryPlaces type="coast" places={[]} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
     expect(screen.getByText('مصر على البحر')).toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { name:'الشواطئ والأماكن البحرية' })).toHaveLength(2)
+    expect(screen.getAllByRole('heading', { name:'الشواطئ والأماكن البحرية' })).toHaveLength(1)
     expect(screen.getByRole('heading', { name:'مرسى علم' })).toBeInTheDocument()
   })
 
