@@ -1087,7 +1087,15 @@ def consult_travel(request):
         return {'answer': _route_choices(duration, request.language), 'mode': 'needs-clarification', 'sources': [],
                 'trip_state': None, 'itinerary': None}
     generic_duration = total_days(message)
-    if (not state and not cities and not unsupported and generic_duration is not None and
+    # A direct family-itinerary request is actionable without city names: propose
+    # a clearly labelled starter route instead of repeatedly asking for cities.
+    # Generic duration-only trips still ask the traveler to select destinations.
+    family_plan_requested = bool(
+        re.search(r'عائلي|عائلية|طفلين|طفلان|أطفال|اطفال|\b(?:family|children|kids?)\b', lowered)
+        and re.search(r'اقترح|اقتراح|خطة|خطه|برنامج|\b(?:plan|itinerary|suggest|propose)\b', lowered)
+    )
+    if (not state and not cities and not unsupported and not family_plan_requested
+            and generic_duration is not None and
             1 <= generic_duration <= 20 and not wants_history(message) and not wants_beach(message) and
             re.search(r'\b(?:plan|itinerary|trip|holiday|voyage)\b|خطط|رحلة|برنامج|خطة|خطه', lowered)):
         return {'answer': _route_choices(generic_duration, request.language),
@@ -1417,6 +1425,9 @@ def consult_travel(request):
         # are clearly described as a provisional suggestion, not a constraint.
         inferred_cities = cities or requested
         suggested_cities = False
+        if not inferred_cities and family_plan_requested and days >= 2 and not (history or beach):
+            inferred_cities = [city for city in ('Cairo', 'Giza') if city in available]
+            suggested_cities = bool(inferred_cities)
         if not inferred_cities and days >= 21 and not (history or beach):
             inferred_cities = [city for city in
                                ('Cairo', 'Giza', 'Alexandria', 'Luxor', 'Aswan', 'Hurghada')
