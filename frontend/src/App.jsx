@@ -12,6 +12,8 @@ import Experiences from './components/Experiences'
 import Essentials from './components/Essentials'
 import TravelerReviews from './components/TravelerReviews'
 import PlaceDetails from './components/PlaceDetails'
+import CoastalDetails from './components/CoastalDetails'
+import { COASTAL_DESTINATIONS } from './coastalDestinations'
 import Saved from './components/Saved'
 import Account, { getSession } from './components/Account'
 import Budget from './components/Budget'
@@ -22,7 +24,7 @@ const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experien
 const SAVED_PLACES_KEY = 'masr-guide-saved-places-v3'
 const pageFromHash = () => {
   const name = window.location.hash.replace(/^#\/?/, '')
-  return PAGES.includes(name) || /^place\/[a-z0-9_-]+$/i.test(name) ? name : 'home'
+  return PAGES.includes(name) || /^(?:place|coast)\/[a-z0-9_-]+$/i.test(name) ? name : 'home'
 }
 
 function Shell({ meta }) {
@@ -156,11 +158,12 @@ function Shell({ meta }) {
     setPage(name); setMobileOpen(false)
     window.scrollTo?.({ top: 0, behavior: 'smooth' })
   }
-  useEffect(() => { document.title = `${page.startsWith('place/') ? (meta.places.find(place => place.id === page.slice(6))?.[lang === 'ar' ? 'name_ar' : 'name'] || t('nav.exploreEgypt')) : page === 'account' ? 'My Account' : ({home: lang === 'ar' ? 'المرشد الذكي' : 'AI Travel Guide', heritage: lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places', coast: lang === 'ar' ? 'الشواطئ' : 'Beaches', destinations: lang === 'ar' ? 'الترشيحات' : 'Recommendations', essentials: lang === 'ar' ? 'نصائح السفر' : 'Travel Tips', stories:'Egypt Travel Journal', offers:'Verified Partner Experiences', partners:'Partner With Us', staff:'Staff Studio', project:'Project Case Study',budget:'Travel Budget' }[page] || t(`nav.${page}`))} · Masr Guide AI` }, [page, t, lang, meta.places])
+  useEffect(() => { document.title = `${page.startsWith('place/') ? (meta.places.find(place => place.id === page.slice(6))?.[lang === 'ar' ? 'name_ar' : 'name'] || t('nav.exploreEgypt')) : page.startsWith('coast/') ? (COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))?.[lang === 'ar' ? 'ar' : 'en'] || t('discovery.coast')) : page === 'account' ? 'My Account' : ({home: lang === 'ar' ? 'المرشد الذكي' : 'AI Travel Guide', heritage: lang === 'ar' ? 'الأماكن الأثرية' : 'Historical Places', coast: lang === 'ar' ? 'الشواطئ' : 'Beaches', destinations: lang === 'ar' ? 'الترشيحات' : 'Recommendations', essentials: lang === 'ar' ? 'نصائح السفر' : 'Travel Tips', stories:'Egypt Travel Journal', offers:'Verified Partner Experiences', partners:'Partner With Us', staff:'Staff Studio', project:'Project Case Study',budget:'Travel Budget' }[page] || t(`nav.${page}`))} · Masr Guide AI` }, [page, t, lang, meta.places])
   const askQuestion = q => { setGuideDraft(q); go('home') }
   // Opening a place from elsewhere remounts Discover so stale search/filters cannot hide it.
   const openPlace = p => { setHighlight(p); setExploreInterest(null); setExploreKey(k => k + 1); go('explore') }
   const openDetails = p => { if (p?.id && meta.places.some(place => place.id === p.id)) { setDetailReturnPage(page); go(`place/${p.id}`) } }
+  const openCoastalDetails = item => { if (item?.id && COASTAL_DESTINATIONS.some(destination => destination.id === item.id)) go(`coast/${item.id}`) }
   const reviewSignIn = () => { setReviewReturnPage(page); go('account') }
   const exploreTheme = tag => { setHighlight(null); setExploreInterest(tag); setExploreKey(k => k + 1); go('explore') }
   const clearTravelerUi = () => {
@@ -187,7 +190,7 @@ function Shell({ meta }) {
           <Logo go={go} />
           <nav id="masr-main-menu" className={`navigation ${mobileOpen ? 'is-open' : ''}`} aria-label={t('nav.aria')}>
             {menu.map(([id, key]) => id === 'explore' ? <div className="nav-discover" key={id}>
-              <button type="button" onClick={() => go('explore')} className={['explore', 'heritage', 'coast'].includes(page) || page.startsWith('place/') ? 'active' : ''} aria-current={page === 'explore' ? 'page' : undefined}>{key}</button>
+              <button type="button" onClick={() => go('explore')} className={['explore', 'heritage', 'coast'].includes(page) || page.startsWith('place/') || page.startsWith('coast/') ? 'active' : ''} aria-current={page === 'explore' ? 'page' : undefined}>{key}</button>
               <div className="nav-discover-submenu" role="group" aria-label={t('discovery.nav')}>
                 <button type="button" onClick={() => go('heritage')} aria-current={page === 'heritage' ? 'page' : undefined}><Landmark size={16} />{t('discovery.heritage')}</button>
                 <button type="button" onClick={() => go('coast')} aria-current={page === 'coast' ? 'page' : undefined}><Waves size={16} />{t('discovery.coast')}</button>
@@ -214,7 +217,7 @@ function Shell({ meta }) {
       )}
       {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
       {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openDetails={openDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
-      {page === 'coast' && <CategoryPlaces type="coast" places={places} openDetails={openDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
+      {page === 'coast' && <CategoryPlaces type="coast" places={places} openDetails={openDetails} openCoastalDetails={openCoastalDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'experiences' && <Experiences experiences={discovery.experiences} places={places} onExplore={exploreTheme} askQuestion={askQuestion} />}
       {page === 'essentials' && <Essentials items={discovery.essentials} />}
@@ -222,6 +225,7 @@ function Shell({ meta }) {
       {page === 'saved' && <Saved places={places} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={openPlace} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
       {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} openDetails={openDetails} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
       {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go(detailReturnPage)} backLabel={detailReturnPage === 'heritage' ? (lang === 'ar' ? 'الأماكن الأثرية' : 'Historical places') : detailReturnPage === 'coast' ? (lang === 'ar' ? 'الشواطئ والبحر' : 'Beaches & sea') : undefined} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
+      {page.startsWith('coast/') && <CoastalDetails destination={COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))} onBack={() => go('coast')} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'planner' && <Planner cities={cities} interests={interests} openPlace={openPlace} />}
       {page === 'account' && <Account registrationEnabled={meta.registrationEnabled} onOpenPlanner={() => go('planner')} onSignOut={clearTravelerUi} onSignIn={next => { setSavedIds([]); setFavoritesError(''); setTravelerSession(next); if (reviewReturnPage) { go(reviewReturnPage); setReviewReturnPage(null) } }} />}
       {page === 'stories' && <Stories go={go} />}
@@ -248,7 +252,7 @@ function Shell({ meta }) {
         <div className="container footer-bottom"><span>{t('footer.copy', { year: new Date().getFullYear() })}</span><span>{t('footer.note')}</span></div>
       </footer>
       <nav className="mg-mobile-tabs" aria-label={lang === 'ar' ? 'التنقل السريع' : 'Quick navigation'}>
-        {[[ 'home', MessageCircle, t('nav.guide')], ['explore', Compass, t('nav.explore')], ['reviews', Star, t('nav.reviews')], ['planner', CalendarDays, t('nav.planner')]].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && (['heritage', 'coast'].includes(page) || page.startsWith('place/')))) ? 'active' : ''} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
+        {[[ 'home', MessageCircle, t('nav.guide')], ['explore', Compass, t('nav.explore')], ['reviews', Star, t('nav.reviews')], ['planner', CalendarDays, t('nav.planner')]].map(([id, Icon, text]) => <button type="button" key={id} className={(id === page || (id === 'home' && page === 'guide') || (id === 'explore' && (['heritage', 'coast'].includes(page) || page.startsWith('place/') || page.startsWith('coast/')))) ? 'active' : ''} aria-current={id === page ? 'page' : undefined} onClick={() => go(id)}><Icon size={19}/><span>{text}</span></button>)}
       </nav>
     </div>
   )

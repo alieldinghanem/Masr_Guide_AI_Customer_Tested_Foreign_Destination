@@ -29,6 +29,24 @@ describe('hash routing', () => {
     expect(document.title).toBe('Karnak Temple Complex · Masr Guide AI')
   })
 
+  it('opens a coastal destination from its image and on a direct link', async () => {
+    const user = await boot('#/coast')
+    await user.click(await screen.findByRole('button', { name: 'More details about Marsa Alam' }))
+    expect(window.location.hash).toBe('#/coast/marsa-alam')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Marsa Alam' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Rate this place' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Visitor comments/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Destination source' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Beaches & coastal places' }))
+    expect(window.location.hash).toBe('#/coast')
+  })
+
+  it('loads a coastal destination directly from its shareable URL', async () => {
+    await boot('#/coast/alexandria')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Alexandria' })).toBeInTheDocument()
+    expect(document.title).toBe('Alexandria · Masr Guide AI')
+  })
+
   it('falls back to Home for unknown routes', async () => {
     await boot('#/nope')
     expect(await screen.findByRole('heading', { level: 1, name: /Discover Egypt, your way/ })).toBeInTheDocument()

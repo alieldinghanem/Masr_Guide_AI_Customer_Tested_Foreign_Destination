@@ -36,11 +36,14 @@ describe('category presentation', () => {
     }
   })
 
-  it('separates swimming beach destinations from waterfront sights', async () => {
+  it('shows all coastal places in one list and opens destination details from the image', async () => {
     const user = userEvent.setup()
+    const openCoastalDetails = vi.fn()
     const places = [entry('qaitbay', 'Alexandria', 'Heritage'), entry('ras-mohammed', 'Sharm El Sheikh', 'Nature', ['beaches']), entry('naama-bay', 'Sharm El Sheikh', 'Beach', ['beaches']), entry('giftun-island', 'Hurghada', 'Nature', ['beaches']), entry('dahab-lagoon', 'Dahab', 'Beach', ['beaches'])]
-    render(<I18nProvider initial="en"><CategoryPlaces type="coast" places={places} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
-    expect(screen.getByText('10 beach destinations · 2 beach places in the catalog')).toBeInTheDocument()
+    render(<I18nProvider initial="en"><CategoryPlaces type="coast" places={places} openPlace={vi.fn()} openCoastalDetails={openCoastalDetails} askQuestion={vi.fn()} /></I18nProvider>)
+    expect(screen.getByText('14 coastal places')).toBeInTheDocument()
+    expect(document.querySelectorAll('.mg-coastal-guides-grid')).toHaveLength(1)
+    expect(document.querySelectorAll('.mg-coastal-guides-grid > article')).toHaveLength(14)
     const guidePhotos = [...document.querySelectorAll('.mg-coastal-guide-photo')]
     expect(guidePhotos).toHaveLength(10)
     expect(new Set(guidePhotos.map(photo => photo.getAttribute('src'))).size).toBe(10)
@@ -50,14 +53,15 @@ describe('category presentation', () => {
       'Sharm El Sheikh', 'North Coast & Alamein', 'Alexandria', 'Marsa Matruh', 'Marsa Alam',
       'Hurghada', 'Dahab', 'Ain Sokhna', 'Nuweiba', 'Safaga',
     ])
-    expect(screen.getAllByRole('link', { name:'Destination source' })).toHaveLength(10)
+    expect(screen.queryByRole('link', { name:'Destination source' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name:'Marsa Alam' }).closest('.mg-coastal-guide')).toHaveTextContent('Sharm El Luli Beach')
-    expect([...document.querySelectorAll('#swimming-beaches-title + p + .mg-category-grid h2')].map(el => el.textContent)).toEqual(['naama-bay', 'giftun-island'])
-    expect([...document.querySelectorAll('#coastal-other-title + p + .mg-category-grid h2')].map(el => el.textContent)).toEqual(['dahab-lagoon', 'ras-mohammed'])
+    expect([...document.querySelectorAll('.mg-coastal-guides-grid .mg-place-card h2')].map(el => el.textContent)).toEqual(['naama-bay', 'giftun-island', 'dahab-lagoon', 'ras-mohammed'])
     expect(screen.queryByRole('heading', { name:'qaitbay' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name:'More details about Marsa Alam' }))
+    expect(openCoastalDetails).toHaveBeenCalledWith(expect.objectContaining({ id:'marsa-alam' }))
     await user.type(screen.getByRole('textbox', { name:'Search places' }), 'Marsa Alam')
     expect(screen.getByRole('heading', { name:'Marsa Alam' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name:'Destination source' })).toHaveLength(1)
+    expect(document.querySelectorAll('.mg-coastal-guides-grid > article')).toHaveLength(1)
     expect(screen.queryByText('No places match that search. Try another term.')).not.toBeInTheDocument()
   })
 
@@ -68,6 +72,13 @@ describe('category presentation', () => {
     expect(names()[0]).toBe('Sharm El Sheikh')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Sort by' }), 'rated')
     expect(names()[0]).toBe('Marsa Alam')
+  })
+
+  it('sorts catalog beaches and destinations together by visitor rating', async () => {
+    const user = userEvent.setup()
+    render(<I18nProvider initial="en"><CategoryPlaces type="coast" places={[entry('naama-bay', 'Sharm El Sheikh', 'Beach', ['beaches'])]} ratings={{ 'naama-bay': { average: 5, count: 3 }, 'coast:marsa-alam': { average: 4.8, count: 12 } }} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Sort by' }), 'rated')
+    expect(document.querySelector('.mg-coastal-guides-grid > article h2')?.textContent).toBe('naama-bay')
   })
 
   it('uses the same landmark priority in the main Explore list', () => {
@@ -94,7 +105,7 @@ describe('category presentation', () => {
   it('labels official coastal ideas in Arabic', () => {
     render(<I18nProvider initial="ar"><CategoryPlaces type="coast" places={[]} openPlace={vi.fn()} askQuestion={vi.fn()} /></I18nProvider>)
     expect(screen.getByText('مصر على البحر')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name:'وجهات شاطئية للنزول للمياه' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name:'الشواطئ والأماكن البحرية' })).toHaveLength(2)
     expect(screen.getByRole('heading', { name:'مرسى علم' })).toBeInTheDocument()
   })
 
