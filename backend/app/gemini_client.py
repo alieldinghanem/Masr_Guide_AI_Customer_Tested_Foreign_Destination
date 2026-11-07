@@ -6,6 +6,7 @@ The free API key is optional. Do not log keys, provider errors or prompt content
 import json
 import logging
 import os
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlsplit
@@ -14,6 +15,21 @@ from fastapi import HTTPException
 from .conversation_router import redact_payment_data
 
 logger = logging.getLogger(__name__)
+_unavailable_until: dict[str, float] = {}
+_COOLDOWN_SECONDS = 45
+
+
+def _check_cooldown(model: str) -> None:
+    if time.monotonic() < _unavailable_until.get(model, 0):
+        raise HTTPException(502, 'Gemini is temporarily unavailable; the local guide can still help.')
+
+
+def _track_availability(model: str, exc: Exception | None = None) -> None:
+    if isinstance(exc, HTTPError) and exc.code == 503:
+        # Avoid making every visitor wait for the same overloaded model.
+        _unavailable_until[model] = time.monotonic() + _COOLDOWN_SECONDS
+    elif exc is None:
+        _unavailable_until.pop(model, None)
 
 
 def gemini_key():
@@ -40,6 +56,7 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
     model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
+    _check_cooldown(model)
     # The API receives genuine conversation roles, rather than a textual
     # transcript in one user turn. History is untrusted visitor data; only the
     # fixed system instruction defines the assistant's operating rules.
@@ -93,8 +110,10 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
         text = ''.join(p.get('text', '') for p in parts).strip()
         if not text:
             raise ValueError('Empty provider response')
+        _track_availability(model)
         return text
     except (HTTPError, URLError, OSError, ValueError, KeyError, IndexError) as exc:
+        _track_availability(model, exc)
         # Never disclose API key or provider response body to the browser.
         logger.warning('Gemini generation failed: model=%s type=%s status=%s completion=%s',
                        model, type(exc).__name__, getattr(exc, 'code', None),
@@ -121,6 +140,7 @@ def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200,
     model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
+    _check_cooldown(model)
     # Reuse the same role-preserving conversation rules as generate().
     contents = []
     for turn in (history or [])[-8:]:
@@ -176,6 +196,7 @@ def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200,
                 break
         queries = [str(q)[:200] for q in (metadata.get('webSearchQueries') or []) if isinstance(q, str)][:8]
         entry_point = (metadata.get('searchEntryPoint') or {}).get('renderedContent', '')
+        _track_availability(model)
         return {
             'answer': answer,
             'sources': sources,
@@ -190,4 +211,5 @@ def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200,
             }
         }
     except (HTTPError, URLError, OSError, ValueError, KeyError, IndexError, TypeError) as exc:
+        _track_availability(model, exc)
         raise HTTPException(502, 'Gemini Search is unavailable. Check API access, rate limits and network.') from exc

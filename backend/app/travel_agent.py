@@ -711,7 +711,9 @@ def _interest_edit(state: dict, message: str, available: set[str]) -> dict[int, 
     ))
     bare_choice = text in {'museums', 'museum', 'history', 'markets', 'market', 'food',
                            'musées', 'musees', 'marchés', 'marches', 'cuisine', 'histoire',
-                           'المتاحف', 'متاحف', 'الآثار', 'الاثار', 'الأسواق', 'الاسواق', 'اسواق', 'الأكل', 'الاكل'}
+                           'المتاحف', 'متاحف', 'الآثار', 'الاثار', 'الأسواق', 'الاسواق', 'اسواق', 'الأكل', 'الاكل',
+                           'المتاحف والآثار', 'المتاحف والاثار', 'الأسواق والأكل المحلي',
+                           'الاسواق والاكل المحلي', 'markets and local food', 'museums and history'}
     if not (opinion or bare_choice):
         return {}
     if re.search(r'\bmuseums?\b|musées|musees|متاحف|المتاحف', text):
@@ -740,7 +742,7 @@ def _pace_edit(state: dict, message: str, available: set[str]) -> str | None:
     text = message.lower()
     if mentioned_cities(message, available):
         return None
-    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة', text):
+    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة|الرحلة هادية|الرحلة خفيفة', text):
         return 'relaxed'
     if re.search(r'\b(?:more packed|faster pace|more activities)\b|وتيرة أسرع|زيارات أكتر|زيارات اكثر', text):
         return 'packed'
@@ -776,6 +778,72 @@ def _route_choices(days: int, language: str) -> str:
     return (f'I have {days} days for your trip. Which cities would you like to include? '
             'I suggest Cairo and Luxor for history, or Cairo and Hurghada for history and the sea. '
             'I have not created an itinerary until you choose.')
+
+
+def _requested_day(message: str) -> int | None:
+    """Find a request to explain an existing day, not to change trip length."""
+    text = _digits(message.lower()).strip(' .!?؟')
+    if re.search(r'\b(?:add|extend|increase|move|transfer|replace)\b|زود|زيد|انقل|بدل|غيّر|غير|احذف|شيل', text):
+        return None
+    match = re.search(r'(?:اليوم|يوم)\s*(?:رقم\s*)?(\d{1,2}|الأول|الاول|الثاني|الثالث)|'
+                      r'(?:أول|اول|ثاني|ثالث)\s+يوم|\bday\s*(\d{1,2}|one|two|three|first|second|third)\b|'
+                      r'\b(first|second|third)\s+day\b', text)
+    if not match:
+        return None
+    if match.group(0).startswith(('أول', 'اول', 'first')):
+        return 1
+    if match.group(0).startswith(('ثاني', 'second')):
+        return 2
+    if match.group(0).startswith(('ثالث', 'third')):
+        return 3
+    value = next((part for part in match.groups() if part), '')
+    return int(value) if value.isdigit() else {
+        'الأول': 1, 'الاول': 1, 'one': 1, 'first': 1,
+        'الثاني': 2, 'two': 2, 'second': 2,
+        'الثالث': 3, 'three': 3, 'third': 3,
+    }.get(value)
+
+
+def _explain_day(state: dict, day_number: int, language: str) -> dict:
+    """Answer a day follow-up from the validated itinerary instead of generic RAG."""
+    if day_number < 1 or day_number > state['days']:
+        answer = (f'الرحلة الحالية {state["days"]} يوم، فمفيش يوم {day_number} في الخطة. تحب تغيّر إجمالي المدة؟'
+                  if language == 'Arabic' else
+                  f'The current trip has {state["days"]} days, so there is no day {day_number}. Would you like to extend it?')
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+                'trip_state': state, 'itinerary': None}
+    itinerary = _make_plan(state, 'ar' if language == 'Arabic' else 'en')
+    day = itinerary['days'][day_number - 1]
+    city = CITY_AR.get(day['city'], day['city']) if language == 'Arabic' else day['city']
+    if language == 'Arabic':
+        lines = [f'اليوم {day_number} في {city}:']
+        if day.get('travel'):
+            lines.append('فيه انتقال من مدينة تانية؛ وقت الانتقال تقديري ويتأكد قبل الحجز.')
+        if day['stops']:
+            lines.extend(f'{i}. {stop["place"]["name_ar"]} — حوالي {stop["suggested_visit_minutes"]} دقيقة للزيارة.'
+                         for i, stop in enumerate(day['stops'], 1))
+            lines.append('الترتيب والمدة مقترحان، وتأكد من المواعيد والتذاكر قبل الخروج.')
+        else:
+            lines.append('ده يوم حر؛ مفيش زيارة موثقة مناسبة أضيفها من دليلنا.')
+            lines.extend(f'فكرة اختيارية: {idea}' for idea in day.get('activity_ideas', [])[:2])
+        lines.append(f'لو عايز اليوم أخف، قل: خفف أيام {city}.')
+    else:
+        lines = [f'Day {day_number} in {city}:']
+        if day.get('travel'):
+            lines.append('There is an intercity transfer; confirm the actual timing before booking.')
+        if day['stops']:
+            lines.extend(f'{i}. {stop["place"]["name"]} — allow about {stop["suggested_visit_minutes"]} minutes.'
+                         for i, stop in enumerate(day['stops'], 1))
+            lines.append('The order and durations are suggestions. Check hours and tickets before you go.')
+        else:
+            lines.append('This is a free day; I have no additional curated visit to assign reliably.')
+            lines.extend(f'Optional idea: {idea}' for idea in day.get('activity_ideas', [])[:2])
+        lines.append(f'If this day feels busy, say: Make {city} days lighter.')
+    sources = [{'number': i, 'id': stop['place']['id'], 'title': stop['place']['name'],
+                'title_ar': stop['place']['name_ar'], 'url': stop['place']['source_url']}
+               for i, stop in enumerate(day['stops'], 1)]
+    return {'answer': '\n'.join(lines), 'mode': 'local-assistant', 'sources': sources,
+            'trip_state': state, 'itinerary': None}
 
 
 def _apply_edit(state, message, cities, hint, available):
@@ -1023,6 +1091,8 @@ def consult_travel(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    if state and (requested_day := _requested_day(message)) is not None:
+        return _explain_day(state, requested_day, request.language)
     if state and re.fullmatch(r'\s*(?:تمام|موافق|ماشي|حلو|كويس|ok|okay|looks good|sounds good|yes)[.!؟\s]*', lowered):
         answer = ('تمام، الخطة الحالية زي ما هي. لو عندك رأي في الأنشطة أو وتيرة السفر، قولّي وأنا أعدّلها مع الحفاظ على الأيام والمدن.'
                   if request.language == 'Arabic' else
@@ -1446,18 +1516,18 @@ def consult_travel(request):
         def day_count_ar(days):
             return 'يوم واحد' if days == 1 else 'يومين' if days == 2 else f'{days} أيام'
         summaries = [f"{day_count_ar(p['days'])} — {', '.join(CITY_AR.get(c, c) for c in p['cities'])} ({kind_ar.get(p['kind'], p['kind'])})" for p in validated.model_dump()['phases']]
-        intro = 'تم تجهيز البرنامج السياحي لهذه الجلسة. لم يُحفظ في حسابك بعد؛ استخدم زر حفظ الرحلة أو اطلب حفظها بعد تسجيل الدخول.'
+        intro = ('حدّثت خطة رحلتك:' if state else
+                 'اقترحت لك خطة مبدئية لهذه الجلسة. لم يُحفظ في حسابك بعد؛ استخدم زر حفظ الرحلة لو حابب ترجع لها.')
         disclaimer = '\nلا توجد حجوزات أو أسعار مؤكدة.'
     elif request.language == 'French':
         kind_fr = {'history': 'histoire', 'mixed': 'culture et découverte', 'beach': 'mer et détente'}
         summaries = [f"{p['days']} jours — {', '.join(p['cities'])} ({kind_fr.get(p['kind'], p['kind'])})" for p in validated.model_dump()['phases']]
-        intro = ("Votre itinéraire modifiable est prêt pour cette session. "
-                 "Il n'a pas été enregistré dans votre compte ; connectez-vous pour le sauvegarder. "
-                 "Les noms et descriptions des étapes restent en anglais dans cette version.")
+        intro = ("J’ai mis à jour votre itinéraire :" if state else
+                 "Votre itinéraire provisoire est prêt. Il n'a pas été enregistré dans votre compte ; connectez-vous pour le sauvegarder.")
         disclaimer = '\nAucun tarif, horaire ou réservation en temps réel n’est confirmé.'
     else:
         summaries = [f"{p['days']} days: {', '.join(p['cities'])} ({p['kind']})" for p in validated.model_dump()['phases']]
-        intro = 'Your editable itinerary is ready below. I used curated catalogue stops and approximate transfer allowances.'
+        intro = 'I updated your itinerary:' if state else 'Here is a draft itinerary using curated catalogue stops:'
         disclaimer = '\nNo live prices or bookings are included.'
     answer = intro + '\n' + '\n'.join(summaries) + disclaimer
     if state and any(before['interests'] != after['interests']

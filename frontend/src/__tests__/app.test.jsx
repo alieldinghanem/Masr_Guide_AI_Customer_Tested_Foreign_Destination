@@ -285,6 +285,22 @@ describe('Planner', () => {
 })
 
 describe('Guide', () => {
+  it('keeps a long source list available without overwhelming the chat', async () => {
+    const sources = Array.from({ length: 4 }, (_, index) => ({
+      number: index + 1, id: `place-${index}`, title: `Place ${index + 1}`,
+      url: `https://example.org/place-${index}`,
+    }))
+    const { user } = await setup({ chat: { answer: 'A draft itinerary.', mode: 'local-planner', sources } })
+    await user.click(nav('AI guide'))
+    await user.type(screen.getByLabelText('Ask the tour guide'), 'Plan a week in Egypt')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    const summary = await screen.findByText('Reference links (4)')
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+    await user.click(summary)
+    expect(summary.closest('details')).toHaveAttribute('open')
+    expect(screen.getByRole('link', { name: /\[1\] Place 1/ })).toBeInTheDocument()
+  })
+
   it('sends a question, renders the answer and its source link', async () => {
     const { calls, user } = await setup()
     await user.click(nav('AI guide'))

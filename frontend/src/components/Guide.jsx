@@ -248,13 +248,13 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
                 <div className="msg-content">
                   <div className="msg-text" dir="auto">{m.text}</div>
                   {m.role === 'assistant' && !!m.sources?.length && (
-                    <div className="message-sources"><strong>{t('guide.refs')}</strong>
+                    <details className="message-sources" open={m.sources.length <= 3}><summary>{t('guide.refs')} ({m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).length})</summary>
                       <div>{m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).map((s, n) => (
                         <a href={s.url} key={s.id || s.url || n} target="_blank" rel="noopener noreferrer">
                           [{s.number ?? n + 1}] {(m.responseLanguage || language) === 'Arabic' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
                         </a>))}
                       </div>
-                    </div>
+                    </details>
                   )}
                   {m.role === 'assistant' && !!m.grounding?.search_suggestions_html && (
                     <iframe title="Google Search suggestions" sandbox="allow-popups allow-popups-to-escape-sandbox"
