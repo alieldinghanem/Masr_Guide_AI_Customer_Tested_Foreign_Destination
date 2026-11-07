@@ -1089,6 +1089,7 @@ def consult_travel(request):
     generic_duration = total_days(message)
     if (not state and not cities and not unsupported and generic_duration is not None and
             1 <= generic_duration <= 20 and not wants_history(message) and not wants_beach(message) and
+            not re.search(r'عائلي|عائلية|زوجتي|طفل(?:ين|ان)|أطفال|اطفال|family|kids?|children', lowered) and
             re.search(r'\b(?:plan|itinerary|trip|holiday|voyage)\b|خطط|رحلة|برنامج|خطة|خطه', lowered)):
         return {'answer': _route_choices(generic_duration, request.language),
                 'mode': 'needs-clarification', 'sources': [], 'trip_state': None, 'itinerary': None}
