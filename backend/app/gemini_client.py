@@ -53,7 +53,7 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
     if not key:
         raise ValueError('GEMINI_API_KEY is not configured')
     # Restrict dynamic model names to alphanumeric model IDs: no arbitrary URL injection.
-    model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
+    model = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
     _check_cooldown(model)
@@ -137,7 +137,7 @@ def generate_grounded(prompt: str, instructions: str, *, max_tokens: int = 1200,
     key = gemini_key()
     if not key:
         raise ValueError('GEMINI_API_KEY is not configured')
-    model = os.getenv('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
+    model = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip()
     if not model or any(ch not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._' for ch in model):
         raise ValueError('Invalid GEMINI_MODEL')
     _check_cooldown(model)

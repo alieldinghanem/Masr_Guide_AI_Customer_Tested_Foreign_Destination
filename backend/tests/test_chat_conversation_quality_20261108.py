@@ -6,7 +6,7 @@ from urllib.error import HTTPError
 import pytest
 from fastapi import HTTPException
 
-from app import gemini_client
+from app import gemini_client, guide, travel_agent, travel_dialogue
 from app.database import initialize
 from app.schemas import ConsultRequest
 from app.travel_agent import consult_travel
@@ -88,3 +88,49 @@ def test_gemini_503_cools_down_instead_of_delaying_every_visitor(monkeypatch):
         assert len(calls) == 2
     finally:
         gemini_client._unavailable_until.pop(model, None)
+
+
+def test_clear_trip_and_short_preference_use_one_model_reply_each(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'guide.sqlite3'))
+    monkeypatch.setenv('AI_PROVIDER', 'gemini')
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-only-key')
+    monkeypatch.setenv('AI_TRIP_NARRATION_ENABLED', 'true')
+    initialize()
+    monkeypatch.setattr(travel_agent, '_extract_gemini',
+                        lambda *_a, **_kw: pytest.fail('Unnecessary intent request'))
+    replies = []
+
+    def narrate(*_args, **_kwargs):
+        replies.append(1)
+        return 'A draft that follows the visitor preferences.'
+
+    monkeypatch.setattr(travel_dialogue, 'generate', narrate)
+    first = _ask('رحلة ٧ أيام: ٣ أيام القاهرة ويومين الأقصر ويومين الغردقة')
+    second = _ask('الأسواق والأكل المحلي', first['trip_state'])
+    assert second['trip_state']['days'] == 7
+    assert len(replies) == 2
+
+
+def test_broad_history_question_gets_concrete_cairo_places_even_offline(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'guide.sqlite3'))
+    monkeypatch.setenv('AI_PROVIDER', 'offline')
+    initialize()
+    question = 'أنا بحب التاريخ، تنصحني أبدأ بإيه في القاهرة وليه؟'
+    reply = _ask(question)
+    assert reply['mode'] == 'local-assistant'
+    assert 'قلعة صلاح الدين' in reply['answer']
+    assert 'المتحف المصري' in reply['answer']
+    assert reply['sources'][0]['id'] == 'citadel'
+
+
+def test_model_deferral_cannot_replace_a_grounded_recommendation(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'guide.sqlite3'))
+    monkeypatch.setenv('AI_PROVIDER', 'gemini')
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-only-key')
+    initialize()
+    monkeypatch.setattr(guide, 'generate', lambda *_a, **_kw:
+                        'I do not have enough information. Ask about a specific place.')
+    reply = _ask('I love history. Where should I start in Cairo and why?', language='English')
+    assert reply['mode'] == 'local-assistant'
+    assert 'Citadel of Saladin' in reply['answer']
+    assert len(reply['sources']) == 3

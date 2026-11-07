@@ -1182,7 +1182,18 @@ def consult_travel(request):
     provider = os.getenv('AI_PROVIDER', 'auto').strip().lower()
     use_openai = (provider == 'openai' or (provider == 'auto' and not gemini_key())) and bool(openai_key())
     use_gemini = provider in ('auto', 'gemini') and bool(gemini_key())
-    if (use_openai or use_gemini) and (state or plan_words):
+    # The server already understands a named-city plan and a simple preference
+    # reply. Asking Gemini to extract those again doubles latency and uses a
+    # second free-tier request before the actual conversational reply.
+    complex_edit = bool(re.search(
+        r'\b(?:move|transfer|replace|swap|add|extend|increase|remove)\b|'
+        r'زود|زيد|ضيف|اضف|أضف|انقل|بدل|استبدل|غير|غيّر|احذف|شيل', lowered))
+    locally_understood = bool(
+        (not state and cities and total_days(message) is not None) or
+        (state and not cities and total_days(message) is None and not complex_edit and
+         (_interest_edit(state, message, available) or _pace_edit(state, message, available)))
+    )
+    if (use_openai or use_gemini) and (state or plan_words) and not (use_gemini and locally_understood):
         try:
             if use_openai:
                 hint = _extract_gemini(message, state, available, provider='openai')

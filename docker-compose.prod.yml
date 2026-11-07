@@ -17,7 +17,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Choose the AI provider explicitly; OpenAI remains optional.
       AI_PROVIDER: ${AI_PROVIDER:-gemini}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       # Search is opt-in: enable only after reviewing provider quotas/terms.
       GEMINI_SEARCH_GROUNDING: ${GEMINI_SEARCH_GROUNDING:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
