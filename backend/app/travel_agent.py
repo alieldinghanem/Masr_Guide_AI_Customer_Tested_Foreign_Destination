@@ -1538,7 +1538,7 @@ def consult_travel(request):
         focus_en = {'museums': 'museums', 'food': 'markets and local food', 'history': 'historical sites'}
         focus_fr = {'museums': 'les musées', 'food': 'les marchés et la cuisine locale', 'history': 'les sites historiques'}
         label = (focus_ar if request.language == 'Arabic' else focus_fr if request.language == 'French' else focus_en).get(focus[0], focus[0]) if focus else ''
-        answer += (f'\nعدّلت اقتراحات الأنشطة حسب تفضيلك لـ{label}.' if request.language == 'Arabic' else
+        answer += (f'\nعدّلت اقتراحات الأنشطة حسب تفضيلك: {label}.' if request.language == 'Arabic' else
                    f'\nJ’ai adapté les visites à votre préférence pour {label}.' if request.language == 'French' else
                    f'\nI updated the suggested stops around your preference for {label}.')
     if state and validated.pace != state['pace']:
