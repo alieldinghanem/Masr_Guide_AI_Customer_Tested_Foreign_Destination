@@ -108,7 +108,7 @@ Or, run `RUN_STARTUP_WINDOWS.bat` from the repository root (opens two windows an
 
 ### Gemini (optional)
 
-Copy `backend/.env.example` to `backend/.env` and set **your NEW, private** `GEMINI_API_KEY`. `GEMINI_MODEL=gemini-2.5-flash` pins the requested model. Turn on `GEMINI_SEARCH_GROUNDING=true` to send Google Search as an optional model tool; a live search must be confirmed using returned grounding metadata. Read `GEMINI_SEARCH_GROUNDING_START_HERE_AR.md` for testing, sources, costs, and terms. **Never commit `.env`, screenshots with secrets, or leaked keys.** Without Gemini, the offline-mode catalogue guide and planning engine still work.
+Copy `backend/.env.example` to `backend/.env` and set **your NEW, private** `GEMINI_API_KEY`. `GEMINI_MODEL=gemini-3.5-flash-lite` selects the current default; availability and quotas vary by project. Turn on `GEMINI_SEARCH_GROUNDING=true` only after reviewing its quotas and terms; a live search must be confirmed using returned grounding metadata. Read `GEMINI_SEARCH_GROUNDING_START_HERE_AR.md` for details. Google's free tier may use prompts to improve its products; avoid personal data. **Never commit `.env`, screenshots with secrets, or leaked keys.** Without Gemini, the local catalogue guide and planning engine still work.
 
 ### Staff CMS (optional)
 
@@ -141,6 +141,8 @@ docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 Docker Compose uses the persistent local named volume `masr_data` for SQLite. For Render hosting, `render.yaml` offers a simple **portfolio preview** service using GitHub + Docker. **Free Render instances use ephemeral storage**; account records, staff edits, trip saves, and referral click counts can disappear on restart/redeploy. Do **not** use the free configuration as a durable production service with real user data. Upgrade to paid persistent disk and backup procedures or migrate to a managed database before onboarding real customers. See `docs/DEPLOY_GITHUB_RENDER_AR.md`.
+
+Visitor star ratings and comments use the tourism SQLite database and now require a signed-in traveler account. One account can revise its vote and comment for a place or coastal destination; the public sees a generated member alias, not the account email. The account export includes reviews, and account deletion removes them. Prior browser-only anonymous submissions are excluded from public listings. Account membership does **not** verify a visit. Comments reject links and email addresses and public submissions have a basic per-peer rate limit. They persist across normal page reloads but can disappear when the free Render instance is recreated or redeployed. New account registration is disabled on that temporary-storage preview; one-click Google OAuth is not configured. Before using reviews as a durable public feature, provide persistent storage, backups, and a moderation workflow, then verify recovery.
 
 ## Architecture
 

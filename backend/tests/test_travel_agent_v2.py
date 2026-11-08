@@ -26,11 +26,13 @@ def test_edit_replace_beach_destination(client):
     assert edited['itinerary']['days'][-1]['city'] == 'Sharm El Sheikh'
 
 
-def test_edit_one_extra_luxor_day_preserves_total(client):
+def test_ambiguous_extra_luxor_day_preserves_original_trip(client):
     start = client.post('/api/consult', json={'message': 'I am visiting for 14 days: history in Cairo and Luxor, beach in Hurghada'}).json()
     edited = client.post('/api/consult', json={'message': 'Add one more day to Luxor', 'trip_state': start['trip_state']}).json()
-    assert [p['days'] for p in edited['trip_state']['phases']] == [8, 6]
-    assert len(edited['itinerary']['days']) == 14
+    assert edited['mode'] == 'needs-clarification'
+    assert edited['trip_state'] == start['trip_state']
+    assert edited['itinerary'] is None
+    assert 'unchanged' in edited['answer']
 
 
 def test_arabic_two_weeks(client):

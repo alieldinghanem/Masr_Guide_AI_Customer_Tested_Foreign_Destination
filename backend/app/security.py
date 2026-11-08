@@ -29,6 +29,8 @@ def sensitive_requests(request) -> int:
         bucket, limit = 'register', _limit('AUTH_REGISTER_RATE_PER_MINUTE', 12)
     elif method == 'POST' and path == '/api/partners/apply':
         bucket, limit = 'partner', _limit('PARTNER_RATE_PER_MINUTE', 10)
+    elif method == 'POST' and path.startswith('/api/ratings/'):
+        bucket, limit = 'rating', _limit('RATING_RATE_PER_MINUTE', 6)
     elif path.startswith('/api/admin/'):
         bucket, limit = 'admin', _limit('ADMIN_RATE_PER_MINUTE', 60)
     else:

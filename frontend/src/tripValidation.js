@@ -57,6 +57,9 @@ export function isValidTripState(state) {
   if (!state || typeof state !== 'object' || !Number.isInteger(state.days)
       || state.days < 1 || state.days > 30 || !Array.isArray(state.phases)
       || state.phases.length === 0 || state.phases.length > 5) return false
+  if ('lighter_cities' in state && (!Array.isArray(state.lighter_cities) || state.lighter_cities.length > 5 ||
+      state.lighter_cities.some(city => typeof city !== 'string' || !city.trim()) ||
+      new Set(state.lighter_cities).size !== state.lighter_cities.length)) return false
   let count = 0
   for (const phase of state.phases) {
     if (!phase || !Number.isInteger(phase.days) || phase.days < 1 ||
@@ -66,7 +69,8 @@ export function isValidTripState(state) {
         new Set(phase.cities).size !== phase.cities.length || phase.days < phase.cities.length) return false
     count += phase.days
   }
-  return count === state.days
+  const plannedCities = new Set(state.phases.flatMap(phase => phase.cities))
+  return count === state.days && (!state.lighter_cities || state.lighter_cities.every(city => plannedCities.has(city)))
 }
 
 /** Cross-check what the traveler requested against the *actual* returned days.

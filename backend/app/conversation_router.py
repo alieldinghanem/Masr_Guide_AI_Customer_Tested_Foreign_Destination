@@ -25,17 +25,30 @@ _CITY_NAMES = {
 
 
 def detect_language(message: str, fallback: str = LANG_EN) -> str:
-    """Respect explicit language choice, then actual user script."""
+    """Use the visitor's language for this turn, including on a translated site."""
     t = message.lower()
-    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
-        return LANG_FR
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in arabic|باللغة العربية|بالعربي|ب العربي|خليها عربي|اتكلم عربي|تكلم عربي', t):
         return LANG_AR
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in english|بالإنجليزي|بالانجليزي', t):
         return LANG_EN
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in french|بالفرنساوي|parlez en fran[çc]ais|en fran[çc]ais', t):
         return LANG_FR
-    return LANG_AR if len(re.findall(r'[\u0600-\u06ff]', message)) >= 3 else fallback
+    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
+        return LANG_FR
+    arabic_letters = len(re.findall(r'[\u0621-\u064a]', t))
+    latin_letters = len(re.findall(r'[a-z]', t))
+    if arabic_letters and latin_letters:
+        return LANG_AR if arabic_letters >= latin_letters else LANG_EN
+    if arabic_letters:
+        return LANG_AR
+    if latin_letters:
+        words = re.findall(r'[a-z]+', t)
+        if len(words) == 1 and words[0] in {
+                'ok', 'okay', 'yes', 'no', 'cairo', 'giza', 'luxor', 'aswan',
+                'hurghada', 'dahab', 'alexandria'}:
+            return fallback
+        return LANG_EN
+    return fallback
 
 
 def _known_cities(text: str) -> list[str]:
@@ -99,7 +112,8 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
             "Je ne peux pas confirmer l'accessibilité en fauteuil roulant. Vérifiez auprès du site officiel les entrées sans marches, les parcours, les toilettes accessibles et l'aide disponible.")
     # An after-hours attraction question must not be answered from general
     # history snippets as if they establish opening hours or night access.
-    if re.search(r'(?:بالليل|ليلا|ليلًا|after dark|at night|night visit|evening entry|la nuit|le soir)', t) and re.search(
+    separate_outing = bool(re.search(r'(?:فسحة|فسحه|خروجة|خروجه|اتمشى|اتمشي|مكان للفسحة|outing|evening walk|where to go)', t))
+    if not separate_outing and re.search(r'(?:بالليل|ليلا|ليلًا|after dark|at night|night visit|evening entry|la nuit|le soir)', t) and re.search(
             r'(?:الأهرامات|الاهرامات|pyramids?|معبد|temple|museum|متحف|site|الموقع|the sphinx|ابو الهول)', t):
         return reply(
             'زيارة المعلم بالليل تعتمد على مواعيد الدخول الفعلية، وقد تختلف الفعاليات المسائية عن الزيارة العادية. ماقدرش أؤكد وجود دخول ليلي؛ راجع الموقع الرسمي أو اتصل بإدارة المعلم قبل ما تتحرك.',
@@ -117,6 +131,18 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
         return reply('ماقدرش أؤكد إن البحر آمن للغوص النهارده من غير بيانات طقس وموج وتيارات بحرية مباشرة. اسأل مركز غوص مرخّص في المنطقة واتبع تعليمات السلامة المحلية، وماتنزلش لو الظروف أو تعليمات المركز غير مناسبة.',
                      'I cannot confirm that diving or snorkeling is safe today without live weather, sea and current conditions. Check with a licensed local dive operator and follow official safety advice; do not go if conditions are unsafe.',
                      'Je ne peux pas confirmer la sécurité de la plongée aujourd’hui sans conditions maritimes en direct. Consultez un opérateur de plongée agréé.')
+    if re.search(r'(?:شاطئ|شواطئ|شاطي|شواطي|سباحة|سباحه|أسبح|اسبح|أعوم|اعوم|swim|beach|plage)', t) and (
+            re.search(r'(?:حالة البحر|حاله البحر|آمن|امن|أمان|امان|safe|weather|sea conditions|sûr|sécurité)', t)
+            or (re.search(r'(?:سباحة|سباحه|أسبح|اسبح|أعوم|اعوم|swim)', t) and re.search(
+                r'(?:النهارده|النهاردة|اليوم|دلوقتي|today|now|current)', t))):
+        return reply('ماقدرش أؤكد إن السباحة آمنة في الشاطئ ده اليوم من غير حالة البحر وتعليمات المكان المباشرة. قبل النزول، اسأل المنقذين أو إدارة الشاطئ واتبع التحذيرات المحلية، وتأكد من السماح بالسباحة.',
+                     'I cannot confirm that swimming is safe at this beach today without live sea conditions and local instructions. Check with lifeguards or beach staff, follow local warnings, and confirm swimming is permitted before entering the water.',
+                     'Je ne peux pas confirmer que la baignade est sûre aujourd’hui sans conditions locales en direct. Vérifiez les consignes des sauveteurs et l’autorisation de baignade avant d’entrer dans l’eau.')
+    if re.search(r'(?:شاطئ|شواطئ|شاطي|شواطي|beach|plage)', t) and re.search(
+            r'(?:مفتوح|مواعيد|سعر|بكام|تذكرة|تذكره|الدخول|open|hours|price|fee|access|tarif|ouvert)', t):
+        return reply('ما عنديش تأكيد مباشر لدخول الشاطئ أو سعره ومواعيده الآن. بعض الشواطئ لها قواعد دخول مختلفة؛ تحقق من إدارة الشاطئ أو موقعه الرسمي قبل السفر.',
+                     'I cannot verify this beach’s current access, fees or hours. Check directly with the beach operator or its official site before travelling.',
+                     'Je ne peux pas vérifier l’accès, les tarifs ou les horaires actuels de cette plage. Consultez son gestionnaire ou son site officiel avant de partir.')
     if re.search(r'(?:book (?:a |the )?(?:hotel|tour|activity)|reserve (?:a |the )?(?:hotel|tour)|احجز|حجز (?:فندق|رحلة)|réserver|réservation)', t):
         return reply('ممكن أساعدك تختار وجهات وتجارب، لكن لم يتم أي حجز أو دفع من خلال المحادثة. الحجوزات الفعلية تحتاج مزود خدمة معتمد وتأكيدًا مستقلًا منه.',
                      'I can help you compare options, but no booking or payment has been made in this chat. Real reservations require a verified provider and their confirmation.',
@@ -126,7 +152,11 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
                      'You can delete saved conversations from your account history. This message has not deleted your data; please use the account deletion control.',
                      'Vous pouvez supprimer les conversations enregistrées depuis votre compte. Ce message ne supprime aucune donnée.')
     if (not re.search(r'(?:مطاعم|مطعم|restaurants?\b|dining\b|restauration\b)', t) and
-            re.search(r'(?:open now|open tomorrow|opening hours|entrance fee|ticket price|مفتوح دلوقتي|مفتوح بكرة|مفتوح بكره|شغال النهارده|سعر التذكرة|مواعيد الزيارة)', t)):
+            re.search(r'(?:open now|open tomorrow|opening hours|entrance fee|entry fee|ticket price|'
+                      r'مفتوح دلوقتي|مفتوح بكرة|مفتوح بكره|شغال النهارده|'
+                      r'سعر (?:ال)?تذكر[ةه]|مواعيد الزيارة|'
+                      r'(?:سعر|بكام|تكلفة|price|cost|fee).{0,45}'
+                      r'(?:تذكر[ةه]|دخول|ticket|entry|admission))', t)):
         return reply('ماقدرش أؤكد حالة فتح المعلم أو سعر التذكرة الآن من غير بيانات مباشرة. راجع الموقع الرسمي للمكان قبل الزيارة والحجز.',
                      'I cannot verify live opening hours, ticket prices or availability. Check the attraction’s official website before visiting or purchasing tickets.',
                      'Je ne peux pas confirmer les horaires ou prix des billets en temps réel. Vérifiez le site officiel.')
@@ -167,7 +197,7 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
     if len(t) <= 100 and re.search(r'بالفرنساوي|(?:speak|reply|respond) (?:to me )?in french|parlez en fran[çc]ais|en fran[çc]ais', t):
         return {'mode': 'local-assistant', 'sources': [], 'answer': 'Bien sûr ! Je peux répondre en français sur les sites, la culture et les voyages en Égypte.'}
 
-    greetings = ('السلام عليكم', 'سلام عليكم', 'اهلا', 'أهلا', 'اهلاً', 'مرحبا', 'مرحباً',
+    greetings = ('السلام عليكم', 'سلام عليكم', 'اهلا', 'أهلا', 'اهلاً', 'هلا', 'هلا والله', 'يا هلا', 'مرحبا', 'مرحباً',
                  'صباح الخير', 'مساء الخير', 'hello', 'hi', 'hey', 'bonjour', 'bonsoir', 'salut')
     # Tourists use Arabic hamza/diacritics freely (أهلاً, اهلا, أهلًا).
     normalized = re.sub(r'[\u064b-\u065f\u0670]', '', t.strip('!؟?.,، '))

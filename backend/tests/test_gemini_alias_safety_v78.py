@@ -9,6 +9,7 @@ from app.gemini_client import generate
     ('gemini-flash-latest', False),
     ('gemini-2.5-flash', True),
     ('gemini-2.5-flash-lite', True),
+    ('gemini-3.1-flash-lite', False),
     ('gemini-3-flash-preview', False),
 ])
 def test_model_specific_generation_settings(monkeypatch, model, has_thinking):

@@ -37,17 +37,57 @@ export const planFor = (body, extra = {}) => ({
 })
 
 /** Stub window.fetch with an in-memory API. Returns the list of recorded calls. */
-export function mockApi({ chat, chatStatus = 200, failNetwork = false } = {}) {
+export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrationEnabled = true, guideMode = 'offline-preview' } = {}) {
   const calls = []
+  const ratingVotes = new Map()
+  const visitorComments = new Map()
   vi.stubGlobal('fetch', vi.fn(async (url, opts = {}) => {
     if (failNetwork) throw new TypeError('Failed to fetch')
     const path = String(url).replace(/^\/api/, '')
     const body = opts.body ? JSON.parse(opts.body) : undefined
-    calls.push({ path, method: opts.method || 'GET', body })
+    calls.push({ path, method: opts.method || 'GET', body, authorization: opts.headers?.Authorization })
     const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
     if (path === '/cities') return reply({ cities: CITIES, interests: INTERESTS, city_names_ar: CITY_NAMES_AR, interest_names_ar: {} })
     if (path === '/places') return reply({ places: PLACES })
-    if (path === '/health') return reply({ status: 'ok', guide_mode: 'offline-preview' })
+    if (path === '/health') return reply({ status: 'ok', guide_mode: guideMode, registration_enabled: registrationEnabled })
+    if (path === '/ratings' && (!opts.method || opts.method === 'GET')) {
+      const ratings = {}
+      for (const [target, votes] of ratingVotes) ratings[target] = { average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size }
+      return reply({ ratings, temporary_storage: true })
+    }
+    if (path === '/ratings/mine') {
+      if (!opts.headers?.Authorization) return reply({ detail: 'Sign in first' }, 401)
+      const ratings = {}
+      for (const [target, votes] of ratingVotes) {
+        if (votes.has(opts.headers.Authorization)) ratings[target] = votes.get(opts.headers.Authorization)
+      }
+      return reply({ ratings })
+    }
+    if (path === '/ratings/recent-comments') {
+      const comments = [...visitorComments.entries()].flatMap(([target_id, entries]) =>
+        [...entries.values()].map(item => ({ target_id, ...item })))
+      return reply({ comments })
+    }
+    if (/^\/ratings\/[^/]+\/comments$/.test(path)) {
+      const target = decodeURIComponent(path.slice('/ratings/'.length, -'/comments'.length))
+      const comments = visitorComments.get(target) || new Map()
+      if (opts.method === 'POST') {
+        if (!opts.headers?.Authorization) return reply({ detail: 'Sign in first' }, 401)
+        comments.set(opts.headers.Authorization, { name: 'Traveler #MEMBER', comment: body.comment, updated_at: '2026-11-04 00:00:00' })
+        visitorComments.set(target, comments)
+      }
+      return reply({ comments: [...comments.values()], count: comments.size, temporary_storage: true })
+    }
+    if (path.startsWith('/ratings/') && opts.method === 'POST') {
+      if (!opts.headers?.Authorization) return reply({ detail: 'Sign in first' }, 401)
+      const target = decodeURIComponent(path.slice('/ratings/'.length))
+      const votes = ratingVotes.get(target) || new Map()
+      votes.set(opts.headers.Authorization, body.rating)
+      ratingVotes.set(target, votes)
+      return reply({ target_id: target, average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size, your_rating: body.rating, temporary_storage: true })
+    }
+    if (path === '/my/favorites') return reply({ place_ids: [] })
+    if (path === '/my/trips') return reply({ trips: [] })
     if (path === '/plan') return reply(planFor(body))
     if (path === '/chat' || path === '/consult') {
       if (chatStatus !== 200) return reply({ detail: 'nope' }, chatStatus)

@@ -18,6 +18,7 @@ from pydantic import BaseModel, EmailStr, Field, ValidationError
 from .schemas import TripState
 from .database import get_place
 from .conversation_router import payment_sensitive
+from .durable_storage import configured as postgres_configured, connect_traveler
 
 router = APIRouter(prefix='/api', tags=['traveler-account'])
 # None means resolve configured storage lazily (after backend/.env is loaded).
@@ -31,7 +32,15 @@ def _db_path() -> Path:
 
 @contextmanager
 def _open():
-    """One SQLite transaction per operation; always release its file descriptor."""
+    """One transaction per operation; always release its connection."""
+    if _DB is None and postgres_configured():
+        conn = connect_traveler()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+        return
     db_path = _db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10)
@@ -263,11 +272,13 @@ def current_user(authorization: str | None = Header(default=None)):
 
 
 def registration_enabled() -> bool:
-    # Public portfolio previews commonly use an ephemeral filesystem: refuse
-    # new accounts rather than imply any trip or conversation can survive a
-    # restart. Private local development remains functional.
-    return not (os.getenv('APP_ENV', '').lower() == 'portfolio' and
-                os.getenv('MASR_DURABLE_STORAGE_CONFIRMED', '').lower() not in ('1', 'true', 'yes'))
+    # Render previews can be deployed without the Blueprint's APP_ENV setting.
+    # Require a durability declaration before accepting new accounts on Render
+    # or a portfolio preview. Local development remains usable.
+    public_preview = (os.getenv('APP_ENV', '').lower() == 'portfolio' or
+                      os.getenv('RENDER', '').lower() == 'true')
+    durable = os.getenv('MASR_DURABLE_STORAGE_CONFIRMED', '').lower() in ('1', 'true', 'yes')
+    return not public_preview or durable
 
 
 @router.post('/auth/register', status_code=201)
@@ -322,6 +333,8 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
                         (user['id'],)).fetchone()
         if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
             raise HTTPException(403, detail='Incorrect current password')
+        from .ratings import delete_account_reviews
+        delete_account_reviews(user['id'])
         c.execute('DELETE FROM account_users WHERE id=?', (user['id'],))
     return {'deleted': True}
 
@@ -388,11 +401,13 @@ def export_account_data(user=Depends(current_user)):
                                   (user['id'],)).fetchall()
         favorites = c.execute('SELECT place_id,created_at FROM account_favorites WHERE user_id=? ORDER BY created_at,place_id',
                               (user['id'],)).fetchall()
+    from .ratings import account_reviews
     return {
         'format': 'masr-guide-traveler-export-v1',
         'exported_at': _now().isoformat(),
         'profile': {'email': profile['email'], 'created_at': profile['created_at']},
         'favorites': [dict(row) for row in favorites],
+        'visitor_reviews': account_reviews(user['id']),
         'trips': [dict(id=row['id'], title=row['title'], itinerary=json.loads(row['itinerary']),
                        created_at=row['created_at'], updated_at=row['updated_at']) for row in trips],
         'conversations': [dict(id=row['id'], title=row['title'],

@@ -55,7 +55,8 @@ def test_chat_offline_transparency(client):
     assert r.status_code==200
     d=r.json()
     assert d['mode']=='offline-preview'
-    assert 'not an LLM' in d['answer']
+    assert d['answer'].startswith('From our local Egypt guide:')
+    assert 'AI provider must be configured' not in d['answer']
     assert d['sources'] and all(x['url'].startswith('https://') for x in d['sources'])
 
 def test_arabic_retrieval(client):
@@ -80,6 +81,12 @@ def test_budget_not_estimated(client):
     assert r.status_code==200
     assert r.json()['budget_usd']==200
     assert 'NOT used' in r.json()['disclaimer']
+
+    arabic = client.post('/api/plan', json={'cities': ['Giza'], 'days': 1,
+                                            'budget_usd': 200, 'language': 'ar'})
+    assert arabic.status_code == 200
+    assert 'ولا تُستخدم في أي تقدير للتكلفة' in arabic.json()['disclaimer']
+    assert 'NOT used' not in arabic.json()['disclaimer']
 
 def test_llm_integration_contract_mock(client, monkeypatch):
     # No real OpenAI network request; validates the configured code path.

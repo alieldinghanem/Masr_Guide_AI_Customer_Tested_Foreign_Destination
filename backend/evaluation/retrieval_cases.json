@@ -114,7 +114,7 @@
   "lang": "en",
   "q": "Tell me about the Hanging Church",
   "expect": [
-   "coptic-cairo"
+   "hanging-church"
   ]
  },
  {
@@ -353,6 +353,13 @@
   "q": "Temple d'Abou Simbel",
   "expect": [
    "abu-simbel"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "احكيلي عن معبد بن عزرا اليهودي في مصر القديمة",
+  "expect": [
+   "ben-ezra-synagogue"
   ]
  },
  {

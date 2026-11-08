@@ -17,7 +17,9 @@ WORKDIR /app/backend
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
+COPY frontend/src/coastalDestinations.json /app/frontend/src/coastalDestinations.json
 COPY backend/quick_demo ./quick_demo
+COPY scripts/storage_backup.py /app/scripts/storage_backup.py
 COPY --from=frontend-build /site/dist /app/frontend/dist
 RUN groupadd -g 10001 masr && useradd -u 10001 -g masr -m masr \
     && mkdir -p /app/data && chown -R masr:masr /app/data

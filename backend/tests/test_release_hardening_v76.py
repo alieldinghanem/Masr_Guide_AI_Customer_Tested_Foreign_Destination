@@ -161,15 +161,15 @@ def test_readiness_requires_real_database_tables(client, monkeypatch, tmp_path):
     assert client.get('/api/ready').status_code==503
 
 
-def test_production_storage_requires_explicit_operator_confirmation(monkeypatch):
+def test_production_storage_requires_explicit_operator_confirmation(monkeypatch, tmp_path):
     monkeypatch.setenv('APP_ENV','production')
     monkeypatch.delenv('MASR_DURABLE_STORAGE_CONFIRMED', raising=False)
     with pytest.raises(RuntimeError, match='persistent'):
         main.validate_deployment_settings()
     monkeypatch.setenv('MASR_DURABLE_STORAGE_CONFIRMED','yes')
     monkeypatch.setenv('BACKUP_RECOVERY_VERIFIED','yes')
-    monkeypatch.setenv('MASR_USER_DB','/data/travelers.sqlite3')
-    monkeypatch.setenv('DATABASE_PATH','/data/tourism.sqlite3')
+    monkeypatch.setenv('MASR_USER_DB', str(tmp_path / 'travelers.sqlite3'))
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'tourism.sqlite3'))
     monkeypatch.setenv('GEMINI_API_KEY','test-nonlive-placeholder')
     monkeypatch.delenv('TRUST_PROXY_HEADERS', raising=False)
     main.validate_deployment_settings()

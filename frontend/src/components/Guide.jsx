@@ -6,6 +6,7 @@ import { ErrorNote } from './Common'
 import { getSession } from './Account'
 import { likelyPaymentNumber, scrubPaymentNumber } from '../paymentSafety'
 import { isCompatibleTripPlan } from '../tripValidation'
+import { inferChatLanguage } from '../chatLanguage'
 
 function restoredConsultation() {
   // The pair must be validated together before the app shows restored days.
@@ -16,10 +17,12 @@ function restoredConsultation() {
   } catch { return { state: null, plan: null } }
 }
 
-const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
+const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
+const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
+const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, home = false }) {
-  const { t, lang } = useI18n()
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, configuredGuideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+  const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [savedConversations, setSavedConversations] = useState([])
@@ -30,9 +33,28 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
   const [restored] = useState(restoredConsultation)
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
-  const scrollRef = useRef(null)
-  useEffect(() => { scrollRef.current?.scrollIntoView?.({ behavior: 'smooth' }) }, [messages, busy])
+  const messagesRef = useRef(null)
+  const promptInputRef = useRef(null)
+  useEffect(() => {
+    const log = messagesRef.current
+    if (log) log.scrollTop = log.scrollHeight
+  }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
+  const serviceState = mode === 'provider-error' ? 'error'
+    : mode === 'offline-fallback' ? 'local'
+    : AI_ACTIVE_MODES.has(mode) ? 'ai'
+    : AI_CONFIGURED_MODES.has(mode) ? 'configured'
+    : AI_CONFIGURED_MODES.has(configuredGuideMode)
+      ? messages.some(message => AI_ACTIVE_MODES.has(message.mode)) ? 'ai' : 'configured'
+      : 'local'
+  const answerArabic = language === 'Arabic'
+  const answerCity = city => answerArabic ? cityNameAr(city) : city
+  useEffect(() => {
+    if (prompt === t('guide.planningPrompt')) promptInputRef.current?.focus()
+  }, [prompt, t])
+  useEffect(() => {
+    if (composeFocusKey > 0) promptInputRef.current?.focus()
+  }, [composeFocusKey])
 
   const submitQuestion = async question => {
     if (busy || question.length < 2) return
@@ -43,11 +65,12 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
         : 'For your safety, do not enter card numbers in chat. Payments are not processed here.')
       return
     }
-    if (/[\u0600-\u06ff]{3,}/.test(question) && language !== 'Arabic') setLanguage('Arabic')
+    const responseLanguage = inferChatLanguage(question, language)
+    if (responseLanguage !== language) setLanguage(responseLanguage)
     const history = messages.map(m => ({ role: m.role, content: scrubPaymentNumber(m.text.slice(0, 1500)) })).slice(-8)
     setMessages(m => [...m, { role: 'user', text: question }]); setPrompt(''); setBusy(true); setError('')
     try {
-      const result = await api('/consult', { method: 'POST', token: getSession()?.token, body: { message: question, language: /[\u0600-\u06ff]{3,}/.test(question) ? 'Arabic' : language, history, trip_state: tripState } })
+      const result = await api('/consult', { method: 'POST', token: getSession()?.token, body: { message: question, language: responseLanguage, history, trip_state: tripState } })
       if (result.trip_state && result.itinerary) {
         if (!isCompatibleTripPlan(result.trip_state, result.itinerary)) {
           throw new Error('The assistant returned an invalid trip. Your previous trip is unchanged.')
@@ -59,7 +82,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
         } catch { /* private browsing */ }
       }
       if (result.saved_trip_id) setCloudStatus(lang === 'ar' ? 'تم حفظ الرحلة في حسابك ويمكنك العثور عليها من صفحة حسابي.' : 'Your trip was saved and is available in My Account.')
-      setMessages(m => [...m, { role: 'assistant', text: result.answer, sources: result.sources, mode: result.mode, grounding: result.grounding }])
+      setMessages(m => [...m, { role: 'assistant', text: result.answer, sources: result.sources, mode: result.mode, grounding: result.grounding, responseLanguage }])
       setGuideMode(result.mode)
     } catch (err) {
       // A failed request must not leave an unanswered user turn in the LLM history.
@@ -201,7 +224,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${['gemini-search-grounded', 'gemini-rag', 'llm-rag', 'openai-rag', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'gemini-intent+local-planner', 'openai-intent+local-planner'].includes(mode) ? 'ready' : ''}`} />{t(`guide.status.${mode}`)}</span>
+              <span><span className={`status-dot ${serviceState === 'ai' ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />
@@ -210,26 +233,29 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </select><ChevronDown size={14} />
             </label>
           </header>
-          <div className="chat-messages">
-            <div className="guide-welcome">
+          <div className="chat-messages" ref={messagesRef} role="log" aria-label={t('guide.conversation')} aria-live="polite" aria-relevant="additions">
+            {!messages.length && <div className="guide-welcome">
               <div className="welcome-icon"><Sparkles size={25} /></div>
               <h3>{t('guide.welcomeTitle')}</h3>
               <p>{t('guide.welcomeText')}</p>
-              <span>{t(`guide.welcome.${mode}`)}</span>
-            </div>
+              <div className="guide-start-actions">
+                {[['plan', 'guide.action.plan'], ['explore', 'guide.action.explore'], ['reviews', 'guide.action.reviews'], ['essentials', 'guide.action.safety']].map(([route, key]) =>
+                  <button key={route} type="button" onClick={() => route === 'plan' ? submitQuestion(t('guide.planningPrompt')) : onNavigate?.(route)}>{t(key)}</button>)}
+              </div>
+            </div>}
             {messages.map((m, i) => (
               <div className={`msg ${m.role}`} key={i}>
                 <div className="msg-avatar">{m.role === 'assistant' ? <Bot size={17} /> : t('guide.you')}</div>
                 <div className="msg-content">
                   <div className="msg-text" dir="auto">{m.text}</div>
                   {m.role === 'assistant' && !!m.sources?.length && (
-                    <div className="message-sources"><strong>{t('guide.refs')}</strong>
+                    <details className="message-sources" open={m.sources.length <= 3}><summary>{t('guide.refs')} ({m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).length})</summary>
                       <div>{m.sources.filter(s => typeof s.url === 'string' && /^https:\/\//i.test(s.url)).map((s, n) => (
                         <a href={s.url} key={s.id || s.url || n} target="_blank" rel="noopener noreferrer">
-                          [{s.number}] {lang === 'ar' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
+                          [{s.number ?? n + 1}] {(m.responseLanguage || language) === 'Arabic' && s.title_ar ? s.title_ar : s.title}<ExternalLink size={12} />
                         </a>))}
                       </div>
-                    </div>
+                    </details>
                   )}
                   {m.role === 'assistant' && !!m.grounding?.search_suggestions_html && (
                     <iframe title="Google Search suggestions" sandbox="allow-popups allow-popups-to-escape-sandbox"
@@ -240,32 +266,41 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </div>
             ))}
             {busy && <div className="thinking"><LoaderCircle size={19} className="spin" /> {t('guide.thinking')}</div>}
-            <div ref={scrollRef} />
           </div>
-          {itinerary && <section className="consult-trip" aria-label={lang === 'ar' ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
+          <div className="chat-compose">
+            <ErrorNote text={error} />
+            {error && prompt.trim().length >= 2 && <button className="chat-retry" type="button" disabled={busy} onClick={() => submitQuestion(prompt.trim())}>{t('guide.retry')}</button>}
+            <form onSubmit={send}>
+              <input ref={promptInputRef} aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
+              <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
+            </form>
+            <small>{t('guide.privacy')}</small>
+            <button type="button" className="guide-manual-planner" onClick={() => onNavigate?.('planner')}>{t('guide.manualPlanner')}</button>
+          </div>
+          {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
             <div className="consult-heading">
-              <strong>{lang === 'ar' ? 'برنامج رحلتك القابل للتعديل' : 'Your editable Egypt itinerary'}</strong>
-              <span>{itinerary.days.length} {lang === 'ar' ? 'يوم' : 'days'}</span>
+              <strong>{answerArabic ? 'برنامج رحلتك القابل للتعديل' : 'Your editable Egypt itinerary'}</strong>
+              <span>{itinerary.days.length} {answerArabic ? 'يوم' : 'days'}</span>
             </div>
-            <p className="consult-help">{lang === 'ar' ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
+            <p className="consult-help">{answerArabic ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{lang === 'ar' ? 'اليوم' : 'Day'} {day.day} — {day.city} · {day.stops.length} {lang === 'ar' ? 'زيارات' : 'stops'}</summary>
-                {day.travel && <p>{lang === 'ar' ? 'انتقال تقريبي' : 'Approximate transfer'}: {day.travel.from_city} → {day.city} ({day.travel.minutes} min)</p>}
-                {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{lang === 'ar' ? stop.place.name_ar : stop.place.name}</li>)}</ul>
-                  : <div><p>{lang === 'ar' ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{lang === 'ar'?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}</summary>
+                {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
+                {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
+                  : <div><p>{answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
               </details>)}
             </div>
             {tripState?.accessibility_needs && (
               <p className="consult-help" role="status">
-                {lang === 'ar'
+                {answerArabic
                   ? 'تنبيه وصول: لم يتم التحقق من ملاءمة المعالم أو الانتقالات للكراسي المتحركة. أكد التفاصيل مع الجهات الرسمية قبل الحجز.'
                   : 'Accessibility notice: no attraction or transfer in this plan is verified wheelchair-accessible. Confirm details with operators before booking.'}
               </p>
             )}
             {!!itinerary.warnings?.length && (
               <details className="consult-day">
-                <summary>{lang === 'ar' ? 'تنبيهات مهمة قبل السفر' : 'Important travel notes'} ({itinerary.warnings.length})</summary>
+                <summary>{answerArabic ? 'تنبيهات مهمة قبل السفر' : 'Important travel notes'} ({itinerary.warnings.length})</summary>
                 <ul>{itinerary.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
               </details>
             )}
@@ -274,8 +309,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               <button type="button" onClick={exportTrip}>{lang === 'ar' ? 'نزّل الرحلة' : 'Download itinerary'}</button></div>
             <small>{itinerary.disclaimer}</small>
           </section>}
-          {home && <div className="mg-quick-prompts" aria-label={lang === 'ar' ? 'أسئلة مقترحة' : 'Suggested questions'}>{[1,2,3].map(n => <button type="button" key={n} onClick={() => setPrompt(t(`guide.prompt${n}`))}>{t(`guide.prompt${n}`)}</button>)}<button type="button" onClick={() => setPrompt(lang === 'ar' ? 'أنا جاي مصر شهر وعايز برنامج بين القاهرة والأقصر وأسوان والغردقة.' : 'Plan a month in Egypt: Cairo, Luxor, Aswan, and Hurghada.')}>{lang === 'ar' ? 'خطط رحلة شهر' : 'Plan a month'}</button></div>}
-          <div className="chat-cloud-tools" aria-label={lang === 'ar' ? 'محادثاتك المحفوظة' : 'Saved conversations'}>
+          <details className="chat-cloud-tools"><summary>{t('guide.conversationOptions')}</summary><div className="chat-cloud-controls">
             <button type="button" onClick={saveConversation} disabled={busy || !messages.length}>{lang === 'ar' ? 'حفظ المحادثة في حسابي' : 'Save conversation to account'}</button>
             <button type="button" onClick={refreshConversations} disabled={busy}>{lang === 'ar' ? 'عرض المحادثات المحفوظة' : 'Show saved chats'}</button>
             {savedConversations.length > 0 && <div className="chat-cloud-restore">
@@ -287,16 +321,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               <button type="button" disabled={busy || !selectedConversation} onClick={deleteConversation}>{lang === 'ar' ? 'حذف المحفوظة' : 'Delete saved'}</button>
             </div>}
             {cloudStatus && <small role="status">{cloudStatus}</small>}
-          </div>
-          <div className="chat-compose">
-            <ErrorNote text={error} />
-            {error && prompt.trim().length >= 2 && <button className="chat-retry" type="button" disabled={busy} onClick={() => submitQuestion(prompt.trim())}>{t('guide.retry')}</button>}
-            <form onSubmit={send}>
-              <input aria-label={t('guide.askAria')} placeholder={t('guide.placeholder')} maxLength={1200} value={prompt} onChange={e => setPrompt(e.target.value)} dir="auto" />
-              <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
-            </form>
-            <small>{t('guide.privacy')}</small>
-          </div>
+          </div></details>
         </section>
         <aside className="guide-side">
           <div className="side-card suggested">
@@ -308,7 +333,7 @@ export default function Guide({ prompt, setPrompt, messages, setMessages, langua
               </button>))}
           </div>
           <div className="side-card suggested">
-            <span className="eyebrow">TRAVEL CONSULTANT</span>
+            <span className="eyebrow">{lang === 'ar' ? 'مستشار رحلتك' : 'TRAVEL CONSULTANT'}</span>
             <h3>{lang === 'ar' ? 'كوّن رحلة كاملة بالكلام' : 'Plan a full journey in chat'}</h3>
             <button type="button" onClick={() => setPrompt(lang === 'ar'
               ? 'أنا جاي مصر أسبوعين، عايز أول أسبوع آثار والقاهرة والأقصر، والأسبوع التاني بحر في الغردقة.'

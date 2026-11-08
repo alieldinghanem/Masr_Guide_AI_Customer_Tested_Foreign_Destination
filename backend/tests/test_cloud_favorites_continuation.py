@@ -127,3 +127,12 @@ def test_public_portfolio_preview_disables_ephemeral_registration(tmp_path, monk
         assert client.post('/api/auth/register', json={
             'email': 'new-preview@example.org', 'password': 'Correct-Password-2026!'
         }).status_code == 201
+
+
+def test_render_disables_registration_without_confirmed_durable_storage(monkeypatch):
+    monkeypatch.delenv('APP_ENV', raising=False)
+    monkeypatch.setenv('RENDER', 'true')
+    monkeypatch.delenv('MASR_DURABLE_STORAGE_CONFIRMED', raising=False)
+    assert accounts.registration_enabled() is False
+    monkeypatch.setenv('MASR_DURABLE_STORAGE_CONFIRMED', 'true')
+    assert accounts.registration_enabled() is True

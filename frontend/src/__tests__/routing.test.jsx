@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../App'
 import { mockApi } from './fixtures'
@@ -23,6 +23,30 @@ describe('hash routing', () => {
     expect(document.title).toBe('Trip planner · Masr Guide AI')
   })
 
+  it('opens a catalog place directly from its shareable URL', async () => {
+    await boot('#/place/karnak')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Karnak Temple Complex' })).toBeInTheDocument()
+    expect(document.title).toBe('Karnak Temple Complex · Masr Guide AI')
+  })
+
+  it('opens a coastal destination from its image and on a direct link', async () => {
+    const user = await boot('#/coast')
+    await user.click(await screen.findByRole('button', { name: 'More details about Marsa Alam' }))
+    expect(window.location.hash).toBe('#/coast/marsa-alam')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Marsa Alam' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Rate this place' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Visitor comments/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Destination source' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Beaches & coastal places' }))
+    expect(window.location.hash).toBe('#/coast')
+  })
+
+  it('loads a coastal destination directly from its shareable URL', async () => {
+    await boot('#/coast/alexandria')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Alexandria' })).toBeInTheDocument()
+    expect(document.title).toBe('Alexandria · Masr Guide AI')
+  })
+
   it('falls back to Home for unknown routes', async () => {
     await boot('#/nope')
     expect(await screen.findByRole('heading', { level: 1, name: /Discover Egypt, your way/ })).toBeInTheDocument()
@@ -30,9 +54,9 @@ describe('hash routing', () => {
 
   it('updates the URL on navigation and supports the browser back button', async () => {
     const user = await boot()
-    await user.click(screen.getByRole('button', { name: 'Explore' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'Explore Egypt' }))
     expect(window.location.hash).toBe('#/explore')
-    await user.click(screen.getByRole('button', { name: 'Chat' }))
+    await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI guide' }))
     expect(window.location.hash).toBe('#/home')
     window.history.back()
     await waitFor(() => expect(window.location.hash).toBe('#/explore'))
@@ -41,23 +65,38 @@ describe('hash routing', () => {
 
   it('marks the active page for assistive technology', async () => {
     const user = await boot()
-    await user.click(screen.getByRole('button', { name: 'Explore' }))
-    expect(screen.getByRole('button', { name: 'Explore' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: 'AI Chat' })).not.toHaveAttribute('aria-current')
+    await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'Explore Egypt' }))
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'Explore Egypt' })).toHaveAttribute('aria-current', 'page')
+    expect(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI guide' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('opens heritage and beaches from Explore Egypt while keeping the main navigation', async () => {
+    const user = await boot()
+    const nav = within(screen.getByRole('navigation', { name: 'Primary navigation' }))
+    await user.click(nav.getByRole('button', { name: 'Beaches & sea' }))
+    expect(window.location.hash).toBe('#/coast')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Beaches & coastal escapes' })).toBeInTheDocument()
+    await user.click(nav.getByRole('button', { name: 'History & heritage' }))
+    expect(window.location.hash).toBe('#/heritage')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Historical places' })).toBeInTheDocument()
+    expect(nav.getByRole('button', { name: 'Explore Egypt' })).toHaveClass('active')
   })
 })
 
 describe('Discover state', () => {
-  it('a place opened from elsewhere is visible even if Discover had a conflicting filter', async () => {
+  it('opens a place page from heritage even if Discover has a conflicting filter', async () => {
     const user = await boot()
-    await user.click(screen.getByRole('button', { name: 'Explore' }))
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Destinations' }))
+    await user.click((await screen.findAllByRole('button', { name: 'Explore places' }))[0])
     await user.type(screen.getByLabelText('Search places'), 'dahab')
     expect(screen.getByText('1 places')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'AI Chat' }))
-    await user.click(screen.getByRole('button', { name: 'Historical Places' }))
-    await user.click(await screen.findByRole('button', { name: /View details/ }))
-    expect(await screen.findByRole('heading', { level: 2, name: 'Karnak Temple Complex' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Search places')).toHaveValue('')
+    await user.click(within(screen.getByRole('navigation', { name: 'Primary navigation' })).getByRole('button', { name: 'AI guide' }))
+    await user.click(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'Historical places' }))
+    await user.click(within((await screen.findByRole('heading', { name: 'Karnak Temple Complex' })).closest('.mg-place-card')).getByRole('button', { name: /View details/ }))
+    expect(window.location.hash).toBe('#/place/karnak')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Karnak Temple Complex' })).toBeInTheDocument()
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Historical places' }))
+    expect(window.location.hash).toBe('#/heritage')
   })
 
   it('keeps the user filters when selecting a place inside Discover', async () => {
@@ -73,6 +112,7 @@ describe('Discover state', () => {
     localStorage.setItem('masr-guide-lang', 'ar')
     render(<App />)
     await waitFor(() => expect(calls.some(c => c.path === '/places')).toBe(true))
+    await userEvent.setup().click(await screen.findByRole('button', { name: /معبد الكرنك/ }))
     expect(await screen.findByText(/نصيحة للزيارة/)).toBeInTheDocument()
     expect(screen.getByText(/اذهب مبكراً/)).toBeInTheDocument()
   })

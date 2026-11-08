@@ -68,6 +68,7 @@ class TripState(BaseModel):
     pace: str = Field(default="balanced", pattern="^(relaxed|balanced|packed)$")
     family: bool = False
     accessibility_needs: bool = False
+    lighter_cities: list[str] = Field(default_factory=list, max_length=5)
 
     @model_validator(mode='after')
     def validate_trip_invariants(self):
@@ -78,6 +79,9 @@ class TripState(BaseModel):
                 raise ValueError('Each planned city needs at least one day')
             if len(set(phase.cities)) != len(phase.cities):
                 raise ValueError('Duplicate city in itinerary phase')
+        planned_cities = {city for phase in self.phases for city in phase.cities}
+        if len(set(self.lighter_cities)) != len(self.lighter_cities) or not set(self.lighter_cities) <= planned_cities:
+            raise ValueError('Lighter days must name distinct planned cities')
         return self
 
 

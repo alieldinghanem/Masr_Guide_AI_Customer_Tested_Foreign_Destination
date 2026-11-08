@@ -13,10 +13,11 @@ services:
       BACKUP_RECOVERY_VERIFIED: ${BACKUP_RECOVERY_VERIFIED:-false}
       MASR_USER_DB: /app/data/traveler.sqlite3
       DATABASE_PATH: /app/data/tourism.db
+      NEON_DATABASE_URL: ${NEON_DATABASE_URL:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       # Choose the AI provider explicitly; OpenAI remains optional.
       AI_PROVIDER: ${AI_PROVIDER:-gemini}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       # Search is opt-in: enable only after reviewing provider quotas/terms.
       GEMINI_SEARCH_GROUNDING: ${GEMINI_SEARCH_GROUNDING:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

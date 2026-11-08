@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 import sqlite3
+from psycopg import Error as PostgresError
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -27,6 +28,8 @@ from .schemas import ChatRequest, PlanRequest, ConsultRequest, TripState
 from .accounts import router as account_router, setup as setup_accounts
 from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
+from .ratings import router as ratings_router, setup as setup_ratings
+from .durable_storage import configured as postgres_configured
 
 # Read the backend-local .env for local development; environment variables take priority.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
@@ -47,20 +50,23 @@ def validate_deployment_settings():
     if os.getenv('BACKUP_RECOVERY_VERIFIED', '').lower() not in accepted:
         raise RuntimeError('Production requires a successfully tested backup and recovery procedure')
 
-    # Require explicit separate absolute paths; otherwise the service can
-    # silently place customer data inside a disposable image filesystem.
-    db_paths = []
-    for key in ('MASR_USER_DB', 'DATABASE_PATH'):
-        value = os.getenv(key, '').strip()
-        if not value or not Path(value).is_absolute():
-            raise RuntimeError(f'Production requires an explicit absolute {key} path on verified durable storage')
-        path = Path(value).resolve()
-        source_root = Path(__file__).resolve().parents[1]
-        if path == source_root or source_root in path.parents:
-            raise RuntimeError(f'Production {key} cannot be stored inside the backend source tree')
-        db_paths.append(path)
-    if db_paths[0] == db_paths[1]:
-        raise RuntimeError('Production account and tourism databases must use separate files')
+    if postgres_configured():
+        if not os.getenv('NEON_DATABASE_URL', '').strip().startswith(('postgresql://', 'postgres://')):
+            raise RuntimeError('Production NEON_DATABASE_URL must be a PostgreSQL URL')
+    else:
+        # With SQLite, both customer-data files must live on verified durable storage.
+        db_paths = []
+        for key in ('MASR_USER_DB', 'DATABASE_PATH'):
+            value = os.getenv(key, '').strip()
+            if not value or not Path(value).is_absolute():
+                raise RuntimeError(f'Production requires an explicit absolute {key} path on verified durable storage')
+            path = Path(value).resolve()
+            source_root = Path(__file__).resolve().parents[1]
+            if path == source_root or source_root in path.parents:
+                raise RuntimeError(f'Production {key} cannot be stored inside the backend source tree')
+            db_paths.append(path)
+        if db_paths[0] == db_paths[1]:
+            raise RuntimeError('Production account and tourism databases must use separate files')
 
     provider = os.getenv('AI_PROVIDER', 'auto').strip().lower()
     if provider not in ('auto', 'openai', 'gemini'):
@@ -78,6 +84,7 @@ async def lifespan(app: FastAPI):
     initialize()
     setup_accounts()
     setup_commerce()
+    setup_ratings()
     yield
 
 app = FastAPI(title="Masr Guide AI", version="7.8.1", lifespan=lifespan,
@@ -87,6 +94,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", 
                    allow_headers=["Content-Type", "Authorization"], allow_credentials=False)
 app.include_router(account_router)
 app.include_router(commerce_router)
+app.include_router(ratings_router)
 # Outer ASGI guard measures actual received bytes, not only the advertised length.
 app.add_middleware(LimitApiBody)
 
@@ -110,7 +118,7 @@ async def protect_sensitive_endpoints(request: Request, call_next):
                             content={'detail': 'Too many requests. Please try again later.'},
                             headers={'Retry-After': str(denied), 'Cache-Control': 'no-store'})
     response = await call_next(request)
-    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/')):
+    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/', '/api/ratings')):
         response.headers['Cache-Control'] = 'no-store'
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'DENY')
@@ -192,7 +200,7 @@ def ready():
             c.execute('SELECT 1 FROM editorial_articles LIMIT 1').fetchone()
         with closing(connect()) as c:
             c.execute('SELECT 1 FROM places LIMIT 1').fetchone()
-    except (OSError, ValueError, sqlite3.Error) as exc:
+    except (OSError, ValueError, sqlite3.Error, PostgresError) as exc:
         raise HTTPException(503, detail='Storage is not ready') from exc
     return {'status': 'ready'}
 
@@ -290,6 +298,14 @@ def quick_demo():
 # Production single-origin deployment: one Render/Docker service serves both
 # the compiled React app and the API. In development, Vite still proxies /api.
 _FRONTEND_DIST = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
+
+@app.get('/favicon.svg', include_in_schema=False)
+def site_favicon():
+    icon = _FRONTEND_DIST / 'favicon.svg'
+    if not icon.is_file():
+        raise HTTPException(404, 'Favicon not found')
+    return FileResponse(icon, media_type='image/svg+xml')
+
 if (_FRONTEND_DIST / 'index.html').is_file():
     app.mount('/assets', StaticFiles(directory=_FRONTEND_DIST / 'assets'), name='site-assets')
 

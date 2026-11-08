@@ -20,8 +20,8 @@ for item in csp.group(1).split(';'):
     if words:
         directives[words[0]] = set(words[1:])
 
-assert 'images.unsplash.com' in editorial and 'images.unsplash.com' in css, 'Update test if editorial sources change'
-assert 'https://images.unsplash.com' in directives.get('img-src', set()), (
+assert 'commons.wikimedia.org' in editorial and 'images.unsplash.com' in css, 'Update test if editorial sources change'
+assert {'https://images.unsplash.com', 'https://commons.wikimedia.org', 'https://upload.wikimedia.org'} <= directives.get('img-src', set()), (
     'Deployed Nginx img-src blocks editorial photos/CSS background imagery from images.unsplash.com')
 assert "'unsafe-inline'" not in directives.get('script-src', set()), 'Do not allow inline scripts'
 assert "'unsafe-eval'" not in directives.get('script-src', set()), 'Do not allow dynamic eval'
