@@ -357,8 +357,10 @@ def _curated_recommendations(query: str) -> list[dict]:
         return []
     if re.search(r'متاحف|متحف|\bmuseums?\b|\bmus[ée]es?\b', folded):
         suitable = lambda p: p['category'] == 'Museum'
-    elif re.search(r'بحر|شاطئ|شواطئ|سباحه|\b(?:beach|sea|swim)\b|\bplage\b', folded):
-        suitable = lambda p: 'beaches' in p['tags']
+    elif re.search(r'بحر|شاطئ|شواطئ|سباحه|نزول الميه|نزول المياه|'
+                   r'\b(?:beach|sea|swim|swimming)\b|\bplage\b', folded):
+        # A marine activity, dive site, or promenade is not a swimming beach.
+        suitable = lambda p: p['category'] == 'Beach'
     elif re.search(r'طبيعه|\bnature\b', folded):
         suitable = lambda p: 'nature' in p['tags']
     elif re.search(r'تاريخ|اثار|اثري|\b(?:history|historic|heritage)\b|\bhistoire\b', folded):
@@ -398,6 +400,11 @@ def _ensure_useful_recommendation(output: str, places: list[dict], language: str
     """Do not show a fluent but empty model answer to a grounded recommendation."""
     if not places:
         return None
+    if language == 'Arabic' and any(
+        char.isalpha() and not unicodedata.name(char, '').startswith(('ARABIC', 'LATIN'))
+        for char in output
+    ):
+        return _recommendation_reply(places, language)
     folded = _fold(output)
     if any(_fold(p['name_ar']) in folded or _fold(p['name']) in folded for p in places):
         return None

@@ -134,3 +134,26 @@ def test_model_deferral_cannot_replace_a_grounded_recommendation(tmp_path, monke
     assert reply['mode'] == 'local-assistant'
     assert 'Citadel of Saladin' in reply['answer']
     assert len(reply['sources']) == 3
+
+
+def test_swimming_question_recommends_a_beach_not_a_marine_activity(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'guide.sqlite3'))
+    monkeypatch.setenv('AI_PROVIDER', 'offline')
+    initialize()
+    reply = _ask('تنصحني أبدأ بأي شاطئ للسباحة في شرم الشيخ؟')
+    assert reply['mode'] == 'local-assistant'
+    assert reply['sources'][0]['id'] == 'naama-bay'
+    assert all(source['id'] != 'ras-mohammed' for source in reply['sources'])
+
+
+def test_mixed_script_model_reply_uses_clean_local_recommendation(tmp_path, monkeypatch):
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'guide.sqlite3'))
+    monkeypatch.setenv('AI_PROVIDER', 'gemini')
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-only-key')
+    initialize()
+    monkeypatch.setattr(guide, 'generate', lambda *_a, **_kw:
+                        'ابدأ بقلعة صلاح الدين والمتحف المصري النيوكลาสيكي.')
+    reply = _ask('أنا بحب التاريخ، تنصحني أبدأ بإيه في القاهرة وليه؟')
+    assert reply['mode'] == 'local-assistant'
+    assert 'قلعة صلاح الدين' in reply['answer']
+    assert 'ล' not in reply['answer']
