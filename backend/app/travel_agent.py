@@ -425,6 +425,8 @@ def _beach_duration(message: str, days: int) -> int | None:
 def _standard_state(days: int, history: bool, beach: bool, cities: list[str], message: str = '', budget_egp: int | None = None, city_allocations: list[tuple[str, int]] | None = None):
     beach_cities = [x for x in cities if x in ('Hurghada', 'Sharm El Sheikh', 'Dahab', 'Alexandria')]
     historic_cities = [x for x in cities if x not in beach_cities]
+    family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|عيلتي|عائلتي|أسرتي|اسرتي|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
+    pace = _requested_pace(message) or 'balanced'
     mixed_with_city = beach and bool(historic_cities)
     if city_allocations:
         coastal = {'Hurghada', 'Sharm El Sheikh', 'Dahab', 'Alexandria'}
@@ -439,8 +441,11 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
         bdays = min(days - 1, max(1, bdays))
         hdays = days - bdays
         first_beach = bool(re.search(r'(?:first week|week one|اول اسبوع|أول أسبوع).{0,35}(?:beach|sea|بحر|شاطئ)', message.lower()))
+        # For a short, relaxed family trip, avoid adding a third city and
+        # another transfer unless the visitor actually named it.
+        suggested_history = ['Cairo'] if family and pace == 'relaxed' and days <= 7 else ['Cairo', 'Luxor']
         cultural = {'kind': 'history' if history else 'mixed', 'days': hdays,
-                    'cities': historic_cities or ['Cairo', 'Luxor'],
+                    'cities': historic_cities or suggested_history,
                     'interests': ['history', 'culture', 'museums'] if history else ['culture', 'food', 'history']}
         coastal = {'kind': 'beach', 'days': bdays, 'cities': beach_cities or ['Hurghada'],
                    'interests': ['beaches', 'nature']}
@@ -450,8 +455,7 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
     else:
         phases = [{'kind': 'history' if history else 'mixed', 'days': days,
                    'cities': historic_cities or cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
-    family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|عيلتي|عائلتي|أسرتي|اسرتي|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
-    return {'days': days, 'phases': phases, 'pace': _requested_pace(message) or 'balanced', 'family': family, 'budget_egp': budget_egp,
+    return {'days': days, 'phases': phases, 'pace': pace, 'family': family, 'budget_egp': budget_egp,
             'accessibility_needs': needs_accessibility(message)}
 
 
@@ -758,7 +762,7 @@ def _pace_edit(state: dict, message: str, available: set[str]) -> str | None:
 
 def _feedback_question(state: dict, language: str, message: str, available: set[str]) -> str:
     land = any(phase['kind'] != 'beach' for phase in state['phases'])
-    if land and _interest_edit(state, message, available):
+    if land and _interest_edit(state, message, available) and not _pace_edit(state, message, available):
         return ('تحب وتيرة الرحلة كلها أهدى، ولا التوزيع الحالي مناسب؟' if language == 'Arabic' else
                 'Préférez-vous un rythme plus tranquille pour tout le voyage, ou le rythme actuel vous convient-il ?' if language == 'French' else
                 'Would you like the whole trip at a more relaxed pace, or is the current pace right for you?')

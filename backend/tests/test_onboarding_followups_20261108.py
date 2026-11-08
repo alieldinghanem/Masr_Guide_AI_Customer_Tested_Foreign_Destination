@@ -26,7 +26,10 @@ def test_bare_week_answer_builds_relaxed_family_history_and_beach_trip(tmp_path,
     assert followup['trip_state']['family'] is True
     assert followup['trip_state']['pace'] == 'relaxed'
     assert {phase['kind'] for phase in followup['trip_state']['phases']} == {'history', 'beach'}
+    assert {city for phase in followup['trip_state']['phases'] for city in phase['cities']} == {
+        'Cairo', 'Hurghada'}
     assert len(followup['itinerary']['days']) == 7
+    assert 'تحب وتيرة الرحلة كلها أهدى' not in followup['answer']
 
 
 def test_duration_answer_keeps_cities_from_previous_turn(tmp_path, monkeypatch):
@@ -57,6 +60,8 @@ def test_english_family_followup_respects_easy_pace(tmp_path, monkeypatch):
     assert followup['trip_state']['family'] is True
     assert followup['trip_state']['pace'] == 'relaxed'
     assert {phase['kind'] for phase in followup['trip_state']['phases']} == {'history', 'beach'}
+    assert {city for phase in followup['trip_state']['phases'] for city in phase['cities']} == {
+        'Cairo', 'Hurghada'}
     assert 'Here is a draft itinerary' in followup['answer']
 
 
