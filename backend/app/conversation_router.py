@@ -118,6 +118,18 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
         return reply('ماقدرش أؤكد إن البحر آمن للغوص النهارده من غير بيانات طقس وموج وتيارات بحرية مباشرة. اسأل مركز غوص مرخّص في المنطقة واتبع تعليمات السلامة المحلية، وماتنزلش لو الظروف أو تعليمات المركز غير مناسبة.',
                      'I cannot confirm that diving or snorkeling is safe today without live weather, sea and current conditions. Check with a licensed local dive operator and follow official safety advice; do not go if conditions are unsafe.',
                      'Je ne peux pas confirmer la sécurité de la plongée aujourd’hui sans conditions maritimes en direct. Consultez un opérateur de plongée agréé.')
+    if re.search(r'(?:شاطئ|شواطئ|شاطي|شواطي|سباحة|سباحه|أسبح|اسبح|أعوم|اعوم|swim|beach|plage)', t) and (
+            re.search(r'(?:حالة البحر|حاله البحر|آمن|امن|أمان|امان|safe|weather|sea conditions|sûr|sécurité)', t)
+            or (re.search(r'(?:سباحة|سباحه|أسبح|اسبح|أعوم|اعوم|swim)', t) and re.search(
+                r'(?:النهارده|النهاردة|اليوم|دلوقتي|today|now|current)', t))):
+        return reply('ماقدرش أؤكد إن السباحة آمنة في الشاطئ ده اليوم من غير حالة البحر وتعليمات المكان المباشرة. قبل النزول، اسأل المنقذين أو إدارة الشاطئ واتبع التحذيرات المحلية، وتأكد من السماح بالسباحة.',
+                     'I cannot confirm that swimming is safe at this beach today without live sea conditions and local instructions. Check with lifeguards or beach staff, follow local warnings, and confirm swimming is permitted before entering the water.',
+                     'Je ne peux pas confirmer que la baignade est sûre aujourd’hui sans conditions locales en direct. Vérifiez les consignes des sauveteurs et l’autorisation de baignade avant d’entrer dans l’eau.')
+    if re.search(r'(?:شاطئ|شواطئ|شاطي|شواطي|beach|plage)', t) and re.search(
+            r'(?:مفتوح|مواعيد|سعر|بكام|تذكرة|تذكره|الدخول|open|hours|price|fee|access|tarif|ouvert)', t):
+        return reply('ما عنديش تأكيد مباشر لدخول الشاطئ أو سعره ومواعيده الآن. بعض الشواطئ لها قواعد دخول مختلفة؛ تحقق من إدارة الشاطئ أو موقعه الرسمي قبل السفر.',
+                     'I cannot verify this beach’s current access, fees or hours. Check directly with the beach operator or its official site before travelling.',
+                     'Je ne peux pas vérifier l’accès, les tarifs ou les horaires actuels de cette plage. Consultez son gestionnaire ou son site officiel avant de partir.')
     if re.search(r'(?:book (?:a |the )?(?:hotel|tour|activity)|reserve (?:a |the )?(?:hotel|tour)|احجز|حجز (?:فندق|رحلة)|réserver|réservation)', t):
         return reply('ممكن أساعدك تختار وجهات وتجارب، لكن لم يتم أي حجز أو دفع من خلال المحادثة. الحجوزات الفعلية تحتاج مزود خدمة معتمد وتأكيدًا مستقلًا منه.',
                      'I can help you compare options, but no booking or payment has been made in this chat. Real reservations require a verified provider and their confirmation.',

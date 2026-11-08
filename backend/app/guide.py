@@ -23,6 +23,7 @@ from .gemini_client import gemini_key, generate, generate_grounded, search_groun
 from .openai_client import generate as generate_openai
 from .catalog_extra import CITY_AR
 from .catalog import PLACES
+from .coastal_guide import recommendations as coastal_recommendations
 from .database import all_places, db_path
 
 # ---------------------------------------------------------------- text normalisation
@@ -357,7 +358,7 @@ def _curated_recommendations(query: str) -> list[dict]:
         return []
     if re.search(r'متاحف|متحف|\bmuseums?\b|\bmus[ée]es?\b', folded):
         suitable = lambda p: p['category'] == 'Museum'
-    elif re.search(r'بحر|شاطئ|شواطئ|سباحه|نزول الميه|نزول المياه|'
+    elif re.search(r'بحر|شاطي|شواطي|سباحه|نزول الميه|نزول المياه|'
                    r'\b(?:beach|sea|swim|swimming)\b|\bplage\b', folded):
         # A marine activity, dive site, or promenade is not a swimming beach.
         suitable = lambda p: p['category'] == 'Beach'
@@ -377,22 +378,26 @@ def _recommendation_reply(places: list[dict], language: str) -> dict:
              'url': p['source_url'], 'city': p['city'], 'id': p['id']}
             for i, p in enumerate(places, 1)]
     first, *rest = places
+    is_coastal = first['id'].startswith('coast:')
     if language == 'Arabic':
         detail = first.get('summary_ar') or first['description']
         names = '، ثم '.join(p['name_ar'] for p in rest)
         answer = (f'أنصحك تبدأ بـ{first["name_ar"]}: {detail}'
                   + (f' وبعدها ممكن تزور {names}.' if names else '')
-                  + ' دي ترشيحات من دليلنا؛ تأكد من المواعيد والتذاكر قبل الزيارة.')
+                  + (' دي أمثلة من دليل الشواطئ؛ تأكد من السماح بالدخول وحالة البحر قبل السباحة.'
+                     if is_coastal else ' دي ترشيحات من دليلنا؛ تأكد من المواعيد والتذاكر قبل الزيارة.'))
     elif language == 'French':
         names = ', puis '.join(p['name'] for p in rest)
         answer = (f'Je vous conseille de commencer par {first["name"]} : {first["description"]}'
                   + (f' Ensuite, découvrez {names}.' if names else '')
-                  + ' Vérifiez les horaires et les billets avant la visite.')
+                  + (' Vérifiez l’accès à la plage et les conditions de la mer avant de nager.'
+                     if is_coastal else ' Vérifiez les horaires et les billets avant la visite.'))
     else:
         names = ', then '.join(p['name'] for p in rest)
         answer = (f'I suggest starting with {first["name"]}: {first["description"]}'
                   + (f' You could then visit {names}.' if names else '')
-                  + ' Check opening hours and tickets before you go.')
+                  + (' Check beach access and sea conditions before swimming.'
+                     if is_coastal else ' Check opening hours and tickets before you go.'))
     return {'answer': answer, 'mode': 'local-assistant', 'sources': refs}
 
 
@@ -470,9 +475,14 @@ def answer_chat(request):
         request = request.model_copy(update={'language': language})
     # For short follow-up questions, retrieve using recent visitor context if
     # the current turn alone does not identify an attraction.
-    recommendations = _curated_recommendations(request.message)
+    recommendations = coastal_recommendations(request.message, _fold) or _curated_recommendations(request.message)
+    if not recommendations and request.history and len(normalize(request.message)) <= 4:
+        recent_question = next((turn.content for turn in reversed(request.history)
+                                if turn.role == 'user'), '')
+        if coastal_recommendations(recent_question, _fold):
+            recommendations = coastal_recommendations('شاطئ ' + request.message, _fold)
     matches = recommendations or retrieve(request.message)
-    if request.history and (not matches or len(normalize(request.message)) <= 2):
+    if request.history and not recommendations and (not matches or len(normalize(request.message)) <= 2):
         recent_question = next((turn.content for turn in reversed(request.history)
                                 if turn.role == "user"), "")
         if recent_question:

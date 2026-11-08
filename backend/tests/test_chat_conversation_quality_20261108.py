@@ -142,7 +142,8 @@ def test_swimming_question_recommends_a_beach_not_a_marine_activity(tmp_path, mo
     initialize()
     reply = _ask('تنصحني أبدأ بأي شاطئ للسباحة في شرم الشيخ؟')
     assert reply['mode'] == 'local-assistant'
-    assert reply['sources'][0]['id'] == 'naama-bay'
+    assert reply['sources'][0]['id'] == 'coast:sharm-el-sheikh'
+    assert 'خليج نعمة' in reply['answer']
     assert all(source['id'] != 'ras-mohammed' for source in reply['sources'])
 
 
