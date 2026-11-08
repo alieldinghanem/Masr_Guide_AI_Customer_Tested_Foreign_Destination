@@ -34,7 +34,7 @@ describe('startup', () => {
 })
 
 describe('navigation and language', () => {
-  it('uses the detected Arabic locale for the chat reply language', async () => {
+  it('answers an English message in English while the site stays Arabic', async () => {
     sessionStorage.setItem(VISITOR_COUNTRY_KEY, 'EG')
     const calls = mockApi()
     const user = userEvent.setup()
@@ -43,7 +43,9 @@ describe('navigation and language', () => {
     expect(document.documentElement.dir).toBe('rtl')
     await user.type(question, 'Tell me about Karnak')
     await user.click(screen.getByRole('button', { name: 'إرسال' }))
-    await waitFor(() => expect(calls.find(call => call.path === '/consult')?.body?.language).toBe('Arabic'))
+    await waitFor(() => expect(calls.find(call => call.path === '/consult')?.body?.language).toBe('English'))
+    expect(screen.getByLabelText('لغة الرد')).toHaveValue('English')
+    expect(document.documentElement.lang).toBe('ar')
   })
 
   it('opens working AI chat on the homepage', async () => {

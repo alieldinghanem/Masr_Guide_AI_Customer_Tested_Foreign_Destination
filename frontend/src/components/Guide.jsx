@@ -6,6 +6,7 @@ import { ErrorNote } from './Common'
 import { getSession } from './Account'
 import { likelyPaymentNumber, scrubPaymentNumber } from '../paymentSafety'
 import { isCompatibleTripPlan } from '../tripValidation'
+import { inferChatLanguage } from '../chatLanguage'
 
 function restoredConsultation() {
   // The pair must be validated together before the app shows restored days.
@@ -64,8 +65,8 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
         : 'For your safety, do not enter card numbers in chat. Payments are not processed here.')
       return
     }
-    const responseLanguage = /[\u0600-\u06ff]{3,}/.test(question) ? 'Arabic' : language
-    if (responseLanguage === 'Arabic' && language !== 'Arabic') setLanguage('Arabic')
+    const responseLanguage = inferChatLanguage(question, language)
+    if (responseLanguage !== language) setLanguage(responseLanguage)
     const history = messages.map(m => ({ role: m.role, content: scrubPaymentNumber(m.text.slice(0, 1500)) })).slice(-8)
     setMessages(m => [...m, { role: 'user', text: question }]); setPrompt(''); setBusy(true); setError('')
     try {

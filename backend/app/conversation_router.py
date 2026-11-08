@@ -25,17 +25,30 @@ _CITY_NAMES = {
 
 
 def detect_language(message: str, fallback: str = LANG_EN) -> str:
-    """Respect explicit language choice, then actual user script."""
+    """Use the visitor's language for this turn, including on a translated site."""
     t = message.lower()
-    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
-        return LANG_FR
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in arabic|باللغة العربية|بالعربي|ب العربي|خليها عربي|اتكلم عربي|تكلم عربي', t):
         return LANG_AR
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in english|بالإنجليزي|بالانجليزي', t):
         return LANG_EN
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in french|بالفرنساوي|parlez en fran[çc]ais|en fran[çc]ais', t):
         return LANG_FR
-    return LANG_AR if len(re.findall(r'[\u0600-\u06ff]', message)) >= 3 else fallback
+    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
+        return LANG_FR
+    arabic_letters = len(re.findall(r'[\u0621-\u064a]', t))
+    latin_letters = len(re.findall(r'[a-z]', t))
+    if arabic_letters and latin_letters:
+        return LANG_AR if arabic_letters >= latin_letters else LANG_EN
+    if arabic_letters:
+        return LANG_AR
+    if latin_letters:
+        words = re.findall(r'[a-z]+', t)
+        if len(words) == 1 and words[0] in {
+                'ok', 'okay', 'yes', 'no', 'cairo', 'giza', 'luxor', 'aswan',
+                'hurghada', 'dahab', 'alexandria'}:
+            return fallback
+        return LANG_EN
+    return fallback
 
 
 def _known_cities(text: str) -> list[str]:
