@@ -254,8 +254,8 @@ def total_days(message: str) -> int | None:
         return 14
     if any(word in t for word in ('one week', 'a week', 'اسبوع واحد', 'أسبوع واحد', 'une semaine')):
         return 7
-    if re.search(r'(?<![\w])(?:اسبوع|أسبوع)(?![\w])', t) and re.search(
-            r'(?:مصر|رحلة|سفر|مدة|جاي|هنقعد|زيارة|برنامج|خطة|خطه)', t):
+    # A bare week is also a valid answer to a duration question.
+    if re.search(r'(?<![\w])(?:اسبوع|أسبوع)(?![\w])', t):
         return 7
     # Month-length intent for an *undated* trip: use an explicitly provisional
     # 30-day planning window. Never interpret 'next month' or a named calendar
@@ -451,7 +451,7 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
         phases = [{'kind': 'history' if history else 'mixed', 'days': days,
                    'cities': historic_cities or cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
     family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|عيلتي|عائلتي|أسرتي|اسرتي|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
-    return {'days': days, 'phases': phases, 'pace': 'balanced', 'family': family, 'budget_egp': budget_egp,
+    return {'days': days, 'phases': phases, 'pace': _requested_pace(message) or 'balanced', 'family': family, 'budget_egp': budget_egp,
             'accessibility_needs': needs_accessibility(message)}
 
 
@@ -737,18 +737,23 @@ def _interest_edit(state: dict, message: str, available: set[str]) -> dict[int, 
     return {index: interests for index in targets}
 
 
-def _pace_edit(state: dict, message: str, available: set[str]) -> str | None:
-    """Only a whole-trip pace request may alter the global pace setting."""
+def _requested_pace(message: str) -> str | None:
+    """Read an explicit pace preference from a new or existing trip request."""
     text = message.lower()
-    if mentioned_cities(message, available):
-        return None
-    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة|الرحلة هادية|الرحلة خفيفة', text):
+    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace|not too hectic|not exhausting|easy pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة|الرحلة هادية|الرحلة خفيفة|(?:مش|ما)\s+(?:عايزين|عايز|نحب|نريد)[^\n.!؟]{0,45}(?:مرهق|زحمة|متعب)', text):
         return 'relaxed'
     if re.search(r'\b(?:more packed|faster pace|more activities)\b|وتيرة أسرع|زيارات أكتر|زيارات اكثر', text):
         return 'packed'
     if re.search(r'\b(?:balanced pace|keep it balanced)\b|وتيرة متوازنة|خليها متوازنة', text):
         return 'balanced'
     return None
+
+
+def _pace_edit(state: dict, message: str, available: set[str]) -> str | None:
+    """Only a whole-trip pace request may alter the global pace setting."""
+    if mentioned_cities(message, available):
+        return None
+    return _requested_pace(message)
 
 
 def _feedback_question(state: dict, language: str, message: str, available: set[str]) -> str:
@@ -1047,6 +1052,19 @@ def consult_travel(request):
     available = {p['city'] for p in all_places()}
     state = request.trip_state.model_dump() if request.trip_state else None
     cities = mentioned_cities(message, available)
+    if not state and not cities and total_days(message) is not None and request.history:
+        previous_assistant = next((turn.content for turn in reversed(request.history)
+                                   if turn.role == 'assistant'), '')
+        previous_user = next((turn.content for turn in reversed(request.history)
+                              if turn.role == 'user'), '')
+        asked_for_duration = re.search(
+            r'كم يوم ستقضي|كم يوم|how many days will you spend|combien de jours',
+            previous_assistant, re.I)
+        if asked_for_duration and mentioned_cities(previous_user, available) and total_days(previous_user) is None:
+            # Complete the visitor's own previous request with their short answer.
+            message = previous_user + ' ' + message
+            lowered = message.lower()
+            cities = mentioned_cities(message, available)
     if not state and not cities and total_days(message) is None and request.history:
         choice = re.fullmatch(r'\s*(?:الاختيار\s*)?(الأول|الاول|الثاني)|\s*(?:first|second)(?:\s+option)?|\s*option\s*[12]|\s*(?:premier|première|deuxième)(?:\s+choix)?', lowered.strip(' .!?؟'))
         if choice:
@@ -1152,6 +1170,7 @@ def consult_travel(request):
                 'trip_state': None, 'itinerary': None}
     if (not state and not cities and not unsupported and
             (duration := total_days(message)) is not None and 1 <= duration <= 30 and
+            not (wants_history(message) or wants_beach(message)) and
             not re.search(r'\b(?:plan|itinerary|trip|holiday|voyage|suggest|recommend|propose)\b|'
                           r'خطط|اعمل\s+(?:رحلة|برنامج)|برنامج|خطة|رحلة|اقترح|اقتراح', lowered)):
         return {'answer': _route_choices(duration, request.language), 'mode': 'needs-clarification', 'sources': [],
