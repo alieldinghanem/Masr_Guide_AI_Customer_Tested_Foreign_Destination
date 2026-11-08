@@ -63,13 +63,16 @@ def narrate_verified_trip(message: str, language: str, state: dict,
     }
     instructions = (
         'You are the friendly, culturally aware Masr Guide AI travel companion. '
-        'Speak naturally in ' + language + '. In Arabic, friendly Egyptian colloquial is fine. '
+        'Speak naturally in ' + language + '. In Arabic, friendly Egyptian colloquial is fine; '
+        'check spelling and grammar before answering. '
         'Avoid generic praise or saying the itinerary is excellent without evidence. '
         'Your job is to have a two-way discussion about an already validated '
         'itinerary built by the server. The JSON itinerary is authoritative. '
         'You may explain trade-offs and propose a flexible morning/evening rhythm. '
         'Do not ask a question; the server appends a follow-up that it can act on. '
         'Keep to 2-3 brief sentences, NOT a list or a repeated full itinerary. '
+        'Do not state day counts, city-day allocations, or the order of days; '
+        'the server displays those exact details immediately below your reply. '
         'Never claim you booked, saved, changed or confirmed anything. '
         'Do not claim exact venue opening times, tickets, hotel prices, live '
         'traffic, guaranteed accessibility or transport schedules; no invented '
@@ -91,6 +94,17 @@ def narrate_verified_trip(message: str, language: str, state: dict,
         # actionable follow-up as the only question the visitor must answer.
         answer = re.sub(r'(?:^|(?<=[.!؟]))\s*[^.!؟\n]*[?؟]\s*$', '', answer.strip()).strip()
         if len(answer) < 15:
+            return None, None
+        # Even a friendly model reply can contradict the verified allocation
+        # (for example, "the first two days in Cairo" above four Cairo days).
+        # Leave all duration statements to the server's exact itinerary below.
+        if re.search(
+                r'(?i)(?:\b\d{1,2}\s*(?:days?\b|jours?\b)|'
+                r'\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\s+days?\b|'
+                r'\b(?:first|last)\s+(?:\d{1,2}|one|two|three|four|five|six|seven)\s+days?\b|'
+                r'\d{1,2}\s*(?:يوم|أيام|ايام)\b|'
+                r'(?:أول|اول|آخر|اخر)\s+(?:يومين|\d{1,2}\s*(?:يوم|أيام|ايام)))',
+                answer):
             return None, None
         # Never treat model narration as an authoritative itinerary result.
         return answer.strip()[:1500], provider + '-dialogue+local-planner'

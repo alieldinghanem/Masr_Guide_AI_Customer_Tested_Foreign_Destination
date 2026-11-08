@@ -69,3 +69,20 @@ def test_upstream_failure_never_drops_valid_trip(monkeypatch):
     assert reply['mode'] == 'local-planner'
     assert reply['answer'].startswith(raw['answer'])
     assert 'do you prefer museums and history or markets and local food?' in reply['answer']
+
+
+def test_model_cannot_prepend_wrong_day_allocation(monkeypatch):
+    monkeypatch.setenv('AI_PROVIDER', 'gemini')
+    monkeypatch.setenv('GEMINI_API_KEY', 'mock-no-network')
+    monkeypatch.setenv('AI_TRIP_NARRATION_ENABLED', 'true')
+    monkeypatch.setattr(travel_dialogue, 'generate', lambda *_a, **_kw:
+                        'هنبدأ بأول يومين في القاهرة وبعدها نروح البحر.')
+    state, itinerary = _trip()
+    raw = {'mode': 'local-planner', 'answer': 'Three Cairo days.',
+           'itinerary': itinerary, 'trip_state': state}
+    reply = _with_verified_dialogue(ConsultRequest(message='رحلة مع الأطفال', language='Arabic'),
+                                     'رحلة مع الأطفال', raw)
+    assert reply['trip_state'] == state
+    assert reply['mode'] == 'local-planner'
+    assert 'أول يومين' not in reply['answer']
+    assert 'Three Cairo days.' in reply['answer']
