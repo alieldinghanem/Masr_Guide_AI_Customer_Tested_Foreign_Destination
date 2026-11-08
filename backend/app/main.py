@@ -298,6 +298,14 @@ def quick_demo():
 # Production single-origin deployment: one Render/Docker service serves both
 # the compiled React app and the API. In development, Vite still proxies /api.
 _FRONTEND_DIST = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
+
+@app.get('/favicon.svg', include_in_schema=False)
+def site_favicon():
+    icon = _FRONTEND_DIST / 'favicon.svg'
+    if not icon.is_file():
+        raise HTTPException(404, 'Favicon not found')
+    return FileResponse(icon, media_type='image/svg+xml')
+
 if (_FRONTEND_DIST / 'index.html').is_file():
     app.mount('/assets', StaticFiles(directory=_FRONTEND_DIST / 'assets'), name='site-assets')
 
