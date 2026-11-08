@@ -744,7 +744,7 @@ def _interest_edit(state: dict, message: str, available: set[str]) -> dict[int, 
 def _requested_pace(message: str) -> str | None:
     """Read an explicit pace preference from a new or existing trip request."""
     text = message.lower()
-    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace|not too hectic|not exhausting|easy pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|رحلة مريحة|الرحلة هادية|الرحلة خفيفة|(?:مش|ما)\s+(?:عايزين|عايز|نحب|نريد)[^\n.!؟]{0,45}(?:مرهق|زحمة|متعب)', text):
+    if re.search(r'\b(?:more relaxed|slower|gentler|less busy|relaxed pace|not too hectic|not exhausting|easy pace)\b|plus tranquille|rythme plus lent|أهدى|اهدى|أبطأ|ابطأ|وتيرة هادئة|(?:رحلة|الرحلة)[^\n.!؟]{0,20}مريحة|الرحلة هادية|الرحلة خفيفة|(?:مش|ما)\s+(?:عايزين|عايز|نحب|نريد)[^\n.!؟]{0,45}(?:مرهق|زحمة|متعب)', text):
         return 'relaxed'
     if re.search(r'\b(?:more packed|faster pace|more activities)\b|وتيرة أسرع|زيارات أكتر|زيارات اكثر', text):
         return 'packed'
@@ -1062,9 +1062,11 @@ def consult_travel(request):
         previous_user = next((turn.content for turn in reversed(request.history)
                               if turn.role == 'user'), '')
         asked_for_duration = re.search(
-            r'كم يوم ستقضي|كم يوم|how many days will you spend|combien de jours',
+            r'كم يوم ستقضي|كم يوم|كام يوم|how many days will you spend|combien de jours',
             previous_assistant, re.I)
-        if asked_for_duration and mentioned_cities(previous_user, available) and total_days(previous_user) is None:
+        previous_preferences = wants_history(previous_user) and wants_beach(previous_user)
+        if (asked_for_duration and total_days(previous_user) is None and
+                (mentioned_cities(previous_user, available) or previous_preferences)):
             # Complete the visitor's own previous request with their short answer.
             message = previous_user + ' ' + message
             lowered = message.lower()
@@ -1169,6 +1171,24 @@ def consult_travel(request):
             if request.language == 'French' else
             'Welcome to Egypt! How many days are you staying, who is traveling with you, '
             'and which cities or places would you like to visit? I can build a trip once you tell me.'
+        )
+        return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
+                'trip_state': None, 'itinerary': None}
+    if (not state and not cities and total_days(message) is None and
+            wants_history(message) and wants_beach(message) and
+            re.search(r'عايز|عاوز|نفسي|أريد|اريد|رحلة|سفر|خطط|'
+                      r'\b(?:plan|trip|travel|want|visit|voyage|voudrais)\b', lowered)):
+        answer = (
+            'أقترح القاهرة للآثار والغردقة للبحر كبداية، ونقدر نخلي الزيارات أخف لو معاك أطفال. '
+            'كام يوم هتقضيهم في مصر؟ بعد ما تقولي المدة هوزع الأيام وأعرض عليك خطة قابلة للتعديل.'
+            if request.language == 'Arabic' else
+            'Je propose Le Caire pour l’histoire et Hurghada pour la mer. '
+            'Nous pouvons alléger les journées avec des enfants. Combien de jours passerez-vous en Égypte ? '
+            'Je préparerai ensuite un itinéraire modifiable.'
+            if request.language == 'French' else
+            'I suggest Cairo for history and Hurghada for the sea as a starting route. '
+            'We can keep the days lighter for children. How many days will you spend in Egypt? '
+            'I will then show you an editable itinerary.'
         )
         return {'answer': answer, 'mode': 'needs-clarification', 'sources': [],
                 'trip_state': None, 'itinerary': None}
