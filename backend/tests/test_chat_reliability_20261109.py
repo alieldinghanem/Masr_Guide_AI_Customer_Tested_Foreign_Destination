@@ -63,6 +63,26 @@ def test_english_culture_route_keeps_named_coastal_city(monkeypatch):
     assert result['itinerary']['day_allocation'] == {'Cairo': 3, 'Alexandria': 2}
 
 
+def test_bare_arabic_day_extends_total_without_moving_cities(monkeypatch):
+    monkeypatch.setenv('AI_PROVIDER', 'offline')
+    original = consult_travel(ConsultRequest(
+        message='خطط رحلة عائلية ٥ أيام في القاهرة والإسكندرية مع أطفال، بدون استعجال',
+        language='Arabic'))
+    edited_day = consult_travel(ConsultRequest(
+        message='خلي اليوم الثالث نشاط واحد مناسب للأطفال', language='Arabic',
+        trip_state=TripState.model_validate(original['trip_state'])))
+    extended = consult_travel(ConsultRequest(
+        message='زود إجمالي مدة الرحلة يوم للإسكندرية من غير ما تقلل أيام القاهرة',
+        language='Arabic', trip_state=TripState.model_validate(edited_day['trip_state'])))
+    assert extended['mode'] == 'local-planner'
+    assert extended['trip_state']['days'] == 6
+    assert extended['itinerary']['day_allocation'] == {'Cairo': 3, 'Alexandria': 3}
+    assert extended['itinerary']['route'] == ['Cairo', 'Alexandria']
+    assert extended['trip_state']['day_overrides'][3]['max_stops'] == 1
+    assert len(extended['itinerary']['days'][2]['stops']) == 1
+    assert extended['itinerary']['days'][:3] == edited_day['itinerary']['days'][:3]
+
+
 def test_out_of_range_day_edit_does_not_change_trip(monkeypatch):
     monkeypatch.setenv('AI_PROVIDER', 'offline')
     first = consult_travel(ConsultRequest(message='Plan 3 days in Cairo', language='English'))

@@ -30,7 +30,8 @@ _CITY_ALIASES = {
     'luxor': 'Luxor', 'louxor': 'Luxor', 'الأقصر': 'Luxor', 'الاقصر': 'Luxor',
     'le caire': 'Cairo', 'caire': 'Cairo', 'assouan': 'Aswan', 'alexandrie': 'Alexandria',
     'aswan': 'Aswan', 'اسوان': 'Aswan', 'أسوان': 'Aswan',
-    'alexandria': 'Alexandria', 'الاسكندرية': 'Alexandria', 'الإسكندرية': 'Alexandria', 'اسكندريه': 'Alexandria',
+    'alexandria': 'Alexandria', 'الاسكندرية': 'Alexandria', 'الإسكندرية': 'Alexandria',
+    'للاسكندرية': 'Alexandria', 'للإسكندرية': 'Alexandria', 'اسكندريه': 'Alexandria',
     'hurghada': 'Hurghada', 'الغردقة': 'Hurghada', 'الغردقه': 'Hurghada', 'للغردقة': 'Hurghada', 'للغردقه': 'Hurghada',
     'sharm el sheikh': 'Sharm El Sheikh', 'sharm': 'Sharm El Sheikh', 'شرم الشيخ': 'Sharm El Sheikh',
     'dahab': 'Dahab', 'دهب': 'Dahab', 'دهب ': 'Dahab',
@@ -289,6 +290,10 @@ def _relative_trip_extension(message: str) -> int | None:
         return 1
     if re.search(r'(?:يومين|يومان|two\s+(?:more\s+)?days)', t, flags=re.I):
         return 2
+    # In Arabic, "زود إجمالي الرحلة يوم للإسكندرية" already states an
+    # unambiguous one-day increase; "واحد" is optional in ordinary speech.
+    if re.search(r'(?<!\w)يوم(?!\w)', t):
+        return 1
     return None
 
 
