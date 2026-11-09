@@ -16,19 +16,19 @@ const boot = async opts => {
 }
 
 describe('GitHub release fixes', () => {
-  it('shows a configured AI connection as unverified until a model replies', async () => {
+  it('shows configured AI as awaiting a response before chat starts', async () => {
     await boot({ guideMode: 'gemini-configured' })
     expect(await screen.findByText(MESSAGES.en['guide.availability.configured'])).toBeInTheDocument()
     expect(screen.queryByText(MESSAGES.en['guide.availability.local'])).not.toBeInTheDocument()
   })
 
-  it('does not call a configured Gemini service offline after a local greeting', async () => {
+  it('identifies a local greeting as local despite Gemini configuration', async () => {
     const { user } = await boot({ guideMode: 'gemini-configured',
       chat: { answer: 'Welcome to Egypt!', mode: 'local-assistant', sources: [] } })
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Hello')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await screen.findByText('Welcome to Egypt!')
-    expect(screen.getByText(MESSAGES.en['guide.availability.configured'])).toBeInTheDocument()
+    expect(screen.getByText(MESSAGES.en['guide.availability.local'])).toBeInTheDocument()
   })
 
   it('recognizes a Gemini narrated itinerary as an AI reply', async () => {
@@ -37,7 +37,21 @@ describe('GitHub release fixes', () => {
     await user.type(screen.getByLabelText('Ask the tour guide'), 'Plan my Egypt trip')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await screen.findByText('Your itinerary is ready.')
-    expect(screen.getByText(MESSAGES.en['guide.availability.ai'])).toBeInTheDocument()
+    expect(screen.getByText(MESSAGES.en['guide.availability.gemini'])).toBeInTheDocument()
+  })
+
+  it.each([
+    ['local-planner', 'planner'],
+    ['gemini-intent+local-planner', 'planner'],
+    ['offline-fallback', 'fallback'],
+    ['gemini-rag', 'gemini'],
+  ])('reports %s replies as %s', async (mode, state) => {
+    const { user } = await boot({ guideMode: 'gemini-configured',
+      chat: { answer: 'Response for this turn.', mode, sources: [] } })
+    await user.type(screen.getByLabelText('Ask the tour guide'), 'Help me plan a trip')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    await screen.findByText('Response for this turn.')
+    expect(screen.getByText(MESSAGES.en[`guide.availability.${state}`])).toBeInTheDocument()
   })
 
   it('matches account storage guidance and registration to the backend state', async () => {

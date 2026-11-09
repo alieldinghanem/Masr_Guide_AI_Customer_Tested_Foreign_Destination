@@ -42,6 +42,7 @@ export function isValidPlannerPlan(plan) {
     plan.days.every(day =>
       typeof day.estimated_activity_minutes === 'number' &&
       Number.isFinite(day.estimated_activity_minutes) && day.estimated_activity_minutes >= 0 &&
+      (!('rest_minutes' in day) || (Number.isInteger(day.rest_minutes) && day.rest_minutes >= 0 && day.rest_minutes <= 240)) &&
       (!('note' in day) || day.note === null || typeof day.note === 'string') &&
       day.stops.every(stop =>
         (!('matched' in stop) || (Array.isArray(stop.matched) &&
@@ -60,6 +61,13 @@ export function isValidTripState(state) {
   if ('lighter_cities' in state && (!Array.isArray(state.lighter_cities) || state.lighter_cities.length > 5 ||
       state.lighter_cities.some(city => typeof city !== 'string' || !city.trim()) ||
       new Set(state.lighter_cities).size !== state.lighter_cities.length)) return false
+  if ('day_overrides' in state && (state.day_overrides === null ||
+      typeof state.day_overrides !== 'object' || Array.isArray(state.day_overrides) ||
+      Object.keys(state.day_overrides).length > 30 ||
+      Object.entries(state.day_overrides).some(([day, edit]) =>
+        !/^[1-9]\d*$/.test(day) || Number(day) > state.days ||
+        !edit || typeof edit !== 'object' || edit.max_stops !== 1 ||
+        typeof edit.family_friendly !== 'boolean'))) return false
   let count = 0
   for (const phase of state.phases) {
     if (!phase || !Number.isInteger(phase.days) || phase.days < 1 ||
@@ -89,5 +97,10 @@ export function isCompatibleTripPlan(state, itinerary) {
         phase.cities.some(city => !segment.some(day => day.city === city))) return false
     offset += phase.days
   }
+  if (state.day_overrides && Object.entries(state.day_overrides).some(([day, edit]) => {
+    const entry = itinerary.days[Number(day) - 1]
+    return !entry || entry.stops.length > edit.max_stops ||
+      (edit.family_friendly && entry.stops.some(stop => stop.place.family_friendly !== true))
+  })) return false
   return offset === itinerary.days.length
 }

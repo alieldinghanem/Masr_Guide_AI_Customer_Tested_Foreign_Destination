@@ -1,4 +1,29 @@
-> **Latest full-stack handoff (31 Oct 2026):** Start with [FINAL_FULLSTACK_QA_2026-10-31_AR.md](FINAL_FULLSTACK_QA_2026-10-31_AR.md). The AI chat is the homepage, with separate heritage/beach pages, mobile-first EN/AR navigation, and orange visual identity. Backend tests and offline customer QA passed, but the production React build/browser and live AI providers are still NOT VERIFIED in this build environment.
+# Masr Guide AI
+
+An Egypt travel discovery and itinerary portfolio project. Visitors can explore a sourced place catalogue, ask a multilingual guide for suggestions, and build and edit a validated trip. The application uses React and FastAPI, with optional Gemini or OpenAI responses; the itinerary engine keeps the authoritative trip state.
+
+**[Open the hosted preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/)** · **[Review the latest chatbot changes](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/pull/5)**
+
+The hosted preview may run an earlier commit until these changes are approved and deployed. This project does not sell travel bookings or provide live prices, opening hours, transport schedules, or safety guarantees.
+
+## What it demonstrates
+
+- **Conversational trip planning:** structured, validated 1–30 day itineraries; explicit city and day edits preserve unrelated trip choices.
+- **Context-aware guide:** Arabic, English, and French responses; sourced attraction and beach suggestions; follow-up questions retain recommended places.
+- **Travel-aware safeguards:** family pacing and rest, approximate intercity transfers, honest fallback when an AI provider is unavailable, and clear separation of local and model-generated replies.
+- **Full-stack product flows:** responsive discovery pages, traveler accounts, saved trips, ratings, and comments. Account availability depends on durable storage configuration.
+
+## Stack and verification
+
+React, Vite, FastAPI, Python, SQL storage, Docker, GitHub Actions, and optional Gemini/OpenAI APIs. The latest chatbot change set (`e10389a`, 9 Nov 2026) passed **488 backend tests (1 skipped)**, **107 frontend tests**, **25 contract tests**, lint, a production build, and desktop/mobile Chromium checks. The [GitHub CI run](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/runs/42564239743) passed. Automated checks use local planning or mocked AI calls; they do not prove that a live Gemini request will succeed in every environment.
+
+For local setup, see [START_LOCAL_FIRST_AR.md](START_LOCAL_FIRST_AR.md) and the detailed instructions below. Never commit API keys or user databases. The free hosted preview may use temporary storage, so it is not a durable customer-data service.
+
+## Historical development notes
+
+The dated reports below describe earlier checkpoints and may list checks that were unavailable at the time. The verification summary above describes the current reviewed change set.
+
+> **31 Oct 2026 handoff:** Start with [FINAL_FULLSTACK_QA_2026-10-31_AR.md](FINAL_FULLSTACK_QA_2026-10-31_AR.md). The AI chat is the homepage, with separate heritage/beach pages, mobile-first EN/AR navigation, and orange visual identity. Backend tests and offline customer QA passed, but the production React build/browser and live AI providers were not verified in that review environment.
 
 > **Company deployment note (30 Oct 2026):** This repository is a commercial-pilot candidate, not a verified live booking service. Start with [COMPANY_RELEASE_GATE_AR.md](COMPANY_RELEASE_GATE_AR.md) and run `python scripts/check_company_release.py` before any public launch. React browser and live Gemini checks remain required.
 

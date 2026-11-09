@@ -18,10 +18,11 @@ function restoredConsultation() {
 }
 
 const MODES = ['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'restaurant-search-unverified', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-configured', 'openai-configured', 'local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'llm-configured', 'provider-error', 'offline-preview', 'local-assistant', 'offline-fallback', 'needs-clarification', 'hotel-editorial', 'hotel-gemini-assisted', 'hotel-openai-assisted', 'hotel-guide-limited', 'restaurant-guide-limited', 'unsupported-destination', 'trip-saved', 'needs-authentication']
-const AI_ACTIVE_MODES = new Set(['gemini-search-grounded', 'gemini-search-unverified', 'gemini-rag-no-live-citations', 'llm-rag', 'openai-rag', 'gemini-rag', 'gemini-intent+local-planner', 'openai-intent+local-planner', 'gemini-dialogue+local-planner', 'openai-dialogue+local-planner', 'hotel-gemini-assisted', 'hotel-openai-assisted'])
+const GEMINI_RESPONSE_MODES = new Set(['gemini-search-grounded', 'gemini-rag-no-live-citations', 'gemini-rag', 'gemini-dialogue+local-planner', 'hotel-gemini-assisted'])
+const OPENAI_RESPONSE_MODES = new Set(['openai-rag', 'openai-dialogue+local-planner', 'hotel-openai-assisted'])
 const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, configuredGuideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -41,12 +42,13 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
   }, [messages, busy])
   const mode = MODES.includes(guideMode) ? guideMode : 'offline-preview'
   const serviceState = mode === 'provider-error' ? 'error'
-    : mode === 'offline-fallback' ? 'local'
-    : AI_ACTIVE_MODES.has(mode) ? 'ai'
+    : mode === 'offline-fallback' ? 'fallback'
+    : GEMINI_RESPONSE_MODES.has(mode) ? 'gemini'
+    : OPENAI_RESPONSE_MODES.has(mode) ? 'openai'
+    : mode === 'llm-rag' ? 'ai'
     : AI_CONFIGURED_MODES.has(mode) ? 'configured'
-    : AI_CONFIGURED_MODES.has(configuredGuideMode)
-      ? messages.some(message => AI_ACTIVE_MODES.has(message.mode)) ? 'ai' : 'configured'
-      : 'local'
+    : ['local-planner', 'gemini-intent+local-planner', 'openai-intent+local-planner'].includes(mode) ? 'planner'
+    : 'local'
   const answerArabic = language === 'Arabic'
   const answerCity = city => answerArabic ? cityNameAr(city) : city
   useEffect(() => {
@@ -224,7 +226,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${serviceState === 'ai' ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
+              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />
@@ -287,6 +289,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
                 <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}</summary>
                 {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
+                {day.rest_minutes > 0 && <p>{answerArabic ? `وقت راحة مقترح: ${day.rest_minutes} دقيقة` : `Suggested rest: ${day.rest_minutes} minutes`}</p>}
                 {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
                   : <div><p>{answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
               </details>)}

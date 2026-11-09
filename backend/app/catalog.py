@@ -63,8 +63,8 @@ PLACES = [
     place("tunis-village", "Tunis Village", "Fayoum", "Culture", ["culture", "family", "food"], 29.3990,30.4926,110,"A lakeside village in Fayoum associated with pottery workshops and local crafts.","https://www.britannica.com/place/Al-Fayyum"),
     place("st-catherine-monastery", "Saint Catherine's Monastery", "Saint Catherine", "Heritage", ["history", "culture", "nature"], 28.5559,33.9760,130,"An early Christian monastery at the foot of Mount Sinai, part of a UNESCO World Heritage site.","https://whc.unesco.org/en/list/954/"),
     place("mount-sinai", "Mount Sinai", "Saint Catherine", "Nature", ["nature", "adventure", "history"], 28.5391,33.9750,300,"A mountain in the southern Sinai region, visited by hikers and pilgrims. Guided hiking may be required.","https://whc.unesco.org/en/list/954/", False),
-    place("blue-hole-dahab", "Blue Hole", "Dahab", "Nature", ["beaches", "nature", "adventure"], 28.5727,34.5378,160,"A well-known Red Sea dive site near Dahab. Deep diving is hazardous and requires appropriate certified guidance.","https://www.britannica.com/place/Red-Sea", False),
-    place("dahab-lagoon", "Dahab Lagoon", "Dahab", "Beach", ["beaches", "nature", "family"], 28.4826,34.5015,150,"A shallow coastal lagoon near Dahab popular for waterside relaxation and wind sports.","https://www.britannica.com/place/Dahab"),
+    place("blue-hole-dahab", "Blue Hole", "Dahab", "Nature", ["nature", "adventure"], 28.5727,34.5378,160,"A well-known Red Sea dive site near Dahab. Diving under its arch is for highly experienced divers.","https://www.experienceegypt.eg/en/Attraction-Details/112/dive-into-the-sea", False),
+    place("dahab-lagoon", "Dahab Lagoon", "Dahab", "Beach", ["beaches", "nature", "family"], 28.4826,34.5015,150,"Laguna Beach near Dahab is a waterside relaxation area where visitors can watch kite and windsurfers. Check local swimming rules and conditions.","https://www.experienceegypt.eg/en/attraction-details/113/relax-on-the-beach"),
 ]
 
 INTERESTS = ["history", "culture", "museums", "nature", "beaches", "adventure", "food", "family"]

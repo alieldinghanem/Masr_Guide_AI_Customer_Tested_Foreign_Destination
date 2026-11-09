@@ -128,7 +128,7 @@ def test_react(browser, label, width, height):
             print('PASS mobile imagery: 360/390/430px single column, crop, tap targets and overflow')
         page.goto(f'{URL}/#/coast', wait_until='domcontentloaded')
         expect(page.locator('.mg-coastal-guides')).to_be_visible(timeout=15000)
-        expect(page.locator('.mg-coastal-guides-grid > article')).to_have_count(17)
+        expect(page.locator('.mg-coastal-guides-grid > article')).to_have_count(16)
         assert page.locator('.mg-coast-group').count() == 0, 'Coastal places must appear in one list'
         assert page.get_by_role('link', name='Destination source').count() == 0
         assert page.locator('.mg-coastal-guide').count() == 10
@@ -139,7 +139,7 @@ def test_react(browser, label, width, height):
             photo.evaluate('(image) => image.decode()')
             assert photo.evaluate('(image) => image.naturalWidth >= 600'), 'Beach destination photo did not load'
         assert page.locator('.mg-coastal-photo-credit').count() == 10
-        assert page.locator('.mg-coastal-guides-grid .mg-place-card').count() == 7
+        assert page.locator('.mg-coastal-guides-grid .mg-place-card').count() == 6
         assert page.get_by_text('Bibliotheca Alexandrina').count() == 0, 'Cultural venues must not be presented as beaches'
         assert page.get_by_text('Citadel of Qaitbay').count() == 0, 'Historic fortress must appear under heritage, not beaches'
         assert page.get_by_text('Montaza Gardens').count() == 0, 'Seaside gardens are not a beach activity'
@@ -206,6 +206,19 @@ def test_react(browser, label, width, height):
         expect(page.locator('.consult-days > .consult-day')).to_have_count(7, timeout=25000)
         expect(page.locator('.msg.assistant').last).to_contain_text('Cairo')
         expect(page.locator('.msg.assistant').last).to_contain_text('Hurghada')
+        before_edit = page.evaluate("JSON.parse(sessionStorage.getItem('masr-guide-consult-plan-v2'))")
+        prompt.fill('خلي اليوم الثالث نشاط واحد مناسب للأطفال')
+        page.get_by_role('button', name='Send message').click()
+        expect(page.locator('.msg.assistant').last).to_contain_text('عدّلت اليوم 3', timeout=25000)
+        after_edit = page.evaluate("JSON.parse(sessionStorage.getItem('masr-guide-consult-plan-v2'))")
+        saved_state = page.evaluate("JSON.parse(sessionStorage.getItem('masr-guide-consult-state-v2'))")
+        assert saved_state['day_overrides']['3'] == {'max_stops': 1, 'family_friendly': True}
+        assert len(after_edit['days'][2]['stops']) == 1
+        assert [(day['city'], [stop['place']['id'] for stop in day['stops']])
+                for i, day in enumerate(after_edit['days']) if i != 2] == [
+                    (day['city'], [stop['place']['id'] for stop in day['stops']])
+                    for i, day in enumerate(before_edit['days']) if i != 2]
+        print(f'PASS {label}: day-three edit persists and preserves other days')
         page.locator('.chat-clear').click()
         expect(page.locator('.consult-days > .consult-day')).to_have_count(0)
         print(f'PASS {label}: preferences survive duration follow-up in the real chat')
@@ -327,7 +340,8 @@ def test_mobile_photo_layout(browser):
         expect(page.locator('.mg-coastal-guides')).to_be_visible(timeout=15000)
         expect(coast.nth(1)).to_be_visible(timeout=15000)
         assert page.locator('.mg-coastal-guide').count() == 10, 'All requested coastal destinations must be shown'
-        assert coast.count() == 7
+        assert coast.count() == 6, 'Dive sites must not appear as swimming beaches'
+        assert coast.filter(has_text='Blue Hole').count() == 0
         assert coast.nth(0).locator('h2').inner_text() == 'خليج نعمة'
         assert abs(coast.nth(0).bounding_box()['x'] - coast.nth(1).bounding_box()['x']) < 2, 'Coast mobile cards must stack'
         print('PASS mobile photo QA: 360/390/430px, Arabic RTL, unique Ibn Tulun framing, heritage/coast')

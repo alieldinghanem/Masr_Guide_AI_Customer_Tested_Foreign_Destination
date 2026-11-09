@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isValidItinerary, isValidPlannerPlan, isValidTripState } from '../src/tripValidation.js'
+import { isValidItinerary, isValidPlannerPlan, isValidTripState, isCompatibleTripPlan } from '../src/tripValidation.js'
 
 const day = (number = 1) => ({ day: number, city: 'Cairo', stops: [{place: {id:'giza',name:'Giza Pyramids'}}] })
 const state = () => ({days:2, phases:[{days:2, kind:'history', cities:['Cairo'],interests:['history']}],pace:'balanced'})
@@ -24,6 +24,15 @@ test('checks actual itinerary day allocations before restoring a trip state', ()
   assert.equal(isValidTripState({...state(),days:3}),false)
   assert.equal(isValidTripState({...state(),phases:[{days:2,kind:'history',cities:['Cairo','Cairo']}]}),false)
   assert.equal(isValidTripState({...state(),phases:[{days:2,kind:'beach',cities:[]}]}),false)
+})
+
+test('restores a saved day edit only when the edited day satisfies it', () => {
+  const trip = {...state(), day_overrides: {'2': {max_stops: 1, family_friendly: true}}}
+  const plan = {days: [day(1), {...day(2), stops: [{place: {id:'museum', name:'Museum', family_friendly:true}}]}]}
+  assert.equal(isCompatibleTripPlan(trip, plan), true)
+  plan.days[1].stops[0].place.family_friendly = false
+  assert.equal(isCompatibleTripPlan(trip, plan), false)
+  assert.equal(isValidTripState({...trip, day_overrides: {'3': {max_stops:1, family_friendly:true}}}), false)
 })
 
 // Regression: preserving just the total number of days is not sufficient.
