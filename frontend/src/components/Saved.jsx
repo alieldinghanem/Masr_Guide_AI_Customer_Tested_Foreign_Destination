@@ -1,0 +1,13 @@
+import React from 'react'
+import { ArrowRight, Bookmark, BookmarkX, MapPin } from 'lucide-react'
+import { useI18n } from '../i18n'
+export default function Saved({places,savedIds,toggleSaved,openPlace,go,cloud=false,loading=false}){
+ const {lang,placeName,placeSummary,cityName}=useI18n(),ar=lang==='ar'
+ const saved=places.filter(p=>savedIds.includes(p.id))
+ const hasPlan=(()=>{try{return !!localStorage.getItem('masr-guide-plan-v1')}catch{return false}})()
+ return <main className="v3-page"><section className="v3-page-head v3-head-saved"><div className="container"><span className="v3-overline">{ar?'رحلتك على مزاجك':'YOUR OWN EGYPT'}</span><h1>{ar?'أماكنك':'Places worth'} <em>{ar?'المفضلة.':'keeping.'}</em></h1><p>{ar?'احتفظ بالأماكن اللي عجبتك وارجعلها في أي وقت من نفس المتصفح.':'Keep the places that inspire you together in this browser.'}</p></div></section><div className="container v3-content">
+  <div className="v3-saved-status"><Bookmark size={19}/><strong>{ar?`${saved.length} أماكن محفوظة`:`${saved.length} saved places`}</strong><span>{loading?(ar?'جار تحميل المفضلة...':'Loading favorites...'):cloud?(ar?'مزامنة مع حسابك.':'Synced with your travel account.'):(ar?'محفوظة محليًا على هذا الجهاز فقط.':'Saved locally on this device. Sign in to sync future favorites.')}</span></div>
+  {saved.length?<div className="v3-saved-grid">{saved.map(p=><article className="v3-saved-card" key={p.id}><span className="v3-kicker"><MapPin size={12}/>{cityName(p.city)}</span><h2>{placeName(p)}</h2><p>{placeSummary(p)}</p><div className="v3-card-actions"><button onClick={()=>openPlace(p)}>{ar?'تفاصيل المكان':'Place details'} <ArrowRight size={16}/></button><button onClick={()=>toggleSaved(p.id)}><BookmarkX size={16}/>{ar?'إزالة':'Remove'}</button></div></article>)}</div>:<div className="v3-empty-faves"><Bookmark size={39}/><h2>{ar?'لسه مفيش أماكن محفوظة':'Your Egypt wishlist starts here'}</h2><p>{ar?'افتح اكتشف مصر، واختار المعالم اللي نفسك تزورها، واضغط حفظ.':'Explore attractions and save the ones you love.'}</p><button className="btn primary dark" onClick={()=>go('explore')}>{ar?'استكشف المعالم':'Discover attractions'} <ArrowRight size={17}/></button></div>}
+  <div className="v3-soft-cta"><div><span className="v3-kicker">{ar?'برامج رحلاتك':'YOUR ITINERARY'}</span><h2>{hasPlan?(ar?'عندك رحلة محفوظة':'You have a saved trip'):(ar?'مستعد تخطط؟':'Ready to plan?')}</h2><p>{ar?'تقدر تعرض رحلتك وتحفظها من صفحة التخطيط.':'Open the planner to view or save your itinerary.'}</p></div><button className="btn primary dark" onClick={()=>go('planner')}>{ar?'افتح المخطط':'Open planner'} <ArrowRight size={17}/></button></div>
+  </div></main>
+}

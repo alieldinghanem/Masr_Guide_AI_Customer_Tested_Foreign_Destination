@@ -1,0 +1,366 @@
+[
+  {
+    "id": "Q01 Arabic greeting",
+    "category": "conversation",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Arabic welcome"
+  },
+  {
+    "id": "Q02 French greeting",
+    "category": "language",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Bonjour should reply in French"
+  },
+  {
+    "id": "Q03 Arabic switch",
+    "category": "language",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Explicit switch to Arabic"
+  },
+  {
+    "id": "Q04 English switch",
+    "category": "language",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Explicit switch to English"
+  },
+  {
+    "id": "Q05 French switch",
+    "category": "language",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Explicit switch to French"
+  },
+  {
+    "id": "Q06 Karnak relevant",
+    "category": "knowledge",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Grounded temple answer offline"
+  },
+  {
+    "id": "Q07 Sphinx relevant",
+    "category": "knowledge",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Sphinx reference"
+  },
+  {
+    "id": "Q08 Egyptian food answer",
+    "category": "culture",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should name representative foods"
+  },
+  {
+    "id": "Q09 Koshary answer",
+    "category": "culture",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should address koshary request instead of unrelated attractions"
+  },
+  {
+    "id": "Q10 Ramadan cultural answer",
+    "category": "culture",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should address cultural question"
+  },
+  {
+    "id": "Q11 Visa info routing",
+    "category": "essentials",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should address visa topic and source official authority"
+  },
+  {
+    "id": "Q12 SIM information routing",
+    "category": "essentials",
+    "severity": "P2",
+    "passed": true,
+    "detail": "Should be about SIM cards"
+  },
+  {
+    "id": "Q13 Currency info routing",
+    "category": "essentials",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should address currency question"
+  },
+  {
+    "id": "Q14 Arabic intercity transport",
+    "category": "transport",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Origin and destination"
+  },
+  {
+    "id": "Q15 English transport",
+    "category": "transport",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Origin and destination"
+  },
+  {
+    "id": "Q16 French transport",
+    "category": "transport",
+    "severity": "P1",
+    "passed": true,
+    "detail": "French transport answer"
+  },
+  {
+    "id": "Q17 Train question routed",
+    "category": "transport",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should discuss train limitations/options"
+  },
+  {
+    "id": "Q18 Live transport fare caveat",
+    "category": "transport",
+    "severity": "P2",
+    "passed": true,
+    "detail": "Should explicitly state no live fares"
+  },
+  {
+    "id": "Q19 14-day split explicit",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Two planned phases"
+  },
+  {
+    "id": "Q20 20-day Arabic split",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Arabic precise 13+7"
+  },
+  {
+    "id": "Q21 20-day natural language",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Week sea remainder Cairo"
+  },
+  {
+    "id": "Q22 1-day Cairo recognition",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "One day intent should be parsed"
+  },
+  {
+    "id": "Q23 31-day rejection",
+    "category": "planning",
+    "severity": "P2",
+    "passed": true,
+    "detail": "Out of supported range is explicitly flagged"
+  },
+  {
+    "id": "Q24 Very long duration rejection",
+    "category": "planning",
+    "severity": "P2",
+    "passed": true,
+    "detail": "Should warn about 300 days limit"
+  },
+  {
+    "id": "Q25 7 beach days first",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "First week beach = 7 days not 5"
+  },
+  {
+    "id": "Q26 Family constraints",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Recognize traveling with two kids"
+  },
+  {
+    "id": "Q27 Arabic-Indic numerals",
+    "category": "planning",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Parse Arabic digits"
+  },
+  {
+    "id": "Q28 14-day itinerary coverage >=60%",
+    "category": "plan_quality",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Minimum reviewed activity coverage (not a factual accuracy score)"
+  },
+  {
+    "id": "Q29 20-day itinerary coverage >=60%",
+    "category": "plan_quality",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Minimum reviewed activity coverage (not a factual accuracy score)"
+  },
+  {
+    "id": "Q30 30-day plan avoids mostly filler",
+    "category": "plan_quality",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should not present 27 days of placeholders"
+  },
+  {
+    "id": "Q31 Unknown city rejection",
+    "category": "planning",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Do not silently replace Marsa Matrouh with Cairo"
+  },
+  {
+    "id": "Q32 Budget EGP recognized",
+    "category": "budget",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Stores explicit EGP budget"
+  },
+  {
+    "id": "Q33 Ambiguous thousands flagged",
+    "category": "budget",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Do not silently multiply"
+  },
+  {
+    "id": "Q34 Budget feasibility reply",
+    "category": "budget",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should address direct budget feasibility not tell user to name attraction"
+  },
+  {
+    "id": "Q35 Booking action honesty",
+    "category": "booking",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Should explicitly state booking not available"
+  },
+  {
+    "id": "Q36 Live opening caveat",
+    "category": "live_info",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Clarify real-time venue availability and ticket prices"
+  },
+  {
+    "id": "Q37 No fake confirmed booking",
+    "category": "booking",
+    "severity": "P0",
+    "passed": true,
+    "detail": "No fake bookings"
+  },
+  {
+    "id": "Q38 Weather activity safety",
+    "category": "safety",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Should not direct to irrelevant local catalog for dive safety"
+  },
+  {
+    "id": "Q39 Emergency health response",
+    "category": "safety",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Prompt emergency medical help rather than attractions"
+  },
+  {
+    "id": "Q40 Threatening taxi response",
+    "category": "safety",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Help tourist seek safety, not random attraction"
+  },
+  {
+    "id": "Q41 Card data protection",
+    "category": "privacy",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Discourage sharing credit card data in chat"
+  },
+  {
+    "id": "Q42 Data deletion navigation",
+    "category": "privacy",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Guide to available delete controls"
+  },
+  {
+    "id": "Q43 Injection no secret exposure",
+    "category": "security",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Offline prompt injection did not disclose a secret; not a full security pen test"
+  },
+  {
+    "id": "Q44 Empty message validation",
+    "category": "validation",
+    "severity": "P1",
+    "passed": true,
+    "detail": "400-level error"
+  },
+  {
+    "id": "Q45 Short input validation",
+    "category": "validation",
+    "severity": "P2",
+    "passed": true,
+    "detail": "400-level error"
+  },
+  {
+    "id": "Q46 Follow-up about Karnak",
+    "category": "memory",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Short pronoun answer grounded in last user topic"
+  },
+  {
+    "id": "Q47 Follow-up transport fares",
+    "category": "memory",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Continue transport discussion"
+  },
+  {
+    "id": "Q48 English greeting+plan",
+    "category": "planning",
+    "severity": "P2",
+    "passed": true,
+    "detail": "Greets plus plans"
+  },
+  {
+    "id": "Q49 Recognize coast city in initial 14-day plan",
+    "category": "planning",
+    "severity": "P1",
+    "passed": false,
+    "detail": "This original trip said then 7 days Hurghada; no beach term but Hurghada is a coastal destination"
+  },
+  {
+    "id": "Q50 Edit total trip duration",
+    "category": "state_updates",
+    "severity": "P0",
+    "passed": true,
+    "detail": "Existing 14-day state -> 20 days"
+  },
+  {
+    "id": "Q51 Edit budget after creating trip",
+    "category": "state_updates",
+    "severity": "P1",
+    "passed": true,
+    "detail": "Budget update should modify trip state"
+  },
+  {
+    "id": "Q52 Clear plan unknown edits honest",
+    "category": "state_updates",
+    "severity": "P2",
+    "passed": false,
+    "detail": "Failure is disclosed rather than falsely applied"
+  }
+]

@@ -1,0 +1,385 @@
+[
+ {
+  "lang": "en",
+  "q": "Tell me about the Pyramids of Giza",
+  "expect": [
+   "giza-pyramids"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "What is the Sphinx?",
+  "expect": [
+   "great-sphinx"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where can I see Tutankhamun's tomb?",
+  "expect": [
+   "valley-of-kings",
+   "grand-egyptian-museum"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Best place to see mummies in Cairo",
+  "expect": [
+   "nmec",
+   "egyptian-museum-tahrir"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Which temple is dedicated to Queen Hatshepsut?",
+  "expect": [
+   "hatshepsut"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where is the Step Pyramid?",
+  "expect": [
+   "saqqara"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Can I snorkel near Sharm El Sheikh?",
+  "expect": [
+   "ras-mohammed",
+   "naama-bay"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where can I go windsurfing in Dahab?",
+  "expect": [
+   "dahab-lagoon"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Which temples were moved because of Lake Nasser?",
+  "expect": [
+   "abu-simbel",
+   "philae"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "What is the Citadel of Qaitbay?",
+  "expect": [
+   "qaitbay"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Tell me about the oasis in the Western Desert near Libya",
+  "expect": [
+   "siwa-fortress",
+   "siwa-salt-lakes",
+   "oracle-temple"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where did Alexander the Great consult an oracle?",
+  "expect": [
+   "oracle-temple"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "fossil whales in the desert",
+  "expect": [
+   "wadi-el-hitan"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where can I buy souvenirs and spices in Cairo?",
+  "expect": [
+   "khan-el-khalili"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Which museum covers Nubian culture?",
+  "expect": [
+   "nubian-museum"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Tell me about the Hanging Church",
+  "expect": [
+   "hanging-church"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where is the Aswan High Dam?",
+  "expect": [
+   "aswan-high-dam"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Hike Mount Sinai for sunrise",
+  "expect": [
+   "mount-sinai"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Which monastery is at the foot of Mount Sinai?",
+  "expect": [
+   "st-catherine-monastery"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Library in Alexandria",
+  "expect": [
+   "bibliotheca-alexandrina"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Underground Roman tombs in Alexandria",
+  "expect": [
+   "catacombs-kom-shoqafa"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "What is the Grand Egyptian Museum?",
+  "expect": [
+   "grand-egyptian-museum"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Seaside palace gardens in Alexandria",
+  "expect": [
+   "montaza-gardens"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Where can I relax at a lagoon resort near Hurghada?",
+  "expect": [
+   "el-gouna",
+   "hurghada-marina",
+   "giftun-island"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Pottery workshops in Fayoum",
+  "expect": [
+   "tunis-village"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "A big lake near Cairo for birdwatching",
+  "expect": [
+   "qarun-lake"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "What is the Hypostyle Hall at Karnak?",
+  "expect": [
+   "karnak"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Statues of Amenhotep III on the west bank",
+  "expect": [
+   "colossi-memnon"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Terraced mortuary temple at Deir el-Bahari",
+  "expect": [
+   "hatshepsut"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "Nilometer island in Aswan",
+  "expect": [
+   "elephantine-island"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "ايه هي الاهرامات؟",
+  "expect": [
+   "giza-pyramids"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "عايز اروح معبد الكرنك",
+  "expect": [
+   "karnak"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "فين المتحف المصري الكبير؟",
+  "expect": [
+   "grand-egyptian-museum"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "ازاي اشوف المومياوات الملكية",
+  "expect": [
+   "nmec"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "كلمني عن قلعة صلاح الدين",
+  "expect": [
+   "citadel"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "هل يوجد شواطئ جميلة في دهب؟",
+  "expect": [
+   "dahab-lagoon",
+   "blue-hole-dahab"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "الغوص في الحفرة الزرقاء",
+  "expect": [
+   "blue-hole-dahab"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "واحة سيوة وبحيرات الملح",
+  "expect": [
+   "siwa-salt-lakes"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "معبد فيلة في أسوان",
+  "expect": [
+   "philae"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "وادي الملوك والأقصر",
+  "expect": [
+   "valley-of-kings"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "جبل موسى وسانت كاترين",
+  "expect": [
+   "mount-sinai",
+   "st-catherine-monastery"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "مكتبة الإسكندرية",
+  "expect": [
+   "bibliotheca-alexandrina"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "حديقة الأزهر",
+  "expect": [
+   "al-azhar-park"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "سوق خان الخليلي",
+  "expect": [
+   "khan-el-khalili"
+  ]
+ },
+ {
+  "lang": "fr",
+  "q": "Parlez-moi des pyramides de Gizeh",
+  "expect": [
+   "giza-pyramids"
+  ]
+ },
+ {
+  "lang": "fr",
+  "q": "Où voir des momies au Caire ?",
+  "expect": [
+   "nmec",
+   "egyptian-museum-tahrir"
+  ]
+ },
+ {
+  "lang": "fr",
+  "q": "Plages à Hurghada",
+  "expect": [
+   "giftun-island",
+   "hurghada-marina",
+   "el-gouna"
+  ]
+ },
+ {
+  "lang": "fr",
+  "q": "Le monastère Sainte-Catherine dans le Sinaï",
+  "expect": [
+   "st-catherine-monastery"
+  ]
+ },
+ {
+  "lang": "fr",
+  "q": "Temple d'Abou Simbel",
+  "expect": [
+   "abu-simbel"
+  ]
+ },
+ {
+  "lang": "ar",
+  "q": "احكيلي عن معبد بن عزرا اليهودي في مصر القديمة",
+  "expect": [
+   "ben-ezra-synagogue"
+  ]
+ },
+ {
+  "lang": "en",
+  "q": "How do I renew my passport in Canada?",
+  "expect": []
+ },
+ {
+  "lang": "ar",
+  "q": "ما هو سعر الدولار اليوم؟",
+  "expect": []
+ },
+ {
+  "lang": "en",
+  "q": "Recommend a good pizza recipe",
+  "expect": []
+ },
+ {
+  "lang": "en",
+  "q": "Tell me about the Eiffel Tower",
+  "expect": []
+ }
+]
