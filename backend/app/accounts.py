@@ -61,6 +61,13 @@ def setup():
           CREATE TABLE IF NOT EXISTS account_users (
             id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
             salt TEXT NOT NULL, created_at TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS account_identities (
+            provider TEXT NOT NULL, subject TEXT NOT NULL,
+            user_id TEXT NOT NULL REFERENCES account_users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (provider, subject),
+            UNIQUE (provider, user_id));
+          CREATE INDEX IF NOT EXISTS idx_account_identity_owner ON account_identities(user_id);
           CREATE TABLE IF NOT EXISTS account_tokens (
             token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES account_users(id) ON DELETE CASCADE,
             expires_at TEXT NOT NULL);
@@ -95,6 +102,10 @@ def _hash_password(password, salt):
 class Credentials(BaseModel):
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=12, max_length=128)
+
+
+class GoogleCredential(BaseModel):
+    credential: str = Field(min_length=50, max_length=8192)
 
 
 class TripSave(BaseModel):
@@ -222,7 +233,8 @@ def _conversation_payload(body: ConversationSave):
 
 
 class AccountDeletion(BaseModel):
-    password: str = Field(min_length=12, max_length=128)
+    password: str | None = Field(default=None, min_length=12, max_length=128)
+    google_credential: str | None = Field(default=None, min_length=50, max_length=8192)
     confirmation: str = Field(pattern=r'^DELETE MY ACCOUNT$')
 
 
@@ -271,6 +283,32 @@ def current_user(authorization: str | None = Header(default=None)):
     return {'id': row['id'], 'email': row['email'], 'token_hash': digest}
 
 
+def _verify_google_credential(credential: str) -> tuple[str, str]:
+    """Validate signed GIS token (signature, expiration, audience, issuer, verified email)."""
+    client_id = os.getenv('GOOGLE_CLIENT_ID', '').strip()
+    if not client_id:
+        raise HTTPException(503, detail='Google sign-in is not configured')
+    try:
+        from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token
+        claims = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+    except Exception:
+        # Never expose the Google credential or verification exception to clients/logs.
+        raise HTTPException(401, detail='Google sign-in token is invalid or expired') from None
+    if (claims.get('iss') not in ('accounts.google.com', 'https://accounts.google.com')
+            or claims.get('email_verified') is not True
+            or not isinstance(claims.get('sub'), str)
+            or not 1 <= len(claims['sub']) <= 255
+            or not isinstance(claims.get('email'), str)):
+        raise HTTPException(401, detail='Google account identity is not verified')
+    return _validate_email(claims['email']), claims['sub']
+
+
+def _google_linked(c, uid: str) -> bool:
+    return c.execute('SELECT 1 FROM account_identities WHERE provider=? AND user_id=?',
+                     ('google', uid)).fetchone() is not None
+
+
 def registration_enabled() -> bool:
     # Render previews can be deployed without the Blueprint's APP_ENV setting.
     # Require a durability declaration before accepting new accounts on Render
@@ -279,6 +317,65 @@ def registration_enabled() -> bool:
                       os.getenv('RENDER', '').lower() == 'true')
     durable = os.getenv('MASR_DURABLE_STORAGE_CONFIRMED', '').lower() in ('1', 'true', 'yes')
     return not public_preview or durable
+
+
+@router.get('/auth/google/config')
+def google_auth_config():
+    # OAuth client IDs are public; this endpoint never returns API keys or secrets.
+    return {'client_id': os.getenv('GOOGLE_CLIENT_ID', '').strip(),
+            'registration_enabled': registration_enabled()}
+
+
+@router.post('/auth/google')
+def google_sign_in(body: GoogleCredential):
+    email, subject = _verify_google_credential(body.credential)
+    setup()
+    try:
+        with _open() as c:
+            identity = c.execute(
+                'SELECT u.id,u.email FROM account_identities i '
+                'JOIN account_users u ON u.id=i.user_id WHERE i.provider=? AND i.subject=?',
+                ('google', subject)).fetchone()
+            if identity:
+                return {'user': {'id': identity['id'], 'email': identity['email'], 'google_linked': True},
+                        **_issue(c, identity['id'])}
+            if not registration_enabled():
+                raise HTTPException(503, detail='New accounts require durable storage on this preview')
+            if c.execute('SELECT id FROM account_users WHERE email=?', (email,)).fetchone():
+                raise HTTPException(409, detail='This email already has an account. Sign in with your password and link Google in My Account.')
+            uid = uuid4().hex
+            # Unusable random password verifier for Google-only accounts.
+            c.execute('INSERT INTO account_users VALUES (?,?,?,?,?)',
+                      (uid, email, secrets.token_hex(32), secrets.token_hex(16), _now().isoformat()))
+            c.execute('INSERT INTO account_identities VALUES (?,?,?,?)',
+                      ('google', subject, uid, _now().isoformat()))
+            return {'user': {'id': uid, 'email': email, 'google_linked': True}, **_issue(c, uid)}
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, detail='The Google identity or email is already linked to an account')
+
+
+@router.post('/auth/google/link')
+def link_google(body: GoogleCredential, user=Depends(current_user)):
+    email, subject = _verify_google_credential(body.credential)
+    if email != user['email']:
+        raise HTTPException(409, detail='Sign in to Google with the same verified email as your account')
+    setup()
+    try:
+        with _open() as c:
+            existing = c.execute('SELECT user_id FROM account_identities WHERE provider=? AND subject=?',
+                                 ('google', subject)).fetchone()
+            if existing and existing['user_id'] != user['id']:
+                raise HTTPException(409, detail='This Google identity belongs to another account')
+            linked = c.execute('SELECT subject FROM account_identities WHERE provider=? AND user_id=?',
+                               ('google', user['id'])).fetchone()
+            if linked and linked['subject'] != subject:
+                raise HTTPException(409, detail='This account is already linked to another Google identity')
+            if not linked:
+                c.execute('INSERT INTO account_identities VALUES (?,?,?,?)',
+                          ('google', subject, user['id'], _now().isoformat()))
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, detail='This Google identity is already linked')
+    return {'linked': True}
 
 
 @router.post('/auth/register', status_code=201)
@@ -311,7 +408,9 @@ def login(body: Credentials):
 
 @router.get('/auth/me')
 def me(user=Depends(current_user)):
-    return {'user': {'id': user['id'], 'email': user['email']}}
+    with _open() as c:
+        google_linked = _google_linked(c, user['id'])
+    return {'user': {'id': user['id'], 'email': user['email'], 'google_linked': google_linked}}
 
 
 @router.post('/auth/logout')
@@ -331,8 +430,15 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
     with _open() as c:
         row = c.execute('SELECT password_hash,salt FROM account_users WHERE id=?',
                         (user['id'],)).fetchone()
-        if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
-            raise HTTPException(403, detail='Incorrect current password')
+        password_ok = bool(body.password and row and
+                           hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])))
+        google_ok = False
+        if body.google_credential:
+            _, subject = _verify_google_credential(body.google_credential)
+            google_ok = c.execute('SELECT 1 FROM account_identities WHERE provider=? AND user_id=? AND subject=?',
+                                  ('google', user['id'], subject)).fetchone() is not None
+        if not (password_ok or google_ok):
+            raise HTTPException(403, detail='Confirm using your password or linked Google account')
         from .ratings import delete_account_reviews
         delete_account_reviews(user['id'])
         c.execute('DELETE FROM account_users WHERE id=?', (user['id'],))

@@ -5,3 +5,6 @@ python-dotenv>=1.0,<2
 psycopg[binary]>=3.2,<4
 # OpenAI Responses API (server-side only). Required for AI_PROVIDER=openai.
 openai>=1.80,<3
+
+# Verify Google Identity Services ID tokens on the server (no OAuth client secret).
+google-auth>=2.35,<3
