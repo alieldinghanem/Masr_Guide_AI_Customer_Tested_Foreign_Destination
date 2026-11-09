@@ -77,11 +77,10 @@ _EDIT = ('move ', 'transfer ', 'shift ', 'انقل', 'نقل ', 'حوّل', 'ح�
 
 def mentioned_cities(text: str, available: set[str]) -> list[str]:
     t = text.lower()
-    hits = []
-    for alias, canonical in sorted(_CITY_ALIASES.items(), key=lambda a: -len(a[0])):
-        if canonical in available and alias in t and canonical not in hits:
-            hits.append(canonical)
-    return hits
+    matches = [(t.index(alias), -len(alias), canonical)
+               for alias, canonical in _CITY_ALIASES.items()
+               if canonical in available and alias in t]
+    return list(dict.fromkeys(city for _, _, city in sorted(matches)))
 
 
 
@@ -454,7 +453,9 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
         phases = [{'kind': 'beach', 'days': days, 'cities': beach_cities or ['Hurghada'], 'interests': ['beaches', 'nature']}]
     else:
         phases = [{'kind': 'history' if history else 'mixed', 'days': days,
-                   'cities': historic_cities or cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
+                   # Alexandria can be a cultural stop even when the visitor
+                   # did not ask for beach time. Keep every named destination.
+                   'cities': cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
     return {'days': days, 'phases': phases, 'pace': pace, 'family': family, 'budget_egp': budget_egp,
             'accessibility_needs': needs_accessibility(message)}
 
@@ -1632,6 +1633,19 @@ def consult_travel(request):
                                if city in available]
             suggested_cities = True
         updated = _standard_state(days, history, beach, inferred_cities, message, budget_egp, explicit_city_days)
+        if suggested_cities and 'Hurghada' in inferred_cities:
+            # The default country sampler has six destinations, while a
+            # single phase supports at most five. Keep the coastal stop in a
+            # short separate phase rather than dropping a requested-looking
+            # city or making half of an open-ended trip a beach stay.
+            coast_days = max(3, days // 5)
+            updated['phases'] = [
+                {'kind': 'mixed', 'days': days - coast_days,
+                 'cities': [city for city in inferred_cities if city != 'Hurghada'],
+                 'interests': ['culture', 'nature']},
+                {'kind': 'beach', 'days': coast_days, 'cities': ['Hurghada'],
+                 'interests': ['beaches', 'nature']},
+            ]
         updated['budget_usd'] = _budget_usd(message)
 
     try:

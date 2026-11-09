@@ -31,6 +31,38 @@ def test_single_family_activity_edit_changes_only_day_three(monkeypatch):
     assert edited['itinerary']['days'][2]['stops'][0]['place']['name_ar'] in followup['answer']
 
 
+def test_named_alexandria_is_kept_on_a_family_culture_trip(monkeypatch):
+    monkeypatch.setenv('AI_PROVIDER', 'offline')
+    original = consult_travel(ConsultRequest(
+        message='خطط رحلة عائلية ٥ أيام في القاهرة والإسكندرية مع أطفال، بدون استعجال',
+        language='Arabic'))
+    days = original['itinerary']['days']
+    assert original['itinerary']['route'] == ['Cairo', 'Alexandria']
+    assert [day['city'] for day in days] == [
+        'Cairo', 'Cairo', 'Cairo', 'Alexandria', 'Alexandria']
+    assert not days[3]['stops']  # Family transfer day stays free.
+    assert days[4]['stops']  # Alexandria gets an actual visit day.
+    assert all(len(day['stops']) <= 2 for day in days)
+    assert all(stop['place']['category'] in {'Park', 'Museum'}
+               for day in days[:2] for stop in day['stops'])
+
+    edited = consult_travel(ConsultRequest(
+        message='خلي اليوم الثالث نشاط واحد مناسب للأطفال', language='Arabic',
+        trip_state=TripState.model_validate(original['trip_state'])))
+    assert edited['itinerary']['days'][2]['stops'][0]['place']['category'] in {'Park', 'Museum'}
+    assert [day for i, day in enumerate(edited['itinerary']['days']) if i != 2] == [
+        day for i, day in enumerate(days) if i != 2]
+
+
+def test_english_culture_route_keeps_named_coastal_city(monkeypatch):
+    monkeypatch.setenv('AI_PROVIDER', 'offline')
+    result = consult_travel(ConsultRequest(
+        message='Plan a relaxed 5-day family trip to Cairo and Alexandria with children',
+        language='English'))
+    assert result['itinerary']['route'] == ['Cairo', 'Alexandria']
+    assert result['itinerary']['day_allocation'] == {'Cairo': 3, 'Alexandria': 2}
+
+
 def test_out_of_range_day_edit_does_not_change_trip(monkeypatch):
     monkeypatch.setenv('AI_PROVIDER', 'offline')
     first = consult_travel(ConsultRequest(message='Plan 3 days in Cairo', language='English'))

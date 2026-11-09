@@ -37,7 +37,11 @@ def distance_km(a, b):
 def score(place, interests, family=False):
     matched = len(set(place["tags"]) & set(interests))
     base = matched * 7 + (2 if place["category"] == "Heritage" else 0)
-    if family and place["family_friendly"]: base += 5
+    if family and place["family_friendly"]:
+        # Open spaces and museums make better default family stops than a
+        # sequence of monuments with the same broad "family" catalogue tag.
+        park_bonus = 18 if "museums" not in interests else 0
+        base += 5 + {"Park": park_bonus, "Museum": 8, "Culture": 5}.get(place["category"], 0)
     if family and not place["family_friendly"]: base -= 14
     return base
 
@@ -179,7 +183,8 @@ def build_plan(request):
     # contiguous so the itinerary does not bounce back and forth between cities.
     # Extra days are assigned to destinations with the greatest remaining activity
     # capacity, using only local catalog estimates (not live transport data).
-    minimum = 2 if len(ordered) > 1 and request.days >= 3 * len(ordered) else 1
+    minimum = (2 if len(ordered) > 1 and request.days >= 2 * len(ordered)
+               and (request.family or request.days >= 3 * len(ordered)) else 1)
     allocations = {city: minimum for city in ordered}
     places_by_city = {
         city: [p for p in places if p["city"] == city
