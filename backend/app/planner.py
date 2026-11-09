@@ -214,7 +214,12 @@ def build_plan(request):
                 warnings.append(msg["long_transfer"].format(
                     day=day, d=_human(travel["minutes"], lang), a=cname(prev_city), b=cname(city), mode=mode_txt))
         prev_city = city
-        day_budget = max(0, max_minutes - (travel["minutes"] if travel else 0))
+        # Family days need an explicit pause and transfer days should not
+        # promise sightseeing after several hours in transit.
+        rest_allowance = 45 if request.family else 0
+        day_budget = max(0, max_minutes - (travel["minutes"] if travel else 0) - rest_allowance)
+        if request.family and travel and travel['minutes'] >= 180:
+            day_budget = 0
         pool = [p for p in places if p["city"] == city and p["id"] not in used
                 and (not request.family or p["family_friendly"])]
         had_candidates = bool(pool)
@@ -223,6 +228,8 @@ def build_plan(request):
         # At most 3 stops in a day; if a city has as many attractions as days,
         # use one anchor per day to avoid exhausting the catalog prematurely.
         daily_stop_limit = min(3, max(1, (len(pool) + city_days_left - 1) // city_days_left))
+        if request.family:
+            daily_stop_limit = min(daily_stop_limit, 2)
         # If all spots in a city were exhausted, keep the day empty, not fake repeated plans.
         stops = []
         elapsed = 0
@@ -255,6 +262,7 @@ def build_plan(request):
         itinerary.append({"day": day, "city": city, "stops": stops,
                           "activity_ideas": day_ideas(city, day, lang) if not stops else [],
                           "estimated_activity_minutes": elapsed,
+                          "rest_minutes": rest_allowance if stops else 0,
                           "estimated_travel_minutes": travel["minutes"] if travel else 0,
                           "travel": travel, "note": note})
 

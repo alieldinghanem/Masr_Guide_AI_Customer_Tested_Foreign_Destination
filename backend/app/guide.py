@@ -176,6 +176,9 @@ def normalize(text):
 def retrieve(query, top_k=4):
     idx = _get_index()
     base = normalize(query)
+    swimming_request = bool(re.search(
+        r'سباح|اسبح|اعوم|عوم|نزول الميه|نزول المياه|\b(?:swim|swimming|baignade)\b',
+        _fold(query)))
     weights: dict[str, float] = {}
     for tok in base:
         weights[tok] = max(weights.get(tok, 0.0), 1.0)
@@ -197,6 +200,8 @@ def retrieve(query, top_k=4):
             s += w * idf * (tf * (_K1 + 1)) / (tf + _K1 * (1 - _B + _B * dl / idx["avg"]))
         # Exact landmark name in the question is the strongest signal.
         named = any(name.strip() and name in full_query for name in idx["names"][i])
+        if swimming_request and p['category'] != 'Beach' and not named:
+            continue
         if named:
             s += 8
         # Coverage guard: a place must explain a reasonable share of the question's words,
@@ -354,8 +359,6 @@ def _curated_recommendations(query: str) -> list[dict]:
     city = next((name for name, arabic in CITY_AR.items()
                  if _fold(arabic) in folded or
                  re.search(r'(?<!\w)' + re.escape(name.lower()) + r'(?!\w)', folded)), None)
-    if not city:
-        return []
     if re.search(r'متاحف|متحف|\bmuseums?\b|\bmus[ée]es?\b', folded):
         suitable = lambda p: p['category'] == 'Museum'
     elif re.search(r'بحر|شاطي|شواطي|سباحه|نزول الميه|نزول المياه|'
@@ -369,7 +372,12 @@ def _curated_recommendations(query: str) -> list[dict]:
     else:
         suitable = lambda p: 'culture' in p['tags']
     editorial_order = {p['id']: index for index, p in enumerate(PLACES)}
-    candidates = [p for p in places if p['city'] == city and suitable(p) and p.get('source_url')]
+    family = bool(re.search(r'اطفال|أطفال|طفل|عائل|family|kids?|children|enfants?', folded))
+    candidates = [p for p in places if (city is None or p['city'] == city)
+                  and suitable(p) and p.get('source_url')
+                  and (not family or p['family_friendly'])]
+    if city is None and not re.search(r'مصر|egypt|egypte|\b(?:where|start|best)\b', folded):
+        return []
     return sorted(candidates, key=lambda p: editorial_order.get(p['id'], len(editorial_order)))[:3]
 
 
@@ -381,20 +389,20 @@ def _recommendation_reply(places: list[dict], language: str) -> dict:
     is_coastal = first['id'].startswith('coast:')
     if language == 'Arabic':
         detail = first.get('summary_ar') or first['description']
-        names = '، ثم '.join(p['name_ar'] for p in rest)
-        answer = (f'أنصحك تبدأ بـ{first["name_ar"]}: {detail}'
+        names = '، ثم '.join(f'{p["name_ar"]} [{i}]' for i, p in enumerate(rest, 2))
+        answer = (f'أنصحك تبدأ بـ{first["name_ar"]} [1]: {detail}'
                   + (f' وبعدها ممكن تزور {names}.' if names else '')
                   + (' دي أمثلة من دليل الشواطئ؛ تأكد من السماح بالدخول وحالة البحر قبل السباحة.'
                      if is_coastal else ' دي ترشيحات من دليلنا؛ تأكد من المواعيد والتذاكر قبل الزيارة.'))
     elif language == 'French':
-        names = ', puis '.join(p['name'] for p in rest)
-        answer = (f'Je vous conseille de commencer par {first["name"]} : {first["description"]}'
+        names = ', puis '.join(f'{p["name"]} [{i}]' for i, p in enumerate(rest, 2))
+        answer = (f'Je vous conseille de commencer par {first["name"]} [1] : {first["description"]}'
                   + (f' Ensuite, découvrez {names}.' if names else '')
                   + (' Vérifiez l’accès à la plage et les conditions de la mer avant de nager.'
                      if is_coastal else ' Vérifiez les horaires et les billets avant la visite.'))
     else:
-        names = ', then '.join(p['name'] for p in rest)
-        answer = (f'I suggest starting with {first["name"]}: {first["description"]}'
+        names = ', then '.join(f'{p["name"]} [{i}]' for i, p in enumerate(rest, 2))
+        answer = (f'I suggest starting with {first["name"]} [1]: {first["description"]}'
                   + (f' You could then visit {names}.' if names else '')
                   + (' Check beach access and sea conditions before swimming.'
                      if is_coastal else ' Check opening hours and tickets before you go.'))
@@ -414,6 +422,32 @@ def _ensure_useful_recommendation(output: str, places: list[dict], language: str
     if any(_fold(p['name_ar']) in folded or _fold(p['name']) in folded for p in places):
         return None
     return _recommendation_reply(places, language)
+
+
+def _followup_attraction(message: str, history) -> list[dict]:
+    """Resolve a short ordinal follow-up against the last named recommendations."""
+    if not history:
+        return []
+    folded = _fold(message)
+    ordinal = (2 if re.search(r'الثاني|التاني|الثانية|التانية|\b(?:second|2nd|deuxième|deuxieme)\b', folded)
+               else 3 if re.search(r'الثالث|التالت|\b(?:third|3rd|troisième|troisieme)\b', folded)
+               else 1 if re.search(r'الاول|الأول|\b(?:first|1st|premier|première)\b|\b(?:it|that one|about it)\b', folded)
+               else None)
+    if ordinal is None:
+        return []
+    places = all_places()
+    if any(_fold(place['name']) in folded or _fold(place['name_ar']) in folded for place in places):
+        return []  # the visitor named a new place explicitly
+    previous = next((turn.content for turn in reversed(history) if turn.role == 'assistant'), '')
+    previous_folded = _fold(previous)
+    mentioned = []
+    for place in places:
+        positions = [previous_folded.find(name) for name in (_fold(place['name']), _fold(place['name_ar']))
+                     if len(name) >= 5 and name in previous_folded]
+        if positions:
+            mentioned.append((min(positions), place))
+    mentioned.sort(key=lambda pair: pair[0])
+    return [mentioned[ordinal - 1][1]] if len(mentioned) >= ordinal else []
 
 
 def answer_chat(request):
@@ -475,7 +509,9 @@ def answer_chat(request):
         request = request.model_copy(update={'language': language})
     # For short follow-up questions, retrieve using recent visitor context if
     # the current turn alone does not identify an attraction.
-    recommendations = coastal_recommendations(request.message, _fold) or _curated_recommendations(request.message)
+    recommendations = (_followup_attraction(request.message, request.history)
+                       or coastal_recommendations(request.message, _fold)
+                       or _curated_recommendations(request.message))
     if not recommendations and request.history and len(normalize(request.message)) <= 4:
         recent_question = next((turn.content for turn in reversed(request.history)
                                 if turn.role == 'user'), '')

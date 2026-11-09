@@ -12,6 +12,16 @@ LANG_EN = 'English'
 LANG_FR = 'French'
 
 
+def _affirmed_dive_request(text: str) -> bool:
+    """Ignore excluded activities while retaining genuine dive-safety questions."""
+    dive = r'(?:الغوص|غوص|الغطس|غطس|dive|diving|scuba|snorkeling|plongée|plongee)'
+    excluded = re.sub(
+        r'(?:مش|مو|ما|بدون|من غير|لا اريد|لا عايز|لا عاوز|not|no|without|pas de|sans)'
+        r'\s+(?:(?:عايز|عاوز|اريد|اروح|مكان|موقع|نشاط|شاطئ|ل|لل|a|any|site|spot|place|for|to|de|du|la|le|pour)\s+){0,4}' + dive,
+        '', text, flags=re.I)
+    return bool(re.search(dive, excluded))
+
+
 _CITY_NAMES = {
     'القاهرة': 'Cairo', 'القاهره': 'Cairo', 'cairo': 'Cairo',
     'الجيزة': 'Giza', 'الجيزه': 'Giza', 'giza': 'Giza',
@@ -127,7 +137,7 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
         return reply('لو فيه تهديد أو خطر عليك دلوقتي، ابتعد لمكان عام وآمن إن أمكن، واطلب المساعدة من الشرطة أو أمن المكان أو موظفي فندق قريب فورًا. شارك موقعك مع شخص تثق فيه، وما تواجهش الشخص المهدِّد.',
                      'If someone is threatening you, move to a public safe place if possible and contact local police, venue security, or hotel staff immediately. Share your location with someone you trust. Do not confront the person.',
                      'Si vous êtes menacé, rejoignez un lieu public sûr et contactez immédiatement la police ou la sécurité locale. Prévenez une personne de confiance.')
-    if re.search(r'(?:الغوص|غوص|الغطس|غطس|dive|diving|scuba|snorkeling|plongée|plongee)', t) and re.search(r'(?:النهارده|اليوم|دلوقتي|today|now|current|sûr|safe|مناسب|آمن|امن|weather|sea conditions|الجو|البحر)', t):
+    if _affirmed_dive_request(t) and re.search(r'(?:النهارده|اليوم|دلوقتي|today|now|current|sûr|safe|مناسب|آمن|امن|weather|sea conditions|الجو|البحر)', t):
         return reply('ماقدرش أؤكد إن البحر آمن للغوص النهارده من غير بيانات طقس وموج وتيارات بحرية مباشرة. اسأل مركز غوص مرخّص في المنطقة واتبع تعليمات السلامة المحلية، وماتنزلش لو الظروف أو تعليمات المركز غير مناسبة.',
                      'I cannot confirm that diving or snorkeling is safe today without live weather, sea and current conditions. Check with a licensed local dive operator and follow official safety advice; do not go if conditions are unsafe.',
                      'Je ne peux pas confirmer la sécurité de la plongée aujourd’hui sans conditions maritimes en direct. Consultez un opérateur de plongée agréé.')

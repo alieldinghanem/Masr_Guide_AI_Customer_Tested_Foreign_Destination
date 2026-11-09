@@ -443,7 +443,7 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
         first_beach = bool(re.search(r'(?:first week|week one|اول اسبوع|أول أسبوع).{0,35}(?:beach|sea|بحر|شاطئ)', message.lower()))
         # For a short, relaxed family trip, avoid adding a third city and
         # another transfer unless the visitor actually named it.
-        suggested_history = ['Cairo'] if family and pace == 'relaxed' and days <= 7 else ['Cairo', 'Luxor']
+        suggested_history = ['Cairo'] if family and days <= 10 else ['Cairo', 'Luxor']
         cultural = {'kind': 'history' if history else 'mixed', 'days': hdays,
                     'cities': historic_cities or suggested_history,
                     'interests': ['history', 'culture', 'museums'] if history else ['culture', 'food', 'history']}
@@ -792,8 +792,13 @@ def _route_choices(days: int, language: str) -> str:
 def _requested_day(message: str) -> int | None:
     """Find a request to explain an existing day, not to change trip length."""
     text = _digits(message.lower()).strip(' .!?؟')
-    if re.search(r'\b(?:add|extend|increase|move|transfer|replace)\b|زود|زيد|انقل|بدل|غيّر|غير|احذف|شيل', text):
+    if re.search(r'\b(?:add|extend|increase|move|transfer|replace|make|change|set|reduce)\b|زود|زيد|انقل|بدل|غيّر|غير|احذف|شيل|خلي|قلل|خفف', text):
         return None
+    return _day_number(text)
+
+
+def _day_number(text: str) -> int | None:
+    text = _digits(text.lower()).strip(' .!?؟')
     match = re.search(r'(?:اليوم|يوم)\s*(?:رقم\s*)?(\d{1,2}|الأول|الاول|الثاني|الثالث)|'
                       r'(?:أول|اول|ثاني|ثالث)\s+يوم|\bday\s*(\d{1,2}|one|two|three|first|second|third)\b|'
                       r'\b(first|second|third)\s+day\b', text)
@@ -811,6 +816,16 @@ def _requested_day(message: str) -> int | None:
         'الثاني': 2, 'two': 2, 'second': 2,
         'الثالث': 3, 'three': 3, 'third': 3,
     }.get(value)
+
+
+def _single_activity_day_edit(message: str) -> int | None:
+    """Recognize an explicit one-activity edit without treating it as a new trip."""
+    text = _digits(message.lower())
+    if not re.search(r'\b(?:make|change|set|keep|reduce|limit)\b|خلي|غير|غيّر|خفف|قلل', text):
+        return None
+    if not re.search(r'(?:نشاط|زيارة|مكان)\s*(?:واحد|واحدة|1)\b|\b(?:one|single|1)\s+(?:activity|stop|visit)\b', text):
+        return None
+    return _day_number(text)
 
 
 def _explain_day(state: dict, day_number: int, language: str) -> dict:
@@ -981,13 +996,17 @@ def _make_plan(state: dict, lang: str):
         if route and part['days'] and part['days'][0].get('travel'):
             first = part['days'][0]
             first_day_allowance = {'relaxed': 240, 'balanced': 360, 'packed': 450}[state['pace']]
+            if state['family']:
+                first_day_allowance -= 45
             # Travel to a phase consumes first-day capacity; drop stops rather than promising
             # physically impossible activity. Approximate, not live-routing.
-            while first['stops'] and first['estimated_activity_minutes'] + first['travel']['minutes'] > first_day_allowance:
+            while first['stops'] and (first['estimated_activity_minutes'] + first['travel']['minutes'] > first_day_allowance
+                                      or (state['family'] and first['travel']['minutes'] >= 180)):
                 first['stops'].pop()
                 first['estimated_activity_minutes'] = sum(s['suggested_visit_minutes'] for s in first['stops']) + max(0, len(first['stops']) - 1) * 30
             if not first['stops']:
                 first['note'] = ('Travel day; no reliably schedulable visit left.' if lang == 'en' else 'يوم انتقال؛ لم يتبق وقت مناسب لزيارة موثوقة.')
+                first['rest_minutes'] = 0
         for entry in part['days']:
             item = dict(entry)
             item['day'] += offset
@@ -1000,6 +1019,8 @@ def _make_plan(state: dict, lang: str):
                 if len(stops) < len(item['stops']):
                     item['stops'] = stops
                     item['estimated_activity_minutes'] = sum(s['suggested_visit_minutes'] for s in stops) + max(0, len(stops) - 1) * 30
+                    if not stops:
+                        item['rest_minutes'] = 0
                     item['note'] = ('Lighter day; removed extra stops. Treat the rest as free time.' if lang == 'en'
                                     else 'يوم أخف؛ حذفت الزيارات الزائدة وتركت وقتًا حرًا.')
             days.append(item)
@@ -1012,6 +1033,43 @@ def _make_plan(state: dict, lang: str):
                 p = stop['place']
                 if p['id'] not in {x['id'] for x in sources}:
                     sources.append({'id': p['id'], 'title': p['name'], 'title_ar': p['name_ar'], 'url': p['source_url']})
+    # Day-specific edits apply to the built itinerary, so every other day's
+    # city, stops and travel estimate remain byte-for-byte stable.
+    for raw_day, preference in state.get('day_overrides', {}).items():
+        index = int(raw_day) - 1
+        if not 0 <= index < len(days):
+            continue
+        day = days[index]
+        if preference['max_stops'] != 1:
+            continue
+        used_elsewhere = {stop['place']['id'] for i, other in enumerate(days) if i != index
+                          for stop in other['stops']}
+        candidates = [stop['place'] for stop in day['stops']
+                      if not preference['family_friendly'] or stop['place']['family_friendly']]
+        candidates += [place for place in all_places() if place['city'] == day['city']
+                       and place['id'] not in used_elsewhere
+                       and place['id'] not in {candidate['id'] for candidate in candidates}
+                       and (not preference['family_friendly'] or place['family_friendly'])]
+        allowance = {'relaxed': 240, 'balanced': 360, 'packed': 450}[state['pace']]
+        allowance -= day['travel']['minutes'] if day.get('travel') else 0
+        if preference['family_friendly'] or state['family']:
+            allowance -= 45  # a visible rest allowance, not predicted transport
+        chosen = next((place for place in candidates if place['visit_minutes'] <= allowance), None)
+        day['stops'] = ([{'place': chosen, 'suggested_visit_minutes': chosen['visit_minutes'],
+                          'matched': [], 'why': 'Family-friendly, single-activity day'}] if chosen else [])
+        day['estimated_activity_minutes'] = chosen['visit_minutes'] if chosen else 0
+        day['rest_minutes'] = 45 if chosen and (preference['family_friendly'] or state['family']) else 0
+        day['activity_ideas'] = [] if chosen else day.get('activity_ideas', [])
+        day['note'] = ('One family-friendly visit with a rest period.' if lang == 'en' else
+                       'زيارة واحدة مناسبة للأطفال مع وقت راحة.') if chosen else day.get('note')
+    sources = []
+    for day in days:
+        for stop in day['stops']:
+            place = stop['place']
+            if place['id'] not in {item['id'] for item in sources}:
+                sources.append({'id': place['id'], 'title': place['name'],
+                                'title_ar': place['name_ar'], 'url': place['source_url']})
+    total_places = sum(len(day['stops']) for day in days)
     if state.get('accessibility_needs'):
         warnings.append(('Accessibility has NOT been verified at any attraction, entrance, transfer, or hotel. Confirm step-free routes and assistance with each operator before booking.' if lang == 'en' else
                          'إمكانية الوصول بالكراسي المتحركة غير متحقق منها للمعالم والمداخل والانتقالات والفنادق. يجب تأكيد الممرات والمساعدة مع كل جهة قبل الحجز.'))
@@ -1115,6 +1173,32 @@ def consult_travel(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    if state and (edited_day := _single_activity_day_edit(message)) is not None:
+        if not 1 <= edited_day <= state['days']:
+            return {'answer': (f'الرحلة {state["days"]} أيام؛ اليوم {edited_day} خارجها. لم أغيّر الخطة.'
+                               if request.language == 'Arabic' else
+                               f'The trip has {state["days"]} days. Day {edited_day} is outside it; no change was made.'),
+                    'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+        updated = deepcopy(state)
+        family_day = bool(re.search(r'اطفال|أطفال|طفل|عائلي|kids?|children|family|child', lowered))
+        updated.setdefault('day_overrides', {})[edited_day] = {
+            'max_stops': 1, 'family_friendly': family_day}
+        checked = TripState.model_validate(updated)
+        itinerary = _make_plan(checked.model_dump(), 'ar' if request.language == 'Arabic' else 'en')
+        edited = itinerary['days'][edited_day - 1]
+        if not edited['stops']:
+            return {'answer': ('مش لاقي نشاطًا مناسبًا يمكن إضافته لليوم ده مع وقت الانتقال والراحة؛ الخطة كما هي.'
+                               if request.language == 'Arabic' else
+                               'No suitable visit fits this day with its transfer and rest time; the trip is unchanged.'),
+                    'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+        place = edited['stops'][0]['place']
+        answer = (f'عدّلت اليوم {edited_day} إلى نشاط واحد مناسب للأطفال: {place["name_ar"]}، مع وقت راحة. باقي الأيام والمدن كما هي.'
+                  if request.language == 'Arabic' and family_day else
+                  f'عدّلت اليوم {edited_day} إلى نشاط واحد: {place["name_ar"]}. باقي الأيام والمدن كما هي.'
+                  if request.language == 'Arabic' else
+                  f'I changed Day {edited_day} to one {"family-friendly " if family_day else ""}activity: {place["name"]}. Other days and cities are unchanged.')
+        return {'answer': answer, 'mode': 'local-planner', 'sources': itinerary['sources'],
+                'trip_state': checked.model_dump(), 'itinerary': itinerary}
     if state and (requested_day := _requested_day(message)) is not None:
         return _explain_day(state, requested_day, request.language)
     if state and re.fullmatch(r'\s*(?:تمام|موافق|ماشي|حلو|كويس|ok|okay|looks good|sounds good|yes)[.!؟\s]*', lowered):

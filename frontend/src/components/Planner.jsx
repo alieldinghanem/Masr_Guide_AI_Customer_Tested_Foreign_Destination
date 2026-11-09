@@ -95,6 +95,7 @@ export default function Planner({ cities, interests, openPlace }) {
     for (const day of plan.days) {
       lines.push(`${t('day.label', { n: String(day.day).padStart(2, '0') })} — ${cityName(day.city)}`)
       if (day.travel) lines.push(t('day.travel', { from: cityName(day.travel.from_city), d: duration(day.travel.minutes), mode: t(String(day.travel.mode || '').startsWith('flight') ? 'mode.flight' : 'mode.road') }))
+      if (day.rest_minutes > 0) lines.push(t('day.rest', { d: duration(day.rest_minutes) }))
       for (const stop of day.stops) lines.push(`- ${placeName(stop.place)} (${duration(stop.suggested_visit_minutes)})`)
       if (!day.stops.length) { lines.push(day.note || t('day.empty')); (day.activity_ideas || []).forEach(idea => lines.push(`  Idea (not booked): ${idea}`)) }
       lines.push('')
@@ -195,6 +196,7 @@ export default function Planner({ cities, interests, openPlace }) {
                   <span>{t('day.label', { n: String(d.day).padStart(2, '0') })}</span>
                   <h3>{cityName(d.city)}</h3>
                   <small>{t('day.stats', { stops: d.stops.length, d: duration(d.estimated_activity_minutes) })}</small>
+                  {d.rest_minutes > 0 && <small>{t('day.rest', { d: duration(d.rest_minutes) })}</small>}
                   {d.travel && (
                     <small className="travel-chip">{t('day.travel', {
                       from: cityName(d.travel.from_city), d: duration(d.travel.minutes),
