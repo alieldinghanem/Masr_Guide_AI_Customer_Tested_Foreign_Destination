@@ -20,6 +20,9 @@ services:
         value: '15'
       - key: NEON_DATABASE_URL
         sync: false
+      # Google OAuth Web Client ID; distinct from Gemini API key.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
