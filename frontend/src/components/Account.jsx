@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 import { isValidItinerary } from '../tripValidation'
 import { useI18n } from '../i18n'
+import GoogleSignInButton from './GoogleSignInButton'
 
 async function request(path, method = 'GET', payload, token, ifMatch) {
   // Browsers reject a request body on GET/HEAD; omitted body must stay undefined.
@@ -42,6 +43,25 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
   const [currentPlan, setCurrentPlan] = useState(null)
   const [deletionPassword, setDeletionPassword] = useState('')
   const [deletionOpen, setDeletionOpen] = useState(false)
+  const [googleClientId, setGoogleClientId] = useState('')
+  const [googleLinked, setGoogleLinked] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    request('/auth/google/config').then(data => {
+      if (active && typeof data.client_id === 'string') setGoogleClientId(data.client_id)
+    }).catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!session?.token) { setGoogleLinked(false); return }
+    let active = true
+    request('/auth/me', 'GET', null, session.token)
+      .then(data => { if (active) setGoogleLinked(!!data.user?.google_linked) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [session])
 
   useEffect(() => {
     try {
@@ -70,6 +90,39 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
       const next = { token: data.token, user: data.user }
       sessionStorage.setItem(SESSION, JSON.stringify(next))
       setSession(next); onSignIn(next); setPassword('')
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function handleGoogleCredential(credential) {
+    setError(''); setBusy(true)
+    try {
+      if (session?.token) {
+        await request('/auth/google/link', 'POST', { credential }, session.token)
+        setGoogleLinked(true)
+      } else {
+        const data = await request('/auth/google', 'POST', { credential })
+        const next = { token: data.token, user: data.user }
+        sessionStorage.setItem(SESSION, JSON.stringify(next))
+        setSession(next); onSignIn(next)
+        setGoogleLinked(true); setPassword('')
+      }
+    } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function handleGoogleDeletion(credential) {
+    if (!session?.token || busy) return
+    if (!window.confirm('Permanently delete your account and all its data? This cannot be undone.')) return
+    setError(''); setBusy(true)
+    try {
+      await request('/my/account', 'DELETE', {
+        google_credential: credential, confirmation: 'DELETE MY ACCOUNT'
+      }, session.token)
+      try { sessionStorage.removeItem(SESSION) } catch { /* private browsing */ }
+      clearBrowserTravelerData(); onSignOut()
+      setSession(null); setTrips([]); setSelected(null); setCurrentPlan(null)
+      setDeletionOpen(false); setGoogleLinked(false)
     } catch (err) { setError(err.message) }
     finally { setBusy(false) }
   }
@@ -160,7 +213,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
     try { sessionStorage.removeItem(SESSION) } catch { /* private browsing */ }
     clearBrowserTravelerData()
     onSignOut()
-    setSession(null); setTrips([]); setSelected(null); setCurrentPlan(null); setError('')
+    setSession(null); setTrips([]); setSelected(null); setCurrentPlan(null); setGoogleLinked(false); setError('')
   }
 
   async function deleteMyAccount(e) {
@@ -186,15 +239,25 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
       {!session ? (
         <form className="account-panel" onSubmit={signIn}>
           <h2>{signup ? (ar ? 'إنشاء حساب' : 'Create an account') : (ar ? 'تسجيل الدخول' : 'Sign in')}</h2>
+          {googleClientId && <div className="google-account-signin">
+            <GoogleSignInButton clientId={googleClientId} onCredential={handleGoogleCredential} disabled={busy} />
+            <small>{ar ? 'ادخل بحساب Google. الحسابات الجديدة تتطلب قاعدة بيانات دائمة.' : 'Use your Google account. Creating new accounts requires durable storage.'}</small>
+          </div>}
+          {googleClientId && <p className="google-account-separator">{ar ? 'أو استخدم البريد وكلمة المرور' : 'Or use email and password'}</p>}
           <label>{ar ? 'البريد الإلكتروني' : 'Email'}<input required autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
           <label>{ar ? 'كلمة المرور' : 'Password'}<input required minLength={12} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
-          <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى. يمكنك استخدام عنوان Gmail كبريد إلكتروني؛ تسجيل Google بضغطة واحدة غير مفعّل حاليًا.' : 'Use at least 12 characters and do not reuse another password. A Gmail address works as an email address; one-click Google sign-in is not enabled yet.'}</small>
+          <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى. يمكنك أيضًا تسجيل الدخول ببريدك الإلكتروني وكلمة المرور.' : 'Use at least 12 characters and do not reuse another password. A Gmail address can also be used with email and password.'}</small>
           <button className="btn primary" disabled={busy} type="submit">{busy ? (ar ? 'انتظر...' : 'Please wait…') : signup ? (ar ? 'إنشاء الحساب' : 'Register') : (ar ? 'تسجيل الدخول' : 'Sign in')}</button>
           {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
         </form>
       ) : (
         <section className="account-panel">
           <div className="account-bar"><p>{ar ? 'تم تسجيل الدخول بالبريد' : 'Signed in as'} <strong>{session.user.email}</strong></p><button className="btn secondary" onClick={signOut}>{ar ? 'تسجيل الخروج' : 'Sign out'}</button></div>
+          {googleClientId && !googleLinked && <section className="google-account-link">
+            <h2>{ar ? 'ربط حساب Google' : 'Link your Google account'}</h2>
+            <p>{ar ? 'اربط نفس عنوان البريد الذي تستخدمه في حسابك الحالي، واحتفظ برحلاتك المحفوظة.' : 'Connect the same verified email as your existing account. Your saved trips remain unchanged.'}</p>
+            <GoogleSignInButton clientId={googleClientId} onCredential={handleGoogleCredential} disabled={busy} />
+          </section>}
           <h2>Save the itinerary from My Trip Planner</h2>
           <p>{currentPlan ? `${currentPlan.days.length}-day itinerary available to save.` : 'Create and save an itinerary in the Planner first, then return here.'}</p>
           <label>Trip title<input maxLength={120} minLength={2} value={title} onChange={e => setTitle(e.target.value)} /></label>
@@ -215,6 +278,10 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
               <form onSubmit={deleteMyAccount}>
                 <label>Confirm with your current password<input required type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>
                 <button className="btn secondary" type="submit" disabled={busy || !deletionPassword}>{busy ? 'Deleting…' : 'Permanently delete account'}</button>
+                {googleClientId && googleLinked && <>
+                  <p>{ar ? 'أو أكد الحذف باستخدام حساب Google المرتبط.' : 'Or confirm deletion with your linked Google account.'}</p>
+                  <GoogleSignInButton clientId={googleClientId} onCredential={handleGoogleDeletion} disabled={busy} />
+                </>}
                 <button className="btn secondary" type="button" disabled={busy} onClick={() => { setDeletionOpen(false); setDeletionPassword('') }}>Cancel</button>
               </form>
             )}
