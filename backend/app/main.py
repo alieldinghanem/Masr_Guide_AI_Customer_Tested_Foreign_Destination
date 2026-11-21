@@ -29,6 +29,7 @@ from .accounts import router as account_router, setup as setup_accounts
 from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
 from .ratings import router as ratings_router, setup as setup_ratings
+from .partner_pilot import router as pilot_router, setup as setup_pilot
 from .durable_storage import configured as postgres_configured
 from .account_recovery import router as recovery_router, setup as setup_recovery
 from .moderation import router as moderation_router
@@ -90,6 +91,7 @@ async def lifespan(app: FastAPI):
     setup_recovery()
     setup_metrics()
     setup_commerce()
+    setup_pilot()
     setup_ratings()
     yield
 
@@ -103,6 +105,7 @@ app.include_router(recovery_router)
 app.include_router(moderation_router)
 app.include_router(metrics_router)
 app.include_router(commerce_router)
+app.include_router(pilot_router)
 app.include_router(ratings_router)
 # Outer ASGI guard measures actual received bytes, not only the advertised length.
 app.add_middleware(LimitApiBody)
