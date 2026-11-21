@@ -137,8 +137,10 @@ def go_offer(offer_id: str):
         row = c.execute('SELECT target_url FROM partner_offers WHERE id=? AND enabled=1', (offer_id,)).fetchone()
         if not row:
             raise HTTPException(404, 'Offer not available')
+        from .partner_pilot import attributed_url
+        target = attributed_url(c, offer_id, row['target_url'])
         c.execute('INSERT INTO affiliate_clicks VALUES (?,?,?)', (uuid4().hex, offer_id, stamp()))
-    return RedirectResponse(row['target_url'], status_code=302, headers={'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'})
+    return RedirectResponse(target, status_code=302, headers={'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'})
 
 
 @router.get('/admin/overview', dependencies=[])
