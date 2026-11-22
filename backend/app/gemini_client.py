@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from .conversation_router import redact_payment_data
+from .provider_status import observe
 
 logger = logging.getLogger(__name__)
 _unavailable_until: dict[str, float] = {}
@@ -25,6 +26,7 @@ def _check_cooldown(model: str) -> None:
 
 
 def _track_availability(model: str, exc: Exception | None = None) -> None:
+    observe(model, exc is None)
     if isinstance(exc, HTTPError) and exc.code == 503:
         # Avoid making every visitor wait for the same overloaded model.
         _unavailable_until[model] = time.monotonic() + _COOLDOWN_SECONDS

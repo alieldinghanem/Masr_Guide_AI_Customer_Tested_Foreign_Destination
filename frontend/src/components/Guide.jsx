@@ -22,7 +22,7 @@ const GEMINI_RESPONSE_MODES = new Set(['gemini-search-grounded', 'gemini-rag-no-
 const OPENAI_RESPONSE_MODES = new Set(['openai-rag', 'openai-dialogue+local-planner', 'hotel-openai-assisted'])
 const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, initialConnection = null, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -31,6 +31,19 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
   const [currentConversation, setCurrentConversation] = useState(null)
   const [currentConversationVersion, setCurrentConversationVersion] = useState(null)
   const [cloudStatus, setCloudStatus] = useState('')
+  const [connection, setConnection] = useState(initialConnection)
+  useEffect(() => {
+    if (!messages.length) return
+    let active = true
+    api('/health').then(data => { if (active) setConnection(data.gemini_connection || null) }).catch(() => {})
+    return () => { active = false }
+  }, [guideMode, messages.length])
+  useEffect(() => {
+    if (connection?.state !== 'verified' || !connection.checked_at) return
+    const delay = Math.max(0, new Date(connection.checked_at).getTime() + 900000 - Date.now())
+    const timer = setTimeout(() => setConnection(previous => ({ ...previous, state: 'stale' })), delay)
+    return () => clearTimeout(timer)
+  }, [connection])
   const [restored] = useState(restoredConsultation)
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
@@ -227,7 +240,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
+              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'verified' ? (lang === 'ar' ? 'Gemini متصل مؤخرًا · الرد التالي لم يُختبر بعد' : 'Gemini recently connected · next response not yet checked') : t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />
@@ -286,6 +299,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
               <span>{itinerary.days.length} {answerArabic ? 'يوم' : (itinerary.days.length === 1 ? 'day' : 'days')}</span>
             </div>
             <p className="consult-help">{answerArabic ? `جرّب: خلي اليوم الأول نشاط واحد، أو زود إجمالي الرحلة يوم في ${answerCity(itinerary.days.at(-1).city)}.` : `Try: Make Day 1 a single activity, or extend the total trip by one day in ${itinerary.days.at(-1).city}.`}</p>
+            {tripState?.traveler_profile && <p className="consult-help">{answerArabic ? 'تفاصيل المسافرين: ' : 'Traveler details: '}{tripState.traveler_profile.adults ? `${tripState.traveler_profile.adults} ${answerArabic ? 'بالغين' : 'adults'} · ` : ''}{tripState.traveler_profile.children_ages?.length ? `${answerArabic ? 'أعمار الأطفال' : 'Children ages'}: ${tripState.traveler_profile.children_ages.join(', ')} · ` : ''}{tripState.traveler_profile.food_preferences?.map(value => answerArabic ? ({ vegetarian: 'نباتي', vegan: 'نباتي صرف', halal: 'حلال' }[value]) : value).join(', ') || (answerArabic ? 'أخبرني بالأعمار وأي احتياجات خاصة.' : 'Tell me ages and any specific needs.')}</p>}
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
                 <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : day.travel ? (answerArabic ? 'انتقال وراحة' : 'Transfer & rest') : (answerArabic ? 'وقت حر — بدون زيارات مجدولة' : 'Free time — no scheduled visits')}</summary>

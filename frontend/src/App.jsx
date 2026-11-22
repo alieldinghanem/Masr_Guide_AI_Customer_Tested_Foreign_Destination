@@ -19,12 +19,13 @@ import Saved from './components/Saved'
 import Account, { getSession } from './components/Account'
 import Budget from './components/Budget'
 import {Stories, Offers, Partners, Staff, Project} from './components/Portal'
+import ServiceInfo from './components/ServiceInfo'
 
 const GUIDE_LANGUAGE = { en: 'English', ar: 'Arabic' }
-const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'reviews', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget']
+const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'reviews', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget', 'privacy', 'terms', 'support']
 const SAVED_PLACES_KEY = 'masr-guide-saved-places-v3'
 const pageFromHash = () => {
-  const name = window.location.hash.replace(/^#\/?/, '')
+  const name = window.location.hash.replace(/^#\/?/, '').split('?')[0]
   return PAGES.includes(name) || /^(?:place|coast)\/[a-z0-9_-]+$/i.test(name) ? name : 'home'
 }
 
@@ -131,7 +132,7 @@ function Shell({ meta }) {
     return () => { live = false }
   }, [])
   const toggleSaved = async id => {
-    if (!meta.places.some(p => p.id === id) || favoritesLoading || pendingFavorites.current.has(id)) return
+    if (!(meta.places.some(p => p.id === id) || COASTAL_DESTINATIONS.some(item => `coast:${item.id}` === id)) || favoritesLoading || pendingFavorites.current.has(id)) return
     const wasSaved = savedIds.includes(id)
     if (!wasSaved && savedIds.length >= 500) {
       setFavoritesError('A maximum of 500 places can be saved.')
@@ -219,17 +220,17 @@ function Shell({ meta }) {
           <button className="btn secondary" type="button" onClick={meta.retry}>{t('nav.retry')}</button>
         </div>
       )}
-      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} composeFocusKey={composeFocusKey} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
+      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide initialConnection={meta.geminiConnection} prompt={guideDraft} setPrompt={setGuideDraft} composeFocusKey={composeFocusKey} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
       {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openDetails={openDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'coast' && <CategoryPlaces type="coast" places={places} openDetails={openDetails} openCoastalDetails={openCoastalDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'experiences' && <Experiences experiences={discovery.experiences} places={places} onExplore={exploreTheme} askQuestion={askQuestion} />}
       {page === 'essentials' && <Essentials items={discovery.essentials} />}
       {page === 'reviews' && <TravelerReviews onExplore={() => go('explore')} places={places} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
-      {page === 'saved' && <Saved places={places} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={openPlace} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
+      {page === 'saved' && <Saved places={[...places, ...COASTAL_DESTINATIONS.map(item => ({ id: `coast:${item.id}`, name: item.en, name_ar: item.ar, city: item.en, description: item.noteEn, summary_ar: item.noteAr }))]} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={place => place.id.startsWith('coast:') ? openCoastalDetails(COASTAL_DESTINATIONS.find(item => `coast:${item.id}` === place.id)) : openPlace(place)} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
       {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} openDetails={openDetails} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
       {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go(detailReturnPage)} backLabel={detailReturnPage === 'heritage' ? (lang === 'ar' ? 'الأماكن الأثرية' : 'Historical places') : detailReturnPage === 'coast' ? (lang === 'ar' ? 'الشواطئ والبحر' : 'Beaches & sea') : undefined} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
-      {page.startsWith('coast/') && <CoastalDetails destination={COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))} onBack={() => go('coast')} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
+      {page.startsWith('coast/') && <CoastalDetails savedIds={savedIds} toggleSaved={toggleSaved} destination={COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))} onBack={() => go('coast')} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'planner' && <Planner cities={cities} interests={interests} openPlace={openPlace} />}
       {page === 'account' && <Account registrationEnabled={meta.registrationEnabled} onOpenPlanner={() => go('planner')} onSignOut={clearTravelerUi} onSignIn={next => { setSavedIds([]); setFavoritesError(''); setTravelerSession(next); if (reviewReturnPage) { go(reviewReturnPage); setReviewReturnPage(null) } }} />}
       {page === 'stories' && <Stories go={go} />}
@@ -238,8 +239,10 @@ function Shell({ meta }) {
       {page === 'staff' && <Staff />}
       {page === 'project' && <Project />}
       {page === 'budget' && <Budget />}
+      {['privacy', 'terms', 'support'].includes(page) && <ServiceInfo section={page} />}
 
       <footer className="footer">
+        <nav className="container" aria-label={lang === 'ar' ? 'الخصوصية والمساعدة' : 'Privacy and help'}>{[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}</nav>
         <div className="container footer-top">
           <div><Logo go={go} /><p>{t('footer.tagline')}</p></div>
           <div className="footer-links">
@@ -271,7 +274,7 @@ export default function App() {
       .then(([loc, attractions, health]) => {
         if (active) setMeta(m => ({ ...m,
           cities: loc.cities, interests: loc.interests, cityNamesAr: loc.city_names_ar || {},
-          places: attractions.places, guideMode: health.guide_mode, registrationEnabled: health.registration_enabled !== false, error: null, loading: false
+          places: attractions.places, geminiConnection: health.gemini_connection, guideMode: health.guide_mode, registrationEnabled: health.registration_enabled !== false, error: null, loading: false
         }))
       })
       .catch(error => { if (active) setMeta(m => ({ ...m, error, loading: false })) })

@@ -66,6 +66,20 @@ class DayOverride(BaseModel):
     family_friendly: bool = False
 
 
+class TravelerProfile(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    adults: int | None = Field(default=None, ge=1, le=20, strict=True)
+    children_ages: list[int] = Field(default_factory=list, max_length=12)
+    food_preferences: list[Literal['vegetarian', 'vegan', 'halal']] = Field(default_factory=list, max_length=3)
+
+    @field_validator('children_ages', mode='before')
+    @classmethod
+    def valid_ages(cls, ages):
+        if not isinstance(ages, list) or any(type(age) is not int or not 0 <= age <= 17 for age in ages):
+            raise ValueError('Children ages must be whole years between 0 and 17')
+        return ages
+
+
 class TripState(BaseModel):
     model_config = ConfigDict(extra="forbid")
     days: int = Field(ge=1, le=30)
@@ -74,6 +88,7 @@ class TripState(BaseModel):
     phases: list[TripPhase] = Field(min_length=1, max_length=5)
     pace: str = Field(default="balanced", pattern="^(relaxed|balanced|packed)$")
     family: bool = False
+    traveler_profile: TravelerProfile = Field(default_factory=TravelerProfile)
     accessibility_needs: bool = False
     lighter_cities: list[str] = Field(default_factory=list, max_length=5)
     day_overrides: dict[int, DayOverride] = Field(default_factory=dict)

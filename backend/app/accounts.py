@@ -341,7 +341,7 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
 
 def _favorite_place_id(place_id: str) -> str:
     # Explicitly allow catalogue slugs, not arbitrary text or external links.
-    if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', place_id) or len(place_id) > 90:
+    if not re.fullmatch(r'(?:coast:)?[a-z0-9]+(?:-[a-z0-9]+)*', place_id) or len(place_id) > 90:
         raise HTTPException(422, detail='Invalid place identifier')
     return place_id
 
@@ -358,7 +358,8 @@ def my_favorites(user=Depends(current_user)):
 @router.post('/my/favorites/{place_id}')
 def add_favorite(place_id: str, user=Depends(current_user)):
     ident = _favorite_place_id(place_id)
-    if get_place(ident) is None:
+    from .ratings import COASTAL_GUIDE_IDS
+    if get_place(ident) is None and not (ident.startswith('coast:') and ident[6:] in COASTAL_GUIDE_IDS):
         raise HTTPException(404, detail='Place not found in the curated catalogue')
     with _open() as c:
         # Write-lock before the cap check; concurrent writes cannot exceed 500.
@@ -433,6 +434,8 @@ def save_trip(body: TripSave, user=Depends(current_user)):
     stamp = _now().isoformat()
     with _open() as c:
         c.execute('INSERT INTO account_trips VALUES (?,?,?,?,?,?)', (tid, user['id'], body.title, raw, stamp, stamp))
+    from .metrics import record
+    record('trip_saved')
     return {'id': tid, 'title': body.title, 'created_at': stamp}
 
 

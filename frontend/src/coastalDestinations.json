@@ -9,7 +9,10 @@
     "spotAr": "خليج نعمة وخليج القرش",
     "noteEn": "Choose a designated beach area and check local sea conditions.",
     "noteAr": "اختر منطقة شاطئية مخصصة وتحقق من حالة البحر محليًا.",
-    "url": "https://www.experienceegypt.eg/en/Attraction-Details/186/beaches-snorkeling-diving"
+    "url": "https://www.experienceegypt.eg/en/City/16/sharm-el-sheikh",
+    "aboutAr": "شرم الشيخ وجهة شاطئية على البحر الأحمر تضم خلجانًا ومنتجعات وأنشطة مائية. حدّد شاطئًا بمدخل مناسب للسباحة، لأن بعض المواقع موجهة للغطس والشعاب.",
+    "aboutEn": "Sharm El Sheikh is a Red Sea base for bays, resorts and water activities. Choose a beach with suitable swimming access; some sites focus on diving and reefs.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "north-coast-alamein",
@@ -21,7 +24,12 @@
     "spotAr": "شواطئ الساحل قرب العلمين",
     "noteEn": "Many beaches are private; confirm access before travelling.",
     "noteAr": "شواطئ كثيرة خاصة؛ تأكد من إمكانية الدخول قبل السفر.",
-    "url": "https://www.experienceegypt.eg/en/city/20/c%C3%B4te-nord-et-el-alamein"
+    "url": "https://www.experienceegypt.eg/en/city/20/c%C3%B4te-nord-et-el-alamein",
+    "aboutAr": "الساحل الشمالي وجهة صيفية على البحر المتوسط، بشواطئ رملية ومصايف داخل قرى خاصة. لا يعني وجود شاطئ قرب مكان الإقامة أن الدخول إليه متاح لغير النزلاء.",
+    "aboutEn": "The Mediterranean North Coast is a summer destination with sandy beaches and private holiday compounds. A nearby beach does not imply access for non-residents.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "alexandria",
@@ -33,7 +41,12 @@
     "spotAr": "شاطئ المعمورة",
     "noteEn": "A managed swimming beach; confirm current access and conditions.",
     "noteAr": "شاطئ للسباحة؛ تأكد من الدخول وحالة البحر الحالية.",
-    "url": "https://maamoura.com.eg/en/beach"
+    "url": "https://maamoura.com.eg/en/beach",
+    "aboutAr": "المعمورة شرق منطقة المنتزه، وتجمع الشاطئ الرملي مع ممشى وخدمات للزوار. تناسب الجمع بين وقت الشاطئ واستراحة خارج المياه.",
+    "aboutEn": "Maamoura lies east of Montazah, combining a sandy beach with a promenade and visitor facilities. Pair beach time with a break ashore.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "marsa-matruh",
@@ -45,7 +58,12 @@
     "spotAr": "المياه البيضاء",
     "noteEn": "The official guide describes swimming here by private boat.",
     "noteAr": "الدليل الرسمي يذكر السباحة هنا برحلة قارب خاص.",
-    "url": "https://www.experienceegypt.eg/en/attraction-details/247/swim-in-al-maya-el-baida"
+    "url": "https://www.experienceegypt.eg/en/attraction-details/247/swim-in-al-maya-el-baida",
+    "aboutAr": "تذكر هيئة السياحة المياه البيضاء كمنطقة سباحة ضحلة يمكن الوصول إليها بقارب خاص. اسأل عن وسيلة الوصول والمرافق قبل ترتيب اليوم.",
+    "aboutEn": "The tourism board describes Al Maya El Baida as a shallow-water swimming area reached by private boat. Ask about transport and facilities before arranging the day.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "marsa-alam",
@@ -57,7 +75,12 @@
     "spotAr": "شاطئ شرم اللولي",
     "noteEn": "A sandy beach south of town; check protected-area rules.",
     "noteAr": "شاطئ رملي جنوب المدينة؛ راجع قواعد المحمية.",
-    "url": "https://www.experienceegypt.eg/en/Attraction/19/sun-sea"
+    "url": "https://www.experienceegypt.eg/en/city/21/marsa-alam",
+    "aboutAr": "مرسى علم مناسبة لرحلة تجمع الشواطئ والطبيعة الساحلية، مع خلجان ومناطق مانجروف ومحميات في المنطقة. اختر نقطة دخول شاطئية محددة بدل افتراض أن كل الساحل مناسب للسباحة.",
+    "aboutEn": "Marsa Alam combines beaches with coastal nature, including lagoons, mangroves and nearby reserves. Choose a specific beach entrance rather than assuming the entire coastline is a swimming area.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "hurghada",
@@ -69,7 +92,12 @@
     "spotAr": "شواطئ جزر الجفتون",
     "noteEn": "Beach visits need a separate boat trip.",
     "noteAr": "زيارة الشواطئ تحتاج رحلة قارب منفصلة.",
-    "url": "https://www.experienceegypt.eg/en/City/23/hurghada-"
+    "url": "https://www.experienceegypt.eg/en/City/23/hurghada-",
+    "aboutAr": "الغردقة مدينة ساحلية على البحر الأحمر تضم منتجعات وشواطئ رملية، وتوجد بالقرب منها رحلات جزر الجفتون. زيارة المارينا والأسواق نشاط على اليابسة، وليست بديلًا عن تحديد شاطئ للسباحة.",
+    "aboutEn": "Hurghada combines Red Sea resorts and sandy beaches with nearby Giftun island trips. Its marina and markets are land activities; identify a separate swimming beach.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "dahab",
@@ -81,7 +109,12 @@
     "spotAr": "شواطئ دهب العامة",
     "noteEn": "Choose a marked swimming area away from water sports.",
     "noteAr": "اختر منطقة سباحة محددة بعيدًا عن الرياضات المائية.",
-    "url": "https://www.experienceegypt.eg/en/attraction-details/113/relax-on-the-beach"
+    "url": "https://www.experienceegypt.eg/en/city/33/dahab",
+    "aboutAr": "دهب وجهة على خليج العقبة تناسب الإقامة الهادئة والأنشطة المائية. اللاغونا في جنوب المدينة والبلو لاجون بمنطقة أبو جالوم اسمان لموقعين مختلفين؛ حدّد المكان المطلوب قبل ترتيب الانتقال.",
+    "aboutEn": "Dahab is a Gulf of Aqaba base for relaxed stays and water activities. The town lagoon and Blue Lagoon in Abu Galum are different destinations; confirm which one you intend to visit.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "ain-sokhna",
@@ -93,7 +126,12 @@
     "spotAr": "شواطئ العين السخنة",
     "noteEn": "A short coastal escape from Cairo; confirm beach access.",
     "noteAr": "وجهة بحرية قريبة من القاهرة؛ تأكد من دخول الشاطئ.",
-    "url": "https://www.experienceegypt.eg/en/city/29/al-ain-al-sukhna"
+    "url": "https://www.experienceegypt.eg/en/city/29/al-ain-al-sukhna",
+    "aboutAr": "العين السخنة منتجع ساحلي على البحر الأحمر يمكن الوصول إليه من القاهرة بالسيارة أو الحافلة. اختر إقامة أو زيارة يومية تؤكد حق استخدام الشاطئ، واترك وقتًا للراحة بعد الانتقال.",
+    "aboutEn": "Ain Sokhna is a Red Sea resort destination accessible from Cairo by road or bus. Choose accommodation or a day visit that confirms beach access, allowing rest after the journey.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "nuweiba",
@@ -105,7 +143,12 @@
     "spotAr": "شواطئ نويبع",
     "noteEn": "A quieter Sinai coast; check local access and conditions.",
     "noteAr": "ساحل هادئ في سيناء؛ تحقق من الدخول والظروف محليًا.",
-    "url": "https://www.experienceegypt.eg/en/attraction-details/264/beaches-nature"
+    "url": "https://www.experienceegypt.eg/en/City/19/nuweiba-",
+    "aboutAr": "نويبع على خليج العقبة معروفة بالشواطئ والإقامات البسيطة على الساحل. اسأل المخيم أو جهة الإقامة عن مكان النزول للمياه والمرافق المتاحة قبل الوصول.",
+    "aboutEn": "Nuweiba on the Gulf of Aqaba is known for beaches and simple coastal camps. Ask your host about water access and available facilities before arriving.",
+    "visitAr": "اقتراح للزيارة: وقت شاطئ قصير ثم استراحة في الظل. أكد الدخول والمرافق والإشراف قبل اصطحاب الأطفال؛ لا توجد أسعار أو حالة بحر حية في الدليل.",
+    "visitEn": "Visit idea: a short beach session followed by a shaded break. Confirm access, facilities and supervision before bringing children; this guide has no live prices or sea conditions.",
+    "editorialReviewedOn": "2026-11-22"
   },
   {
     "id": "safaga",
@@ -117,6 +160,9 @@
     "spotAr": "شواطئ ومنتجعات سفاجا",
     "noteEn": "Confirm access to a designated swimming beach.",
     "noteAr": "تحقق من دخول شاطئ مخصص للسباحة.",
-    "url": "https://sis.gov.eg/en/egypt/tourism/famous-cities/safaga/"
+    "url": "https://sis.gov.eg/en/egypt/tourism/famous-cities/safaga/",
+    "aboutAr": "سفاجا مدينة ميناء ومنتجع جنوب الغردقة، تجمع الشواطئ والأنشطة المائية. افصل بين منطقة الميناء والشاطئ المخصص للزوار، وأكد الدخول وتعليمات السباحة مع جهة الإقامة.",
+    "aboutEn": "Safaga is a port and resort town south of Hurghada with beaches and water activities. Distinguish the port from visitor beaches and confirm access and swimming rules with your host.",
+    "editorialReviewedOn": "2026-11-22"
   }
 ]

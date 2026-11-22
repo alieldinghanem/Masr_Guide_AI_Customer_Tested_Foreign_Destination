@@ -8,7 +8,7 @@ from pathlib import Path
 import sqlite3
 from psycopg import Error as PostgresError
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Header
 from fastapi.responses import FileResponse, JSONResponse
 from .security import sensitive_requests
 from .http_limits import LimitApiBody
@@ -30,6 +30,10 @@ from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
 from .ratings import router as ratings_router, setup as setup_ratings
 from .durable_storage import configured as postgres_configured
+from .account_recovery import router as recovery_router, setup as setup_recovery
+from .moderation import router as moderation_router
+from .provider_status import snapshot as provider_snapshot
+from .metrics import router as metrics_router, setup as setup_metrics, consultation as record_consultation
 
 # Read the backend-local .env for local development; environment variables take priority.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
@@ -83,6 +87,8 @@ async def lifespan(app: FastAPI):
     validate_deployment_settings()
     initialize()
     setup_accounts()
+    setup_recovery()
+    setup_metrics()
     setup_commerce()
     setup_ratings()
     yield
@@ -93,6 +99,9 @@ origins = [v.strip() for v in os.getenv("CORS_ORIGINS", "http://localhost:5173,h
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST", "PUT", "DELETE"],
                    allow_headers=["Content-Type", "Authorization"], allow_credentials=False)
 app.include_router(account_router)
+app.include_router(recovery_router)
+app.include_router(moderation_router)
+app.include_router(metrics_router)
 app.include_router(commerce_router)
 app.include_router(ratings_router)
 # Outer ASGI guard measures actual received bytes, not only the advertised length.
@@ -189,7 +198,27 @@ def health():
     return {"status":"ok", "version":"7.8.1", "guide_mode": mode,
             "gemini_search_configured": bool(search_grounding_enabled() and gemini_key()
                                              and provider in ('gemini', 'auto')),
-            "registration_enabled": accounts.registration_enabled()}
+            "registration_enabled": accounts.registration_enabled(),
+            "gemini_connection": provider_snapshot()}
+
+@app.post('/api/admin/ai-check')
+def check_ai_connection(x_admin_key: str | None = Header(None)):
+    from .commerce import require_staff
+    from .gemini_client import generate
+    from .provider_status import observe
+    require_staff(x_admin_key)
+    if not gemini_key() or os.getenv('AI_PROVIDER', 'auto').lower() not in ('auto', 'gemini'):
+        raise HTTPException(503, 'Gemini is not enabled and configured')
+    try:
+        answer = generate('Reply with MASR_OK.', 'Connectivity test. Return only MASR_OK.', max_tokens=30)
+        if answer.strip().strip('`.') != 'MASR_OK':
+            observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False)
+            raise HTTPException(502, 'Gemini returned an unexpected test response')
+        observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), True)
+    except (HTTPException, ValueError):
+        observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False)
+        return {'connection': provider_snapshot(), 'result': 'failed', 'detail': 'Check model access, credentials, quota and provider availability.'}
+    return {'connection': provider_snapshot(), 'result': 'success'}
 
 @app.get('/api/ready')
 def ready():
@@ -286,7 +315,7 @@ def consult(body: ConsultRequest, request: Request):
                            f'Your {state.days}-day itinerary was saved to your account. You can find it in My Account.'),
                 'mode': 'trip-saved', 'sources': [], 'trip_state': state.model_dump(),
                 'itinerary': itinerary, 'saved_trip_id': saved['id']}
-    return consult_travel(body)
+    return record_consultation(consult_travel(body), body.trip_state is not None)
 
 @app.get("/demo", include_in_schema=False)
 @app.get("/demo/", include_in_schema=False)

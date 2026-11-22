@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 import { isValidItinerary } from '../tripValidation'
 import { useI18n } from '../i18n'
+import AccountEmail from './AccountEmail'
 
 async function request(path, method = 'GET', payload, token, ifMatch) {
   // Browsers reject a request body on GET/HEAD; omitted body must stay undefined.
@@ -184,6 +185,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
     <main className="page-wrap container account-page">
       <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك.' : 'Save Egypt itineraries and share reviews from your account.'}{!registrationEnabled && ` ${ar ? 'التخزين مؤقت في هذه النسخة، وقد تختفي البيانات بعد إعادة تشغيل الموقع.' : 'Storage is temporary in this preview, and data may disappear after a restart.'}`}</p></div>
       {error && <p role="alert" className="account-error">{error}</p>}
+      <AccountEmail session={session} onPasswordReset={() => { sessionStorage.removeItem(SESSION); setSession(null); onSignOut() }} />
       {!session ? (
         <form className="account-panel" onSubmit={signIn}>
           <h2>{signup ? (ar ? 'إنشاء حساب' : 'Create an account') : (ar ? 'تسجيل الدخول' : 'Sign in')}</h2>

@@ -40,6 +40,11 @@ jobs:
         run: python scripts/qa_local_launchers.py
       - name: Validate deployment CSP against photo and map assets
         run: python scripts/qa_frontend_security_contract.py
+      - name: Enable PostgreSQL 16 backup tools for the isolated restore drill
+        run: |
+          test -x /usr/lib/postgresql/16/bin/pg_dump
+          test -x /usr/lib/postgresql/16/bin/pg_restore
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
       - name: Test backend
         working-directory: backend
         run: python -m pytest -q

@@ -61,6 +61,15 @@ export function isValidTripState(state) {
   if ('lighter_cities' in state && (!Array.isArray(state.lighter_cities) || state.lighter_cities.length > 5 ||
       state.lighter_cities.some(city => typeof city !== 'string' || !city.trim()) ||
       new Set(state.lighter_cities).size !== state.lighter_cities.length)) return false
+  if ('traveler_profile' in state) {
+    const profile = state.traveler_profile
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile) ||
+        (profile.adults !== null && (!Number.isInteger(profile.adults) || profile.adults < 1 || profile.adults > 20)) ||
+        !Array.isArray(profile.children_ages) || profile.children_ages.length > 12 ||
+        profile.children_ages.some(age => !Number.isInteger(age) || age < 0 || age > 17) ||
+        !Array.isArray(profile.food_preferences) || profile.food_preferences.length > 3 ||
+        profile.food_preferences.some(value => !['vegetarian', 'vegan', 'halal'].includes(value))) return false
+  }
   if ('day_overrides' in state && (state.day_overrides === null ||
       typeof state.day_overrides !== 'object' || Array.isArray(state.day_overrides) ||
       Object.keys(state.day_overrides).length > 30 ||
