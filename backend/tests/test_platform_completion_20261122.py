@@ -131,8 +131,20 @@ def test_family_memory_survives_day_edit_extension_and_saved_conversation(platfo
     assert saved.status_code == 201, saved.text
     restored = platform.get('/api/my/conversations/' + saved.json()['id'], headers=headers).json()
     assert restored['trip_state']['traveler_profile'] == profile
+    trip = platform.post('/api/my/trips', headers=headers, json={'title': 'Family saved trip', 'itinerary': third['itinerary']})
+    assert trip.status_code == 201
+    assert platform.get('/api/my/trips/' + trip.json()['id'], headers=headers).json()['itinerary']['traveler_profile'] == profile
     memory = consult_travel(ConsultRequest(message='How old are the children?', language='English', trip_state=TripState.model_validate(third['trip_state'])))
     assert '4, 7 years' in memory['answer'] and memory['itinerary'] is None
+
+
+def test_planner_preserves_profile_and_child_rest_on_regeneration(platform):
+    profile = {'adults': 2, 'children_ages': [3, 7], 'food_preferences': ['halal']}
+    response = platform.post('/api/plan', json={'cities': ['Cairo'], 'days': 3, 'traveler_profile': profile})
+    assert response.status_code == 200
+    plan = response.json()
+    assert plan['traveler_profile'] == profile and plan['family'] is True
+    assert all(day['rest_minutes'] >= 60 for day in plan['days'] if day['stops'])
 
 
 def test_reports_require_accounts_and_staff_and_hide_every_public_view(platform):
