@@ -1079,10 +1079,13 @@ def _make_plan(state: dict, lang: str):
     if state.get('accessibility_needs'):
         warnings.append(('Accessibility has NOT been verified at any attraction, entrance, transfer, or hotel. Confirm step-free routes and assistance with each operator before booking.' if lang == 'en' else
                          'إمكانية الوصول بالكراسي المتحركة غير متحقق منها للمعالم والمداخل والانتقالات والفنادق. يجب تأكيد الممرات والمساعدة مع كل جهة قبل الحجز.'))
-    disclaimer = ('Illustrative plan. Many beach days are intentionally free time, not a fabricated activity. '
+    has_beach = any(phase['kind'] == 'beach' for phase in state['phases'])
+    beach_note = ('Many beach days are intentionally free time, not a fabricated activity. ' if lang == 'en' else
+                  'الأيام البحرية الحرة مقصودة وليست أنشطة مخترعة. ') if has_beach else ''
+    disclaimer = ('Illustrative plan. ' + beach_note +
                   'No live prices, hotel/flight availability or schedules; cross-city travel is approximate. '
                   'Verify opening hours, routes and ticket prices independently.' if lang == 'en'
-                  else 'خطة استرشادية؛ الأيام البحرية الحرة مقصودة وليست أنشطة مخترعة. لا تتوفر أسعار أو حجوزات أو مواعيد حية، والانتقالات تقريبية؛ تحقق منها قبل الحجز.')
+                  else 'خطة استرشادية؛ ' + beach_note + 'لا تتوفر أسعار أو حجوزات أو مواعيد حية، والانتقالات تقريبية؛ تحقق منها قبل الحجز.')
     allocations = {}
     for day in days:
         allocations[day['city']] = allocations.get(day['city'], 0) + 1

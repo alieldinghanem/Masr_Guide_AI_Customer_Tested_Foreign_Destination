@@ -342,10 +342,30 @@ def _is_upstream_unavailable(exc: HTTPException) -> bool:
     return exc.status_code == 502
 
 
+def _requested_recommendation_count(query: str) -> int | None:
+    """Only parse counts attached to places, never a trip's day count."""
+    folded = _fold(query).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    match = re.search(r'\b([1-5]|one|two|three|four|five|un|une|deux|trois|quatre|cinq)\s+'
+                      r'(?:(?:historical|historic|family|friendly|tourist|best)\s+)*'
+                      r'(?:places?|attractions?|museums?|beaches?|sites?|lieux|endroits|mus[ée]es|plages)\b', folded)
+    if match:
+        token = match[1]
+        if token.isdigit():
+            return int(token)
+        return {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+                'un': 1, 'une': 1, 'deux': 2, 'trois': 3, 'quatre': 4, 'cinq': 5}[token]
+    if re.search(r'مكانين|متحفين|شاطيين|شاطئين|معلمين', folded):
+        return 2
+    match = re.search(r'(?<!\w)([1-5]|ثلاثه|ثلاث|اربعه|اربع|خمسه|خمس)\s+(?:اماكن|متاحف|شواطي|معالم)', folded)
+    if match:
+        return int(match[1]) if match[1].isdigit() else {'ثلاثه': 3, 'ثلاث': 3, 'اربعه': 4, 'اربع': 4, 'خمسه': 5, 'خمس': 5}[match[1]]
+    return None
+
+
 def _curated_recommendations(query: str) -> list[dict]:
     """Ground broad 'where should I start?' questions in the local catalogue."""
     folded = _fold(query)
-    if not re.search(r'تنصحني|ترشح|اقترح|ابدا|ابدء|ايه احسن|ايه افضل|'
+    if not re.search(r'تنصحني|ترشح|رشح|اقترح|ابدا|ابدء|ايه احسن|ايه افضل|'
                      r'\b(?:recommend|suggest|start|best places?)\b|'
                      r'conseille|recommande|commencer', folded):
         return []
@@ -367,7 +387,7 @@ def _curated_recommendations(query: str) -> list[dict]:
         suitable = lambda p: p['category'] == 'Beach'
     elif re.search(r'طبيعه|\bnature\b', folded):
         suitable = lambda p: 'nature' in p['tags']
-    elif re.search(r'تاريخ|اثار|اثري|\b(?:history|historic|heritage)\b|\bhistoire\b', folded):
+    elif re.search(r'تاريخ|اثار|اثري|\b(?:history|historical|historic|heritage)\b|\bhistoire\b', folded):
         suitable = lambda p: 'history' in p['tags']
     else:
         suitable = lambda p: 'culture' in p['tags']
@@ -378,7 +398,7 @@ def _curated_recommendations(query: str) -> list[dict]:
                   and (not family or p['family_friendly'])]
     if city is None and not re.search(r'مصر|egypt|egypte|\b(?:where|start|best)\b', folded):
         return []
-    return sorted(candidates, key=lambda p: editorial_order.get(p['id'], len(editorial_order)))[:3]
+    return sorted(candidates, key=lambda p: editorial_order.get(p['id'], len(editorial_order)))[:_requested_recommendation_count(query) or 3]
 
 
 def _recommendation_reply(places: list[dict], language: str) -> dict:
@@ -406,6 +426,17 @@ def _recommendation_reply(places: list[dict], language: str) -> dict:
                   + (f' You could then visit {names}.' if names else '')
                   + (' Check beach access and sea conditions before swimming.'
                      if is_coastal else ' Check opening hours and tickets before you go.'))
+    # A resolved follow-up deserves practical catalogue detail as well as a name.
+    # These are editorial visit estimates, never opening hours or live guarantees.
+    if len(places) == 1:
+        tip = first.get('tip_ar') if language == 'Arabic' else first.get('tip') if language == 'English' else None
+        if tip:
+            answer += f' {tip} [1]'
+        minutes = first.get('visit_minutes')
+        if minutes:
+            answer += (f' وقت الزيارة المقترح في دليلنا: حوالي {minutes} دقيقة [1].' if language == 'Arabic' else
+                       f' Durée indicative de visite : environ {minutes} minutes [1].' if language == 'French' else
+                       f' Suggested visit time in our guide: about {minutes} minutes [1].')
     return {'answer': answer, 'mode': 'local-assistant', 'sources': refs}
 
 
@@ -518,6 +549,11 @@ def answer_chat(request):
         if coastal_recommendations(recent_question, _fold):
             recommendations = coastal_recommendations('شاطئ ' + request.message, _fold)
     matches = recommendations or retrieve(request.message)
+    requested_count = _requested_recommendation_count(request.message)
+    if recommendations and requested_count:
+        # Enforce a visitor's explicit count even when a provider is configured.
+        # This is a sourced catalogue response and must retain local provenance.
+        return _recommendation_reply(recommendations[:requested_count], language)
     if request.history and not recommendations and (not matches or len(normalize(request.message)) <= 2):
         recent_question = next((turn.content for turn in reversed(request.history)
                                 if turn.role == "user"), "")

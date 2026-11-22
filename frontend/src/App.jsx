@@ -14,6 +14,7 @@ import TravelerReviews from './components/TravelerReviews'
 import PlaceDetails from './components/PlaceDetails'
 import CoastalDetails from './components/CoastalDetails'
 import { COASTAL_DESTINATIONS } from './coastalDestinations'
+import { CHAT_LANGUAGE_KEY, restoreChatLanguage } from './chatLanguage'
 import Saved from './components/Saved'
 import Account, { getSession } from './components/Account'
 import Budget from './components/Budget'
@@ -51,14 +52,15 @@ function Shell({ meta }) {
   useEffect(() => {
     try { sessionStorage.setItem('masr-guide-chat-session-v7', JSON.stringify(guideMessages.slice(-24))) } catch { /* private mode or storage quota */ }
   }, [guideMessages])
-  const [guideLanguage, setGuideLanguage] = useState(GUIDE_LANGUAGE[lang])
-  const guideLanguageChosen = useRef(false)
+  const [guideLanguage, setGuideLanguage] = useState(() => restoreChatLanguage(guideMessages, GUIDE_LANGUAGE[lang]))
+  const guideLanguageChosen = useRef(guideMessages.length > 0 || (() => { try { return !!sessionStorage.getItem(CHAT_LANGUAGE_KEY) } catch { return false } })())
   useEffect(() => {
     if (!guideLanguageChosen.current) setGuideLanguage(GUIDE_LANGUAGE[lang])
   }, [lang])
   const chooseGuideLanguage = next => {
     guideLanguageChosen.current = true
     setGuideLanguage(next)
+    try { sessionStorage.setItem(CHAT_LANGUAGE_KEY, next) } catch { /* private browsing */ }
   }
   const [highlight, setHighlight] = useState(null)
   const [detailReturnPage, setDetailReturnPage] = useState('explore')

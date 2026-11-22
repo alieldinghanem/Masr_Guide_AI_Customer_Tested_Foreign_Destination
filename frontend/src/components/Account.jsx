@@ -15,7 +15,7 @@ const SESSION = 'masr-account-session-v4'
 // who uses the same browser profile. Account data stored on the server is
 // governed separately by auth and account deletion.
 export function clearBrowserTravelerData() {
-  for (const key of ['masr-guide-chat-session-v7', 'masr-guide-consult-state-v2', 'masr-guide-consult-plan-v2', 'masr-guide-draft-v1']) {
+  for (const key of ['masr-guide-chat-session-v7', 'masr-guide-consult-state-v2', 'masr-guide-consult-plan-v2', 'masr-guide-draft-v1', 'masr-guide-reply-language-v1']) {
     try { sessionStorage.removeItem(key) } catch { /* private browsing */ }
   }
   for (const key of ['masr-guide-plan-v1', 'masr-guide-saved-places-v3', 'masr-budget-estimate-v5']) {
@@ -70,8 +70,9 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
       const next = { token: data.token, user: data.user }
       sessionStorage.setItem(SESSION, JSON.stringify(next))
       setSession(next); onSignIn(next); setPassword('')
-    } catch (err) { setError(err.message) }
-    finally { setBusy(false) }
+    } catch (err) {
+      setError(ar && err.message === 'Incorrect email or password' ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' : err.message)
+    } finally { setBusy(false) }
   }
 
   async function saveCloud() {
