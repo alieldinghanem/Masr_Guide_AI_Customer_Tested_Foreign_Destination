@@ -112,6 +112,8 @@ def test_profile_uses_age_labels_not_duration_or_budget():
     profile = update_profile({}, '2 adults, children aged 4 and 7, budget 4000 USD, halal food')
     assert profile == {'adults': 2, 'children_ages': [4, 7], 'food_preferences': ['halal']}
     assert update_profile(profile, '٣ بالغين والأطفال أعمارهم ٥ و٩')['children_ages'] == [5, 9]
+    assert update_profile({}, 'children aged 4 and 7, 14 days in Cairo')['children_ages'] == [4, 7]
+    assert update_profile({}, '2 adultes, enfants âgés de 4 et 7 ans')['children_ages'] == [4, 7]
 
 
 def test_family_memory_survives_day_edit_extension_and_saved_conversation(platform):
@@ -129,6 +131,8 @@ def test_family_memory_survives_day_edit_extension_and_saved_conversation(platfo
     assert saved.status_code == 201, saved.text
     restored = platform.get('/api/my/conversations/' + saved.json()['id'], headers=headers).json()
     assert restored['trip_state']['traveler_profile'] == profile
+    memory = consult_travel(ConsultRequest(message='How old are the children?', language='English', trip_state=TripState.model_validate(third['trip_state'])))
+    assert '4, 7 years' in memory['answer'] and memory['itinerary'] is None
 
 
 def test_reports_require_accounts_and_staff_and_hide_every_public_view(platform):
@@ -182,6 +186,17 @@ def test_provider_verification_is_fresh_config_scoped_and_never_local(monkeypatc
     assert provider_status.snapshot()['state'] == 'unavailable'
     monkeypatch.setenv('AI_PROVIDER', 'offline')
     assert provider_status.snapshot()['state'] == 'disabled'
+
+
+def test_provider_failure_reports_category_without_key_or_upstream_text(monkeypatch):
+    from urllib.error import HTTPError
+    from app.gemini_client import _track_availability
+    monkeypatch.setenv('AI_PROVIDER', 'gemini')
+    monkeypatch.setenv('GEMINI_API_KEY', 'private-test-key-never-expose')
+    _track_availability('gemini-3.5-flash-lite', HTTPError('https://example.org', 429, 'private upstream body', {}, None))
+    status = provider_status.snapshot()
+    assert status['failure_reason'] == 'quota_or_rate_limit'
+    assert 'private' not in str(status)
 
 
 def test_staff_probe_requires_real_expected_response(platform, monkeypatch):

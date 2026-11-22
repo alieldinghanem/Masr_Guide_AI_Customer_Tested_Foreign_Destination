@@ -21,7 +21,8 @@ def _settings(url):
     parsed = urlsplit(url)
     if parsed.scheme not in ('postgres', 'postgresql') or not parsed.hostname or not parsed.path.strip('/'):
         raise ValueError('A PostgreSQL database URL is required')
-    sslmode = parse_qs(parsed.query).get('sslmode', ['require'])[0]
+    default_ssl = 'disable' if parsed.hostname in ('localhost', '127.0.0.1', '::1') else 'require'
+    sslmode = parse_qs(parsed.query).get('sslmode', [default_ssl])[0]
     if sslmode not in ('require', 'verify-full', 'verify-ca') and parsed.hostname not in ('localhost', '127.0.0.1', '::1'):
         raise ValueError('Remote database connections require TLS')
     return {'PGHOST': parsed.hostname, 'PGPORT': str(parsed.port or 5432),

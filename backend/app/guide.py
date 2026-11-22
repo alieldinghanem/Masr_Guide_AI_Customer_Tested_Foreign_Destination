@@ -540,9 +540,11 @@ def answer_chat(request):
         request = request.model_copy(update={'language': language})
     # For short follow-up questions, retrieve using recent visitor context if
     # the current turn alone does not identify an attraction.
+    family_context = bool(getattr(getattr(request, 'trip_state', None), 'family', False))
+    recommendation_query = request.message + (' family' if family_context else '')
     recommendations = (_followup_attraction(request.message, request.history)
                        or coastal_recommendations(request.message, _fold)
-                       or _curated_recommendations(request.message))
+                       or _curated_recommendations(recommendation_query))
     if not recommendations and request.history and len(normalize(request.message)) <= 4:
         recent_question = next((turn.content for turn in reversed(request.history)
                                 if turn.role == 'user'), '')

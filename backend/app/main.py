@@ -215,11 +215,12 @@ def check_ai_connection(x_admin_key: str | None = Header(None)):
     try:
         answer = generate('Reply with MASR_OK.', 'Connectivity test. Return only MASR_OK.', max_tokens=30)
         if answer.strip().strip('`.') != 'MASR_OK':
-            observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False)
+            observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False, 'invalid_response')
             raise HTTPException(502, 'Gemini returned an unexpected test response')
         observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), True)
     except (HTTPException, ValueError):
-        observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False)
+        if provider_snapshot()['state'] != 'unavailable':
+            observe(os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite').strip(), False, 'invalid_response')
         return {'connection': provider_snapshot(), 'result': 'failed', 'detail': 'Check model access, credentials, quota and provider availability.'}
     return {'connection': provider_snapshot(), 'result': 'success'}
 

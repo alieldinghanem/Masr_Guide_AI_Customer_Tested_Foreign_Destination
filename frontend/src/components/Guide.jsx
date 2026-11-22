@@ -240,7 +240,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'verified' ? (lang === 'ar' ? 'Gemini متصل مؤخرًا · الرد التالي لم يُختبر بعد' : 'Gemini recently connected · next response not yet checked') : t(`guide.availability.${serviceState}`)}</span>
+              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'verified' ? (lang === 'ar' ? 'Gemini متصل مؤخرًا · الرد التالي لم يُختبر بعد' : 'Gemini recently connected · next response not yet checked') : serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'unavailable' ? (lang === 'ar' ? 'Gemini مُعدّ · آخر محاولة اتصال فشلت' : 'Gemini configured · last connection attempt failed') : t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />

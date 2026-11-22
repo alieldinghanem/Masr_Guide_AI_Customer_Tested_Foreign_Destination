@@ -81,6 +81,8 @@ def setup():
           CREATE TABLE IF NOT EXISTS partner_interest (
             id TEXT PRIMARY KEY, company TEXT NOT NULL, email TEXT NOT NULL, website TEXT,
             city TEXT, description TEXT, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new');
+          CREATE TABLE IF NOT EXISTS account_mail_requests (
+            address_hash TEXT PRIMARY KEY, next_at TEXT NOT NULL);
         ''')
 
 
@@ -335,6 +337,8 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
             raise HTTPException(403, detail='Incorrect current password')
         from .ratings import delete_account_reviews
         delete_account_reviews(user['id'])
+        c.execute('DELETE FROM account_mail_requests WHERE address_hash=?',
+                  (hashlib.sha256(user['email'].encode()).hexdigest(),))
         c.execute('DELETE FROM account_users WHERE id=?', (user['id'],))
     return {'deleted': True}
 
@@ -551,3 +555,8 @@ def partner_apply(body: PartnerInterest):
         c.execute('INSERT INTO partner_interest (id,company,email,website,city,description,created_at) VALUES (?,?,?,?,?,?,?)',
                   (pid, body.company, _validate_email(body.email), body.website, body.city, body.description, _now().isoformat()))
     return {'received': True, 'reference': pid}
+
+
+@router.get('/partners/status')
+def partner_status():
+    return {'inquiries_enabled': os.getenv('PARTNER_INQUIRIES_ENABLED', '').lower() in ('1', 'true')}

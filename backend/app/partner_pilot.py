@@ -155,3 +155,12 @@ def report(x_admin_key: str | None = Header(None)):
             referrals = c.execute('SELECT COUNT(*) FROM pilot_referrals WHERE contract_id=?', (ident,)).fetchone()[0]
             rows.append({**dict(contract), **dict(counts), 'referrals': referrals})
     return {'agreements': rows, 'note': 'Staff-reconciled estimates, not collected revenue or payouts. Currencies must not be added together.'}
+
+
+@router.get('/activity')
+def activity(x_admin_key: str | None = Header(None)):
+    require_staff(x_admin_key)
+    with accounts._open() as db:
+        referrals = db.execute('SELECT id,contract_id,created_at FROM pilot_referrals ORDER BY created_at DESC LIMIT 100').fetchall()
+        bookings = db.execute('SELECT id,contract_id,external_booking_id,status,commission_minor FROM pilot_bookings ORDER BY created_at DESC LIMIT 100').fetchall()
+    return {'referrals': [dict(row) for row in referrals], 'bookings': [dict(row) for row in bookings]}

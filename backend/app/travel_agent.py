@@ -1772,6 +1772,12 @@ def consult_travel(request):
             if turn.role == 'user':
                 profile = update_profile(profile, turn.content)
     profile = update_profile(profile, request.message)
+    if original and profile['children_ages'] and re.search(r'how old|what (?:are (?:the|their) )?ages|كم.*عمر|أعمار.*(?:ايه|كام)|quel.*âge', request.message, re.I) and not re.search(r'\d|[٠-٩]', request.message):
+        ages = ', '.join(map(str, profile['children_ages']))
+        answer = (f'أعمار الأطفال المسجلة في رحلتك: {ages} سنوات.' if request.language == 'Arabic' else
+                  f'Les âges des enfants enregistrés pour ce voyage : {ages} ans.' if request.language == 'French' else
+                  f'The children’s ages recorded for your trip are {ages} years.')
+        return {'answer': answer, 'mode': 'local-assistant', 'trip_state': original, 'itinerary': None, 'sources': []}
     result = _consult_travel_core(request)
     if original and result.get('mode') in ('needs-clarification', 'unsupported-destination'):
         # A mixed, rejected itinerary edit must not partially apply new profile fields.
@@ -1791,6 +1797,7 @@ def consult_travel(request):
             if changed and original:
                 result['answer'] = ('سجّلت تفاصيل المسافرين في الرحلة الحالية، مع الحفاظ على المدن وعدد الأيام. الإرشادات الغذائية وإمكانية الوصول تحتاج تأكيدًا من مقدمي الخدمة.'
                                     if request.language == 'Arabic' else
+                                    'Les détails des voyageurs sont enregistrés. Les villes et leurs jours sont conservés. Confirmez les besoins alimentaires et l’accessibilité auprès des prestataires.' if request.language == 'French' else
                                     'Traveler details are recorded in your current trip. Cities and day allocations are preserved. Confirm dietary and access requirements with operators.')
                 result['mode'] = 'local-planner'
                 result['sources'] = result['itinerary'].get('sources', [])

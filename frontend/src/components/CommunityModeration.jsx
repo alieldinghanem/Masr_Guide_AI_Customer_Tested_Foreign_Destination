@@ -5,6 +5,7 @@ export default function CommunityModeration({ staffKey }) {
   const [reports, setReports] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [metrics, setMetrics] = useState(null)
   const load = async () => {
     setBusy(true); setMessage('')
     try { setReports((await api('/admin/community/reports', { headers: { 'X-Admin-Key': staffKey } })).reports || []) }
@@ -26,9 +27,17 @@ export default function CommunityModeration({ staffKey }) {
     } catch { setMessage('Gemini check is not available. Check staff access and provider configuration.') }
     finally { setBusy(false) }
   }
+  const loadMetrics = async () => {
+    setBusy(true); setMessage('')
+    try { setMetrics(await api('/admin/metrics', { headers: { 'X-Admin-Key': staffKey } })) }
+    catch { setMessage('Could not load aggregate counters.') }
+    finally { setBusy(false) }
+  }
   return <section><h3>Community reports</h3><button type="button" disabled={busy} onClick={load}>Refresh reports</button>
     <p>Reports require human review. Hiding removes the comment from public discussions; restore reverses that decision.</p>
     <button type="button" disabled={busy} onClick={checkProvider}>Test Gemini connection</button><small> Makes one short provider request using your configured quota.</small>
+    <button type="button" disabled={busy} onClick={loadMetrics}>Load aggregate counters</button>
+    {metrics && <div><p>{metrics.enabled ? 'Daily aggregate counters enabled. No visitor identity or message text.' : 'Aggregate counters are disabled.'}</p>{metrics.counts.map(item => <p key={`${item.day}-${item.event}`}>{item.day} · {item.event}: {item.count}</p>)}</div>}
     {message && <p role="status">{message}</p>}
     {reports.map((report, index) => <article key={`${report.comment_id}-${index}`}><strong>{report.target_id} · {report.reason} · {report.status}</strong>
       <p>{report.comment_text}</p><small>{report.reports} report(s)</small>

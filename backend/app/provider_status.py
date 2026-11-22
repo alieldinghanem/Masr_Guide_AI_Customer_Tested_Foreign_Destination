@@ -13,11 +13,11 @@ def _identity(model):
     return sha256((os.getenv('GEMINI_API_KEY', '') + '\0' + model).encode()).hexdigest()
 
 
-def observe(model, success):
+def observe(model, success, reason=None):
     with _lock:
         if len(_observations) > 20:
             _observations.clear()
-        _observations[_identity(model)] = (monotonic(), bool(success), datetime.now(timezone.utc).isoformat())
+        _observations[_identity(model)] = (monotonic(), bool(success), datetime.now(timezone.utc).isoformat(), reason)
 
 
 def snapshot():
@@ -31,6 +31,7 @@ def snapshot():
         observation = _observations.get(_identity(model))
     if not observation:
         return {'state': 'unverified', 'scope': 'this_process'}
-    when, success, checked_at = observation
+    when, success, checked_at, reason = observation
     return {'state': ('verified' if success else 'unavailable') if monotonic() - when < 900 else 'stale',
-            'checked_at': checked_at, 'scope': 'this_process'}
+            'checked_at': checked_at, 'scope': 'this_process',
+            **({'failure_reason': reason} if reason and not success else {})}

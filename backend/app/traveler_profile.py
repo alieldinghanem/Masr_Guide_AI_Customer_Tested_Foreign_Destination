@@ -5,7 +5,7 @@ from .schemas import TravelerProfile
 
 def update_profile(profile, message):
     profile = TravelerProfile.model_validate(profile or {}).model_dump()
-    text = message.lower().translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    text = message.lower().translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789')).replace('â', 'a').replace('é', 'e')
     words = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'اثنين': 2, 'اتنين': 2, 'ثلاثة': 3}
     adults = re.search(r'(?<!\w)(\d{1,2}|one|two|three|four|اثنين|اتنين|ثلاثة)\s*(?:adults?|adultes?|بالغين|بالغ|كبار)(?!\w)', text)
     if adults:
@@ -14,8 +14,8 @@ def update_profile(profile, message):
             profile['adults'] = count
     # A bounded list after an explicit age label. It stops at prose, preventing
     # numbers in "aged 4 and 7, budget 2000" from becoming extra children.
-    ages = re.search(r'(?:children(?:\s+are)?\s+aged?|kids(?:\s+are)?\s+aged?|ages|أعمار(?:هم| الأطفال)?|اعمار(?:هم| الاطفال)?|عمرهم|سنهم)\s*[:=]?\s*'
-                     r'(\d{1,2}(?:(?:\s*(?:,|،|and|و|et)\s*|\s+)\d{1,2}){0,11})(?!\d)', text)
+    ages = re.search(r'(?:children(?:\s+are)?\s+aged?|kids(?:\s+are)?\s+aged?|enfants\s+(?:ages\s+de|de)|ages(?:\s+de)?|أعمار(?:هم| الأطفال)?|اعمار(?:هم| الاطفال)?|عمرهم|سنهم)\s*[:=]?\s*'
+                     r'(\d{1,2}(?:(?:\s*(?:,|،|and|و|et)\s*|\s+)\d{1,2}){0,11})(?!\d|\s*(?:days?|أيام|ايام|دولار|usd|egp|جنيه))', text)
     if ages:
         values = [int(value) for value in re.findall(r'\d+', ages[1])]
         if values and all(0 <= age <= 17 for age in values):
