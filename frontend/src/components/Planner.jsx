@@ -15,39 +15,33 @@ const DRAFT_KEY = 'masr-guide-draft-v1'
 // Only hydrate objects matching the public itinerary shape (storage may hold older/foreign data).
 export const isValidPlan = isValidPlannerPlan
 
+function restoredPlanner() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+    const saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null')
+    if (isValidPlan(draft)) return { plan: draft, saved: false }
+    if (isValidPlan(saved)) return { plan: saved, saved: true }
+  } catch { /* unavailable storage or invalid JSON */ }
+  return { plan: null, saved: false }
+}
+
 export default function Planner({ cities, interests, openPlace }) {
   const { t, lang, cityName, interestName, placeName, duration } = useI18n()
-  const [selectedCities, setSelectedCities] = useState(['Cairo'])
-  const [chosenInterests, setChosenInterests] = useState(['history'])
-  const [days, setDays] = useState(3)
-  const [pace, setPace] = useState('balanced')
-  const [family, setFamily] = useState(false)
-  const [travelerProfile, setTravelerProfile] = useState(null)
-  const [optimize, setOptimize] = useState(true)
-  const [plan, setPlan] = useState(null)
+  // Restore before the first editable frame. A later effect could overwrite
+  // the visitor's first keystroke with the saved duration/cities.
+  const [restored] = useState(restoredPlanner)
+  const initial = restored.plan
+  const [selectedCities, setSelectedCities] = useState(() => initial ? [...new Set(initial.days.map(day => day.city))] : ['Cairo'])
+  const [chosenInterests, setChosenInterests] = useState(() => Array.isArray(initial?._request?.interests) && initial._request.interests.length ? initial._request.interests : ['history'])
+  const [days, setDays] = useState(initial?.days.length || 3)
+  const [pace, setPace] = useState(PACES.includes(initial?.pace) ? initial.pace : 'balanced')
+  const [family, setFamily] = useState(!!initial?.family || !!initial?.traveler_profile?.children_ages?.length)
+  const [travelerProfile, setTravelerProfile] = useState(initial?.traveler_profile || null)
+  const [optimize, setOptimize] = useState(initial ? !!initial.route_optimized : true)
+  const [plan, setPlan] = useState(initial)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    try {
-      const savedPlan = localStorage.getItem(SAVED_KEY)
-      const draftPlan = sessionStorage.getItem(DRAFT_KEY)
-      const savedData = savedPlan ? JSON.parse(savedPlan) : null
-      const draftData = draftPlan ? JSON.parse(draftPlan) : null
-      const restored = isValidPlan(draftData) ? draftData : isValidPlan(savedData) ? savedData : null
-      if (restored) {
-        setPlan(restored); setSaved(restored === savedData)
-        setSelectedCities([...new Set(restored.days.map(day => day.city))])
-        setDays(restored.days.length)
-        if (PACES.includes(restored.pace)) setPace(restored.pace)
-        setFamily(!!restored.family || !!restored.traveler_profile?.children_ages?.length)
-        setTravelerProfile(restored.traveler_profile || null)
-        setOptimize(!!restored.route_optimized)
-        if (restored._request?.interests?.length) setChosenInterests(restored._request.interests)
-      }
-    } catch { /* storage may be disabled or data from an older version */ }
-  }, [])
+  const [saved, setSaved] = useState(restored.saved)
 
   const persist = (data, isSaved) => {
     try {

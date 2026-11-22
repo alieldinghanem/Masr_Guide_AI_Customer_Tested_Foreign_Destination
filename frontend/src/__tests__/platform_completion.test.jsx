@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useLayoutEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -98,7 +98,13 @@ describe('platform completion', () => {
     sessionStorage.setItem('masr-guide-draft-v1', JSON.stringify(plan))
     const calls = mockApi()
     const user = userEvent.setup()
-    wrap(<Planner cities={CITIES} interests={INTERESTS} />)
+    const firstPaint = []
+    function ObserveFirstFrame() {
+      useLayoutEffect(() => { firstPaint.push(document.querySelector('input[type="number"]').value) }, [])
+      return null
+    }
+    wrap(<><Planner cities={CITIES} interests={INTERESTS} /><ObserveFirstFrame /></>)
+    expect(firstPaint).toEqual(['2'])
     expect(screen.getByLabelText('Number of days')).toHaveValue(2)
     await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
     const body = calls.find(call => call.path === '/plan').body
