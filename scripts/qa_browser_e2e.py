@@ -293,7 +293,7 @@ def test_react(browser, label, width, height):
         expect(page.get_by_role('button', name='Saved · Remove')).to_be_visible(timeout=15000)
         page.goto(f'{URL}/#/saved', wait_until='domcontentloaded')
         expect(page.get_by_text('Synced with your travel account.')).to_be_visible(timeout=15000)
-        expect(page.get_by_text('1 saved places')).to_be_visible(timeout=15000)
+        expect(page.get_by_text('1 saved place', exact=True)).to_be_visible(timeout=15000)
         print(f'PASS {label}: cloud favorites survive reload')
         page.goto(f'{URL}/#/account', wait_until='domcontentloaded')
         page.get_by_role('button', name='Sign out').click()
