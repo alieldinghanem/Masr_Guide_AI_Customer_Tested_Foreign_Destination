@@ -35,6 +35,12 @@ class PlanRequest(BaseModel):
     optimize_route: bool = False
     language: str = Field(default="en", pattern="^(en|ar)$")
     budget_usd: int | None = Field(default=None, ge=1, le=1000000)
+    traveler_profile: dict | None = None
+
+    @field_validator('traveler_profile')
+    @classmethod
+    def valid_profile(cls, value):
+        return TravelerProfile.model_validate(value).model_dump() if value is not None else None
 
     @field_validator("cities")
     @classmethod

@@ -268,7 +268,18 @@ def detail(slug: str):
 
 @app.post("/api/plan")
 def plan(body: PlanRequest):
-    try: return build_plan(body)
+    try:
+        if body.traveler_profile and body.traveler_profile['children_ages']:
+            body = body.model_copy(update={'family': True})
+        result = build_plan(body)
+        result['family'] = body.family
+        if body.traveler_profile:
+            result['traveler_profile'] = body.traveler_profile
+            if any(age < 5 for age in body.traveler_profile['children_ages']):
+                for day in result['days']:
+                    if day['stops']:
+                        day['rest_minutes'] = max(day.get('rest_minutes', 0), 60)
+        return result
     except ValueError as exc: raise HTTPException(422, detail=str(exc)) from exc
 
 @app.post("/api/chat")

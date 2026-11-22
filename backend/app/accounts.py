@@ -15,7 +15,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, EmailStr, Field, ValidationError
 
-from .schemas import TripState
+from .schemas import TripState, TravelerProfile
 from .database import get_place
 from .conversation_router import payment_sensitive
 from .durable_storage import configured as postgres_configured, connect_traveler
@@ -123,6 +123,8 @@ def _validate_saved_itinerary(plan: dict) -> str:
     generated trips must have unique, contiguous positive day numbers.
     """
     try:
+        if isinstance(plan, dict) and 'traveler_profile' in plan:
+            TravelerProfile.model_validate(plan['traveler_profile'])
         raw = json.dumps(plan, ensure_ascii=False, allow_nan=False)
     except (TypeError, ValueError) as exc:
         raise HTTPException(422, detail='Itinerary contains invalid numeric or object values') from exc

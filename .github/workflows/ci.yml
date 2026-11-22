@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16
@@ -42,6 +42,10 @@ jobs:
         run: python scripts/qa_frontend_security_contract.py
       - name: Enable PostgreSQL 16 backup tools for the isolated restore drill
         run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client-16
+          fi
           test -x /usr/lib/postgresql/16/bin/pg_dump
           test -x /usr/lib/postgresql/16/bin/pg_restore
           echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"

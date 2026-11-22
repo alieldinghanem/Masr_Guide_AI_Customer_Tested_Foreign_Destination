@@ -1097,6 +1097,8 @@ def _make_plan(state: dict, lang: str):
     for day in days:
         allocations[day['city']] = allocations.get(day['city'], 0) + 1
     return {'days': days, 'warnings': warnings, 'route': route, 'route_optimized': False,
+            'traveler_profile': state.get('traveler_profile', {'adults': None, 'children_ages': [], 'food_preferences': []}),
+            'family': state['family'], 'budget_usd': state.get('budget_usd'), 'budget_egp': state.get('budget_egp'),
             'total_travel_minutes': travel_minutes, 'total_places': total_places, 'pace': state['pace'],
             'accessibility_needs': bool(state.get('accessibility_needs', False)),
             'disclaimer': disclaimer, 'sources': sources, 'day_allocation': allocations}

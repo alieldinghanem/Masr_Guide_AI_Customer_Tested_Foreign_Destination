@@ -22,6 +22,7 @@ export default function Planner({ cities, interests, openPlace }) {
   const [days, setDays] = useState(3)
   const [pace, setPace] = useState('balanced')
   const [family, setFamily] = useState(false)
+  const [travelerProfile, setTravelerProfile] = useState(null)
   const [optimize, setOptimize] = useState(true)
   const [plan, setPlan] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -34,8 +35,17 @@ export default function Planner({ cities, interests, openPlace }) {
       const draftPlan = sessionStorage.getItem(DRAFT_KEY)
       const savedData = savedPlan ? JSON.parse(savedPlan) : null
       const draftData = draftPlan ? JSON.parse(draftPlan) : null
-      if (isValidPlan(draftData)) { setPlan(draftData); setSaved(false) }
-      else if (isValidPlan(savedData)) { setPlan(savedData); setSaved(true) }
+      const restored = isValidPlan(draftData) ? draftData : isValidPlan(savedData) ? savedData : null
+      if (restored) {
+        setPlan(restored); setSaved(restored === savedData)
+        setSelectedCities([...new Set(restored.days.map(day => day.city))])
+        setDays(restored.days.length)
+        if (PACES.includes(restored.pace)) setPace(restored.pace)
+        setFamily(!!restored.family || !!restored.traveler_profile?.children_ages?.length)
+        setTravelerProfile(restored.traveler_profile || null)
+        setOptimize(!!restored.route_optimized)
+        if (restored._request?.interests?.length) setChosenInterests(restored._request.interests)
+      }
     } catch { /* storage may be disabled or data from an older version */ }
   }, [])
 
@@ -48,7 +58,8 @@ export default function Planner({ cities, interests, openPlace }) {
 
   const requestBody = () => ({
     cities: selectedCities, days: Number(days), interests: chosenInterests, pace, family,
-    optimize_route: optimize, language: lang, budget_usd: null
+    optimize_route: optimize, language: lang, budget_usd: plan?.budget_usd || plan?._request?.budget_usd || null,
+    ...(travelerProfile ? { traveler_profile: travelerProfile } : {})
   })
 
   const toggleCity = c => setSelectedCities(old => old.includes(c) ? old.filter(x => x !== c) : [...old, c])
@@ -59,6 +70,7 @@ export default function Planner({ cities, interests, openPlace }) {
     if (!isValidPlan(response)) throw new Error('The planner returned an invalid itinerary. Your previous plan was not replaced.')
     const withRequest = { ...response, _request: body }
     setPlan(withRequest)
+    if (response.family !== undefined) setFamily(response.family)
     if (keepSaved) persist(withRequest, true)
     else { setSaved(false); persist(withRequest, false) }
   }, [])
@@ -88,6 +100,7 @@ export default function Planner({ cities, interests, openPlace }) {
   const clear = () => {
     try { localStorage.removeItem(SAVED_KEY); sessionStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
     setPlan(null); setSaved(false)
+    setTravelerProfile(null)
   }
   const download = () => {
     if (!plan) return

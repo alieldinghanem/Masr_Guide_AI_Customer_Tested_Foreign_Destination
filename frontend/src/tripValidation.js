@@ -5,6 +5,15 @@
 // This is defense-in-depth, not a substitute for server-side authorization.
 const validLabel = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max
 
+export function isValidTravelerProfile(profile) {
+  return !!profile && typeof profile === 'object' && !Array.isArray(profile) &&
+    (profile.adults === null || (Number.isInteger(profile.adults) && profile.adults >= 1 && profile.adults <= 20)) &&
+    Array.isArray(profile.children_ages) && profile.children_ages.length <= 12 &&
+    profile.children_ages.every(age => Number.isInteger(age) && age >= 0 && age <= 17) &&
+    Array.isArray(profile.food_preferences) && profile.food_preferences.length <= 3 &&
+    profile.food_preferences.every(value => ['vegetarian', 'vegan', 'halal'].includes(value))
+}
+
 export function isValidItinerary(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data) || !Array.isArray(data.days) ||
       data.days.length < 1 || data.days.length > 30) return false
@@ -33,6 +42,7 @@ export function isValidItinerary(data) {
  */
 export function isValidPlannerPlan(plan) {
   return isValidItinerary(plan) &&
+    (!('traveler_profile' in plan) || isValidTravelerProfile(plan.traveler_profile)) &&
     (!('route' in plan) || (Array.isArray(plan.route) && plan.route.length <= 30 &&
       plan.route.every(x => validLabel(x, 100)))) &&
     (!('warnings' in plan) || (Array.isArray(plan.warnings) && plan.warnings.length <= 50 &&

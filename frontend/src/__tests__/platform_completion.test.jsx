@@ -8,7 +8,8 @@ import VisitorComments from '../components/VisitorComments'
 import CoastalDetails from '../components/CoastalDetails'
 import { COASTAL_DESTINATIONS } from '../coastalDestinations'
 import App from '../App'
-import { mockApi } from './fixtures'
+import { mockApi, planFor, CITIES, INTERESTS } from './fixtures'
+import Planner from '../components/Planner'
 import { isValidTripState } from '../tripValidation'
 
 beforeEach(() => window.history.replaceState(null, '', '/'))
@@ -89,5 +90,21 @@ describe('platform completion', () => {
     expect(isValidTripState({ ...state, traveler_profile: profile })).toBe(true)
     expect(isValidTripState({ ...state, traveler_profile: { ...profile, children_ages: [true] } })).toBe(false)
     expect(isValidTripState({ ...state, traveler_profile: { ...profile, food_preferences: ['invented'] } })).toBe(false)
+  })
+
+  it('hydrates an existing itinerary and sends its traveler profile when regenerated', async () => {
+    const profile = { adults: 2, children_ages: [4, 7], food_preferences: ['halal'] }
+    const plan = planFor({ pace: 'relaxed', language: 'en' }, { family: true, traveler_profile: profile, budget_usd: 2000 })
+    sessionStorage.setItem('masr-guide-draft-v1', JSON.stringify(plan))
+    const calls = mockApi()
+    const user = userEvent.setup()
+    wrap(<Planner cities={CITIES} interests={INTERESTS} />)
+    expect(screen.getByLabelText('Number of days')).toHaveValue(2)
+    await user.click(screen.getByRole('button', { name: 'Generate my itinerary' }))
+    const body = calls.find(call => call.path === '/plan').body
+    expect(body.cities).toEqual(['Giza', 'Luxor'])
+    expect(body.traveler_profile).toEqual(profile)
+    expect(body.budget_usd).toBe(2000)
+    expect(body.family).toBe(true)
   })
 })
