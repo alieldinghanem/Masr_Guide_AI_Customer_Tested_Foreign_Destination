@@ -1184,8 +1184,8 @@ def _consult_travel_core(request):
                              re.search(r'(?<!\w)(?:يومين|يومان)(?!\w)', lowered))
     plan_words = (total_days(message) is not None or two_day_city_stay or bool(_explicit_city_allocations(message, available))
                   or any(x in lowered for x in ('plan', 'itinerary', 'trip', 'holiday', 'برنامج', 'رحلة', 'خطط', 'خطة', 'خطه', 'تخطيط', 'voyage')))
-    from .conversation_router import payment_sensitive
-    if (payment_sensitive(message) or
+    from .conversation_router import payment_sensitive, unsafe_dive_request
+    if (payment_sensitive(message) or unsafe_dive_request(message) or
         re.search(r'(?:chest pain|medical emergency|can.t breathe|ألم الصدر|الم الصدر|بيهددني|تهددني|unsafe driver|driver threatens)', lowered)):
         from .conversation_router import special_reply
         safety = special_reply(message, request.language, request.history)

@@ -246,6 +246,10 @@ def test_react(browser, label, width, height):
         demo_email = f'qa-{uuid4().hex[:12]}@example.org'
         page.get_by_role('textbox', name='Email', exact=True).fill(demo_email)
         page.get_by_label('Password', exact=True).fill('QA-test-account-Password-2026')
+        page.get_by_label('Confirm password', exact=True).fill('QA-different-password-2026')
+        page.get_by_role('button', name='Register', exact=True).click()
+        expect(page.get_by_role('alert')).to_contain_text('Passwords do not match')
+        expect(page.get_by_role('button', name='Register', exact=True)).to_be_visible()
         page.get_by_label('Confirm password', exact=True).fill('QA-test-account-Password-2026')
         page.get_by_role('button', name='Register').click()
         expect(page.get_by_text(f'Signed in as')).to_be_visible(timeout=15000)

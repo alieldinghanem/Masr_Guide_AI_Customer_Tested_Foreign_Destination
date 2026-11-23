@@ -231,3 +231,24 @@ def test_config_disabled_provider_failure_and_rate_limits_are_honest(google, mon
     security._guard_hits.clear(); monkeypatch.setenv('AUTH_GOOGLE_RATE_PER_MINUTE', '1')
     client.post('/api/auth/google/challenge', json={})
     assert client.post('/api/auth/google/challenge', json={}).status_code == 429
+
+
+def test_google_member_can_post_export_and_delete_community_content(google, monkeypatch):
+    client, token = google
+    monkeypatch.setenv('ADMIN_API_TOKEN', 'isolated-test-moderation-token')
+    created = client.post('/api/auth/google', json=credentials(client, token)).json()
+    headers = {'Authorization': 'Bearer ' + created['token']}
+    post = client.post('/api/community/posts', headers=headers, json={
+        'client_id': 'a' * 32, 'topic': 'question', 'body': 'Which family activity would you recommend in Cairo?'})
+    assert post.status_code == 201, post.text
+    post_id = post.json()['post']['id']
+    exported = client.get('/api/my/export', headers=headers)
+    assert exported.status_code == 200 and 'Which family activity' in exported.text
+    body = credentials(client, token, purpose='delete', headers=headers)
+    proof = client.post('/api/auth/google/reauth-delete', headers=headers, json=body)
+    assert proof.status_code == 200
+    deleted = client.request('DELETE', '/api/my/account', headers=headers, json={
+        'google_proof': proof.json()['google_proof'], 'confirmation': 'DELETE MY ACCOUNT'})
+    assert deleted.status_code == 200, deleted.text
+    assert client.get('/api/auth/me', headers=headers).status_code == 401
+    assert client.get('/api/community/posts/' + post_id).status_code == 404

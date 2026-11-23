@@ -24,6 +24,8 @@ def test_traveler_account_and_reviews_survive_catalog_rebuild_and_restart(tmp_pa
         assert first.get('/api/health').json()['registration_enabled'] is True
         created = first.post('/api/auth/register', json={'email': email, 'password': password})
         assert created.status_code == 201, created.text
+        duplicate = first.post('/api/auth/register', json={'email': email, 'password': password})
+        assert duplicate.status_code == 409, duplicate.text
         headers = {'Authorization': f"Bearer {created.json()['token']}"}
         assert first.post('/api/my/favorites/karnak', headers=headers).status_code == 200
         assert first.post('/api/ratings/giza-pyramids', json={'rating': 5}, headers=headers).status_code == 200

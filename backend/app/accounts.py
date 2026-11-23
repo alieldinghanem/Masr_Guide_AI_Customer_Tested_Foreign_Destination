@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import sqlite3
+from psycopg import IntegrityError as PostgresIntegrityError
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -318,7 +319,7 @@ def register(body: Registration):
             c.execute('INSERT INTO account_users VALUES (?,?,?,?,?)',
                       (uid, email, _hash_password(body.password, salt), salt, _now().isoformat()))
             credential = _issue(c, uid)
-    except sqlite3.IntegrityError:
+    except (sqlite3.IntegrityError, PostgresIntegrityError):
         raise HTTPException(409, detail='Account already exists')
     return {'user': {'id': uid, 'email': email}, **credential}
 
