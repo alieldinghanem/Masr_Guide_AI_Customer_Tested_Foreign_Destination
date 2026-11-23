@@ -29,6 +29,6 @@ export default function CoastalDetails({ destination, onBack, askQuestion, saved
       <iframe title={ar ? `خريطة بحث عن ${title}` : `Map search for ${title}`} src={`https://maps.google.com/maps?q=${encodeURIComponent(`${destination.spotEn}, ${destination.en}, Egypt`)}&output=embed`} loading="lazy" referrerPolicy="no-referrer" style={{ width: '100%', minHeight: 260, border: 0 }} />
       <small>{ar ? 'الخريطة للبحث عن المنطقة؛ أكد مدخل الشاطئ مع الجهة المشغلة.' : 'Map searches the area; confirm the beach entrance with its operator.'}</small>
     </section></div>
-    <VisitorComments targetId={targetId} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} />
+    <VisitorComments key={targetId + ':' + (session?.token || 'guest')} targetId={targetId} session={session} onSignIn={onSignIn} registrationEnabled={registrationEnabled} />
   </main>
 }

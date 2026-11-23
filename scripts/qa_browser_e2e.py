@@ -375,6 +375,7 @@ def test_visitor_ratings(browser):
         page.get_by_role('combobox', name='Sort by').select_option('rated')
         expect(page.locator('.mg-coastal-guide h3').first).to_have_text('Marsa Alam')
         page.goto(f'{URL}/#/reviews', wait_until='domcontentloaded')
+        page.get_by_role('button', name='Place reviews', exact=True).click()
         expect(page.locator('.reviews-rank li').first).to_contain_text('Marsa Alam', timeout=15000)
         print('PASS visitor ratings: real vote, reload persistence and highest-rated sort')
     finally:
@@ -421,6 +422,59 @@ def test_photo_details_and_comments(browser):
         context.close()
 
 
+def test_community_posts(browser, label, width, height):
+    """Round-trip the compiled discussion UI against an isolated real backend."""
+    from uuid import uuid4
+    from urllib.parse import urlsplit
+    assert urlsplit(URL).hostname in ('127.0.0.1', 'localhost', '::1'), 'Synthetic social posts must remain in isolated local/CI services'
+    context = browser.new_context(viewport={'width': width, 'height': height})
+    context.add_init_script("localStorage.setItem('masr-guide-lang', 'en')")
+    page = context.new_page()
+    unique = uuid4().hex[:10]
+    body = f'Community QA {unique}: what is a relaxed family activity in Dahab?'
+    try:
+        page.goto(f'{URL}/#/account', wait_until='domcontentloaded')
+        page.get_by_role('button', name='Create an account').click()
+        page.get_by_role('textbox', name='Email', exact=True).fill(f'social-{unique}@example.invalid')
+        page.get_by_label('Password').fill('Isolated-social-QA-password-2026!')
+        page.get_by_role('button', name='Register', exact=True).click()
+        expect(page.get_by_text('Signed in as')).to_be_visible(timeout=15000)
+        page.goto(f'{URL}/#/reviews', wait_until='domcontentloaded')
+        page.get_by_role('button', name='Write a post', exact=True).click()
+        page.get_by_role('combobox', name='Post topic', exact=True).select_option('question')
+        page.get_by_role('combobox', name='Destination (optional)', exact=True).select_option('coast:dahab')
+        page.get_by_role('textbox', name='Your post', exact=True).fill(body)
+        page.locator('.lang-toggle').click()
+        expect(page.get_by_role('textbox', name='منشورك', exact=True)).to_have_value(body)
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'Arabic community overflow'
+        page.locator('.lang-toggle').click()
+        page.get_by_role('button', name='Publish post', exact=True).click()
+        card = page.locator('.social-post').filter(has_text=unique)
+        expect(card).to_be_visible(timeout=15000)
+        card.get_by_role('button', name='Like 0', exact=True).click()
+        expect(card.get_by_role('button', name='Like 1', exact=True)).to_have_attribute('aria-pressed', 'true')
+        card.get_by_role('button', name='Replies 0', exact=True).click()
+        card.get_by_role('textbox', name='Your reply', exact=True).fill('A useful reply from the isolated browser test.')
+        card.get_by_role('button', name='Post reply', exact=True).click()
+        expect(card.get_by_text('A useful reply from the isolated browser test.')).to_be_visible()
+        expect(card.get_by_role('button', name='Replies 1', exact=True)).to_be_visible()
+        page.reload(wait_until='domcontentloaded')
+        card = page.locator('.social-post').filter(has_text=unique)
+        expect(card.get_by_role('button', name='Like 1', exact=True)).to_have_attribute('aria-pressed', 'true', timeout=15000)
+        expect(card.get_by_role('button', name='Replies 1', exact=True)).to_be_visible()
+        card.get_by_role('button', name='Edit', exact=True).click()
+        card.get_by_role('textbox', name='Edit', exact=True).fill(body + ' Updated after feedback.')
+        card.get_by_role('button', name='Save changes', exact=True).click()
+        expect(card.locator('.social-body')).to_have_text(body + ' Updated after feedback.')
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), 'Community overflow'
+        card.get_by_role('button', name='Delete', exact=True).click()
+        card.get_by_role('button', name='Confirm deletion', exact=True).click()
+        expect(card).to_have_count(0)
+        print(f'PASS {label}: real community post, language-preserved draft, destination, like, reply, reload, edit and deletion')
+    finally:
+        context.close()
+
+
 def run():
     with sync_playwright() as p:
         exe = os.getenv('BROWSER_EXECUTABLE') or shutil.which('chromium') or shutil.which('google-chrome')
@@ -431,6 +485,8 @@ def run():
             test_mobile_photo_layout(browser)
             test_visitor_ratings(browser)
             test_photo_details_and_comments(browser)
+            test_community_posts(browser, 'desktop', 1366, 900)
+            test_community_posts(browser, 'mobile', 390, 844)
             # Must be the compiled React entry point served by the backend.
             test_react(browser, 'desktop', 1366, 900)
             test_react(browser, 'mobile', 390, 844)

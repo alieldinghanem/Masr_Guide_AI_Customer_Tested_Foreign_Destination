@@ -88,6 +88,8 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrat
     }
     if (path === '/auth/google/config') return reply({ enabled: false, client_id: null })
     if (path === '/my/favorites') return reply({ place_ids: [] })
+    if (path === '/community/status') return reply({ posting_enabled: true })
+    if (path.startsWith('/community/posts')) return reply({ posts: [], next_cursor: null })
     if (path === '/my/trips') return reply({ trips: [] })
     if (path === '/plan') return reply(planFor(body))
     if (path === '/chat' || path === '/consult') {
