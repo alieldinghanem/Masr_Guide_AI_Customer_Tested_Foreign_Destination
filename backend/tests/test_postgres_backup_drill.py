@@ -45,6 +45,7 @@ def test_real_backup_restore_and_account_trip_ownership(tmp_path, monkeypatch):
     monkeypatch.setenv('NEON_DATABASE_URL', source)
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'catalog.sqlite3'))
     monkeypatch.setenv('MASR_DURABLE_STORAGE_CONFIRMED', 'true')
+    monkeypatch.setenv('ADMIN_API_TOKEN', 'isolated-backup-test-staff-token')
     security._guard_hits.clear()
     with TestClient(app) as client:
         created = client.post('/api/auth/register', json={'email': email, 'password': password})
@@ -54,6 +55,11 @@ def test_real_backup_restore_and_account_trip_ownership(tmp_path, monkeypatch):
         trip = client.post('/api/my/trips', headers=headers, json={'title': 'Restore rehearsal', 'itinerary': {'days': [{'day': 1, 'city': 'Cairo', 'stops': []}]}})
         assert trip.status_code == 201, trip.text
         trip_id = trip.json()['id']
+        post = client.post('/api/community/posts', headers=headers, json={
+            'client_id': uuid4().hex, 'body': 'Community post retained through an isolated backup restore.', 'topic': 'tip'})
+        assert post.status_code == 201, post.text
+        post_id = post.json()['post']['id']
+        assert client.put('/api/community/posts/' + post_id + '/like', headers=headers).status_code == 200
     with psycopg.connect(source, autocommit=True) as admin:
         admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(target_name)))
     try:
@@ -70,6 +76,8 @@ def test_real_backup_restore_and_account_trip_ownership(tmp_path, monkeypatch):
             assert logged_in.status_code == 200
             headers = {'Authorization': 'Bearer ' + logged_in.json()['token']}
             assert restored_app.get('/api/my/trips/' + trip_id, headers=headers).json()['title'] == 'Restore rehearsal'
+            restored_post = restored_app.get('/api/community/posts/' + post_id, headers=headers).json()['post']
+            assert restored_post['is_owner'] and restored_post['liked'] and restored_post['likes_count'] == 1
             outsider = restored_app.post('/api/auth/register', json={'email': 'other-' + uuid4().hex + '@example.org', 'password': password})
             assert outsider.status_code == 201
             assert restored_app.get('/api/my/trips/' + trip_id, headers={'Authorization': 'Bearer ' + outsider.json()['token']}).status_code == 404

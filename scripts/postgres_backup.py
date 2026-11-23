@@ -15,6 +15,8 @@ import subprocess
 from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+BASE_TABLES = ('account_users', 'account_trips', 'account_conversations', 'visitor_ratings', 'visitor_comments')
+COMMUNITY_TABLES = ('community_posts', 'community_replies', 'community_likes', 'community_content_reports')
 
 
 def _settings(url):
@@ -58,8 +60,9 @@ def backup(source_url, destination):
         with psycopg.connect(source_url, sslmode=settings['PGSSLMODE'], connect_timeout=10) as db:
             db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY')
             snapshot = db.execute('SELECT pg_export_snapshot()').fetchone()[0]
-            counts = {table: db.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0]
-                      for table in ('account_users', 'account_trips', 'account_conversations', 'visitor_ratings', 'visitor_comments')}
+            present = {row[0] for row in db.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'").fetchall()}
+            tables = (*BASE_TABLES, *(name for name in COMMUNITY_TABLES if name in present))
+            counts = {table: db.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0] for table in tables}
             _run('pg_dump', ['--format=custom', '--no-owner', '--no-privileges', '--snapshot', snapshot, '--file', str(destination)], settings)
         digest = hashlib.sha256(destination.read_bytes()).hexdigest()
         _run('pg_restore', ['--list', str(destination)], settings)
@@ -81,6 +84,9 @@ def restore_drill(source_url, target_url, archive):
         raise ValueError('Restore target must be a separate empty database')
     archive = _private_path(archive)
     manifest = json.loads(archive.with_suffix(archive.suffix + '.json').read_text(encoding='ascii'))
+    names = set(manifest.get('counts', {}))
+    if not set(BASE_TABLES) <= names or not names <= set((*BASE_TABLES, *COMMUNITY_TABLES)):
+        raise ValueError('Backup manifest contains unsupported tables')
     if hashlib.sha256(archive.read_bytes()).hexdigest() != manifest['sha256']:
         raise ValueError('Backup checksum does not match')
     with psycopg.connect(target_url, sslmode=target['PGSSLMODE'], connect_timeout=10) as db:
@@ -89,8 +95,7 @@ def restore_drill(source_url, target_url, archive):
             raise ValueError('Restore target is not empty; no tables were changed')
     _run('pg_restore', ['--dbname', target['PGDATABASE'], '--single-transaction', '--exit-on-error', '--no-owner', '--no-privileges', str(archive)], target)
     with psycopg.connect(target_url, sslmode=target['PGSSLMODE'], connect_timeout=10) as db:
-        counts = {table: db.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0]
-                  for table in ('account_users', 'account_trips', 'account_conversations', 'visitor_ratings', 'visitor_comments')}
+        counts = {table: db.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0] for table in sorted(names)}
         orphaned = db.execute('''SELECT COUNT(*) FROM account_trips t LEFT JOIN account_users u ON u.id=t.user_id
                                  WHERE u.id IS NULL''').fetchone()[0]
         if orphaned:

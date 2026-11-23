@@ -87,6 +87,8 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrat
       return reply({ target_id: target, average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size, your_rating: body.rating, temporary_storage: true })
     }
     if (path === '/my/favorites') return reply({ place_ids: [] })
+    if (path === '/community/status') return reply({ posting_enabled: true })
+    if (path.startsWith('/community/posts')) return reply({ posts: [], next_cursor: null })
     if (path === '/my/trips') return reply({ trips: [] })
     if (path === '/plan') return reply(planFor(body))
     if (path === '/chat' || path === '/consult') {
