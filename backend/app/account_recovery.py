@@ -1,11 +1,14 @@
 """Single-use account links. Disabled until an operator configures secure mail."""
 import hashlib
+import http.client
+import json
 import os
 import secrets
 import smtplib
 import ssl
 from datetime import timedelta
 from email.message import EmailMessage
+from email.utils import parseaddr
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -17,11 +20,30 @@ router = APIRouter(prefix='/api/auth', tags=['account-recovery'])
 
 
 def mail_ready():
-    origin = urlsplit(os.getenv('PUBLIC_SITE_URL', ''))
-    return (origin.scheme == 'https' and bool(origin.netloc) and not origin.username
+    try:
+        origin = urlsplit(os.getenv('PUBLIC_SITE_URL', ''))
+    except ValueError:
+        return False
+    sender = os.getenv('MAIL_FROM', '').strip()
+    address = parseaddr(sender)[1]
+    common = (origin.scheme == 'https' and bool(origin.hostname) and not origin.username
             and not origin.password and origin.path in ('', '/') and not origin.query and not origin.fragment
-            and all(os.getenv(name, '').strip() for name in
-                    ('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM'))
+            and '\n' not in sender and '\r' not in sender and '@' in address)
+    if not common:
+        return False
+    provider = os.getenv('MAIL_PROVIDER', 'smtp').strip().lower()
+    if provider == 'resend':
+        # The shared test domain cannot send account links to public visitors.
+        return bool(os.getenv('RESEND_API_KEY', '').strip()) and address.rsplit('@', 1)[-1].lower() != 'resend.dev'
+    if provider == 'brevo':
+        return bool(os.getenv('BREVO_API_KEY', '').strip())
+    if provider != 'smtp':
+        return False
+    # Render Free blocks the secure SMTP ports this transport uses. Paid
+    # deployments may explicitly select SMTP; HTTPS mail works on Free.
+    if os.getenv('RENDER', '').lower() == 'true' and os.getenv('MAIL_ALLOW_RENDER_SMTP', '').lower() != 'true':
+        return False
+    return (all(os.getenv(name, '').strip() for name in ('SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD'))
             and os.getenv('SMTP_PORT', '587') in ('465', '587'))
 
 
@@ -55,6 +77,8 @@ class PasswordReset(LinkToken):
 
 
 def _send_link(address, purpose, token):
+    if not mail_ready():
+        raise ValueError('Account email is not configured')
     message = EmailMessage()
     message['From'] = os.environ['MAIL_FROM']
     message['To'] = address
@@ -62,6 +86,36 @@ def _send_link(address, purpose, token):
     url = os.environ['PUBLIC_SITE_URL'].rstrip('/') + '/#/account?action=' + purpose + '&token=' + token
     message.set_content('Open this single-use link within 30 minutes:\n' + url +
                         '\n\nIf you did not request this, ignore this message. Do not share the link.')
+    provider = os.getenv('MAIL_PROVIDER', 'smtp').strip().lower()
+    if provider in ('resend', 'brevo'):
+        # Fixed HTTPS destination; http.client never follows redirects carrying
+        # the API key or single-use link to an unexpected host.
+        if provider == 'resend':
+            host, path, receipt = 'api.resend.com', '/emails', 'id'
+            payload = {'from': str(message['From']), 'to': [address],
+                       'subject': str(message['Subject']), 'text': message.get_content()}
+            credentials = {'Authorization': 'Bearer ' + os.environ['RESEND_API_KEY'].strip()}
+        else:
+            host, path, receipt = 'api.brevo.com', '/v3/smtp/email', 'messageId'
+            sender_name, sender_address = parseaddr(str(message['From']))
+            payload = {'sender': {'name': sender_name or 'Masr Guide AI', 'email': sender_address},
+                       'to': [{'email': address}], 'subject': str(message['Subject']),
+                       'textContent': message.get_content()}
+            credentials = {'api-key': os.environ['BREVO_API_KEY'].strip()}
+        connection = http.client.HTTPSConnection(host, timeout=10, context=ssl.create_default_context())
+        try:
+            connection.request('POST', path, json.dumps(payload).encode('utf-8'),
+                               headers={'Content-Type': 'application/json', **credentials})
+            response = connection.getresponse()
+            raw = response.read(8193)
+            if response.status not in (200, 201) or len(raw) > 8192:
+                raise ValueError('Email provider did not accept the message')
+            result = json.loads(raw)
+            if not isinstance(result, dict) or not isinstance(result.get(receipt), str) or not result[receipt].strip():
+                raise ValueError('Email provider did not confirm acceptance')
+        finally:
+            connection.close()
+        return
     context = ssl.create_default_context()
     port = int(os.getenv('SMTP_PORT', '587'))
     factory = smtplib.SMTP_SSL if port == 465 else smtplib.SMTP
@@ -76,7 +130,7 @@ def _send_link(address, purpose, token):
 def _deliver(address, purpose, token):
     try:
         _send_link(address, purpose, token)
-    except (OSError, smtplib.SMTPException):
+    except (OSError, smtplib.SMTPException, http.client.HTTPException, ValueError):
         with accounts._open() as db:
             db.execute('DELETE FROM account_actions WHERE token_hash=?',
                        (hashlib.sha256(token.encode()).hexdigest(),))
@@ -110,7 +164,7 @@ def _request(address, purpose, tasks):
                            (hashlib.sha256(token.encode()).hexdigest(), user['id'], purpose,
                             (now + timedelta(minutes=30)).isoformat()))
     if token:
-        # Delivery happens after responding, avoiding an SMTP timing oracle.
+        # Delivery happens after responding, avoiding a mail-delivery timing oracle.
         # A failed send invalidates the token; no token is returned or logged.
         tasks.add_task(_deliver, address, purpose, token)
     return {'status': 'accepted', 'detail': 'If the account is eligible, check its inbox for a link.'}
