@@ -189,7 +189,7 @@ def create_post(body: PostCreate, user=Depends(current_user)):
                     or existing['topic'] != body.topic or existing['target_id'] != body.target_id
                     or existing['state'] != 'active'):
                 raise HTTPException(409, 'This submission has already changed')
-        return {'post': _post(db, body.client_id, user)}
+            return {'post': _post(db, body.client_id, user)}
 
 
 @router.get('/community/posts/{post_id}')
@@ -288,7 +288,7 @@ def like(post_id: str, user=Depends(current_user)):
         with db:
             _post(db, post_id)
             db.execute('INSERT INTO community_likes VALUES (?,?) ON CONFLICT DO NOTHING', (post_id, _hash(user)))
-        return {'post': _post(db, post_id, user)}
+            return {'post': _post(db, post_id, user)}
 
 
 @router.delete('/community/posts/{post_id}/like')
@@ -297,7 +297,7 @@ def unlike(post_id: str, user=Depends(current_user)):
         with db:
             _post(db, post_id)
             db.execute('DELETE FROM community_likes WHERE post_id=? AND author_hash=?', (post_id, _hash(user)))
-        return {'post': _post(db, post_id, user)}
+            return {'post': _post(db, post_id, user)}
 
 
 @router.post('/community/content-reports', status_code=202)
