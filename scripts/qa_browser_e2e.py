@@ -244,7 +244,7 @@ def test_react(browser, label, width, height):
         page.get_by_role('button', name='Create an account').click()
         from uuid import uuid4
         demo_email = f'qa-{uuid4().hex[:12]}@example.org'
-        page.get_by_label('Email').fill(demo_email)
+        page.get_by_role('textbox', name='Email', exact=True).fill(demo_email)
         page.get_by_label('Password').fill('QA-test-account-Password-2026')
         page.get_by_role('button', name='Register').click()
         expect(page.get_by_text(f'Signed in as')).to_be_visible(timeout=15000)
@@ -293,7 +293,7 @@ def test_react(browser, label, width, height):
         expect(page.get_by_role('button', name='Saved · Remove')).to_be_visible(timeout=15000)
         page.goto(f'{URL}/#/saved', wait_until='domcontentloaded')
         expect(page.get_by_text('Synced with your travel account.')).to_be_visible(timeout=15000)
-        expect(page.get_by_text('1 saved places')).to_be_visible(timeout=15000)
+        expect(page.get_by_text('1 saved place', exact=True)).to_be_visible(timeout=15000)
         print(f'PASS {label}: cloud favorites survive reload')
         page.goto(f'{URL}/#/account', wait_until='domcontentloaded')
         page.get_by_role('button', name='Sign out').click()
@@ -358,7 +358,7 @@ def test_visitor_ratings(browser):
         from uuid import uuid4
         page.goto(f'{URL}/#/account', wait_until='domcontentloaded', timeout=20000)
         page.get_by_role('button', name='Create an account').click()
-        page.get_by_label('Email').fill(f'rating-qa-{uuid4().hex[:12]}@example.org')
+        page.get_by_role('textbox', name='Email', exact=True).fill(f'rating-qa-{uuid4().hex[:12]}@example.org')
         page.get_by_label('Password').fill('QA-test-account-Password-2026')
         page.get_by_role('button', name='Register').click()
         expect(page.get_by_text('Signed in as')).to_be_visible(timeout=15000)
@@ -398,7 +398,7 @@ def test_photo_details_and_comments(browser):
         expect(page).to_have_url(re.compile(r'#/account$'))
         from uuid import uuid4
         page.get_by_role('button', name='Create an account').click()
-        page.get_by_label('Email').fill(f'comment-qa-{uuid4().hex[:12]}@example.org')
+        page.get_by_role('textbox', name='Email', exact=True).fill(f'comment-qa-{uuid4().hex[:12]}@example.org')
         page.get_by_label('Password').fill('QA-test-account-Password-2026')
         page.get_by_role('button', name='Register').click()
         expect(page).to_have_url(re.compile(r'#/place/giza-pyramids$'))

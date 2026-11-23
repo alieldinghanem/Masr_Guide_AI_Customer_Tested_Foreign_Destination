@@ -6,7 +6,7 @@ import { ErrorNote } from './Common'
 import { getSession } from './Account'
 import { likelyPaymentNumber, scrubPaymentNumber } from '../paymentSafety'
 import { isCompatibleTripPlan } from '../tripValidation'
-import { inferChatLanguage } from '../chatLanguage'
+import { conversationLanguage, inferChatLanguage } from '../chatLanguage'
 
 function restoredConsultation() {
   // The pair must be validated together before the app shows restored days.
@@ -22,7 +22,7 @@ const GEMINI_RESPONSE_MODES = new Set(['gemini-search-grounded', 'gemini-rag-no-
 const OPENAI_RESPONSE_MODES = new Set(['openai-rag', 'openai-dialogue+local-planner', 'hotel-openai-assisted'])
 const AI_CONFIGURED_MODES = new Set(['gemini-configured', 'openai-configured', 'llm-configured'])
 
-export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, home = false }) {
+export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages, setMessages, language, setLanguage, guideMode, setGuideMode, openTrip, onNavigate, initialConnection = null, home = false }) {
   const { t, lang, cityNameAr } = useI18n()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -31,6 +31,19 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
   const [currentConversation, setCurrentConversation] = useState(null)
   const [currentConversationVersion, setCurrentConversationVersion] = useState(null)
   const [cloudStatus, setCloudStatus] = useState('')
+  const [connection, setConnection] = useState(initialConnection)
+  useEffect(() => {
+    if (!messages.length) return
+    let active = true
+    api('/health').then(data => { if (active) setConnection(data.gemini_connection || null) }).catch(() => {})
+    return () => { active = false }
+  }, [guideMode, messages.length])
+  useEffect(() => {
+    if (connection?.state !== 'verified' || !connection.checked_at) return
+    const delay = Math.max(0, new Date(connection.checked_at).getTime() + 900000 - Date.now())
+    const timer = setTimeout(() => setConnection(previous => ({ ...previous, state: 'stale' })), delay)
+    return () => clearTimeout(timer)
+  }, [connection])
   const [restored] = useState(restoredConsultation)
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
@@ -97,7 +110,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
   const cloudToken = () => {
     const session = getSession()
     if (!session?.token) {
-      setCloudStatus(lang === 'ar' ? 'سجّل الدخول من صفحة حسابي لحفظ المحادثات على حسابك.' : 'Sign in from My Account to save conversations to your account.')
+      setCloudStatus(lang === 'ar' ? 'سجّل الدخول لحفظ الرحلة أو المحادثة في حسابك. مسودتك موجودة في هذه الجلسة.' : 'Sign in to save your itinerary or conversation to your account. Your draft is kept in this session.')
       return null
     }
     return session.token
@@ -138,6 +151,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
     try {
       const data = await api(`/my/conversations/${selectedConversation}`, { token })
       setMessages((data.messages || []).map(m => ({ role: m.role, text: m.text })))
+      setLanguage(conversationLanguage(data.messages || [], language))
       const valid = isCompatibleTripPlan(data.trip_state, data.itinerary)
       const hasTrip = Boolean(data.trip_state || data.itinerary)
       setTripState(valid ? data.trip_state : null); setItinerary(valid ? data.itinerary : null)
@@ -226,7 +240,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             <span className="bot-avatar"><Bot size={21} /></span>
             <div>
               <h2>{t('guide.name')}</h2>
-              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{t(`guide.availability.${serviceState}`)}</span>
+              <span><span className={`status-dot ${['ai', 'gemini', 'openai'].includes(serviceState) ? 'ready' : ''}`} />{serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'verified' ? (lang === 'ar' ? 'Gemini متصل مؤخرًا · الرد التالي لم يُختبر بعد' : 'Gemini recently connected · next response not yet checked') : serviceState === 'configured' && mode === 'gemini-configured' && connection?.state === 'unavailable' ? (lang === 'ar' ? 'Gemini مُعدّ · آخر محاولة اتصال فشلت' : 'Gemini configured · last connection attempt failed') : t(`guide.availability.${serviceState}`)}</span>
             </div>
             <button type="button" className="chat-clear" onClick={clearChat} disabled={busy || (!messages.length && !prompt && !itinerary)} aria-label={t('guide.clear')} title={t('guide.clear')}><Trash2 size={16} />{t('guide.clear')}</button>
             <label className="lang-picker"><Globe2 size={17} />
@@ -282,12 +296,13 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
           {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
             <div className="consult-heading">
               <strong>{answerArabic ? 'برنامج رحلتك القابل للتعديل' : 'Your editable Egypt itinerary'}</strong>
-              <span>{itinerary.days.length} {answerArabic ? 'يوم' : 'days'}</span>
+              <span>{itinerary.days.length} {answerArabic ? 'يوم' : (itinerary.days.length === 1 ? 'day' : 'days')}</span>
             </div>
-            <p className="consult-help">{answerArabic ? 'اكتب في المحادثة: غير الغردقة إلى شرم الشيخ، أو زود يوم للأقصر.' : 'Try: Replace Hurghada with Sharm El Sheikh, or add one more day to Luxor.'}</p>
+            <p className="consult-help">{answerArabic ? `جرّب: خلي اليوم الأول نشاط واحد، أو زود إجمالي الرحلة يوم في ${answerCity(itinerary.days.at(-1).city)}.` : `Try: Make Day 1 a single activity, or extend the total trip by one day in ${itinerary.days.at(-1).city}.`}</p>
+            {tripState?.traveler_profile && <p className="consult-help">{answerArabic ? 'تفاصيل المسافرين: ' : 'Traveler details: '}{tripState.traveler_profile.adults ? `${tripState.traveler_profile.adults} ${answerArabic ? 'بالغين' : 'adults'} · ` : ''}{tripState.traveler_profile.children_ages?.length ? `${answerArabic ? 'أعمار الأطفال' : 'Children ages'}: ${tripState.traveler_profile.children_ages.join(', ')} · ` : ''}{tripState.traveler_profile.food_preferences?.map(value => answerArabic ? ({ vegetarian: 'نباتي', vegan: 'نباتي صرف', halal: 'حلال' }[value]) : value).join(', ') || (answerArabic ? 'أخبرني بالأعمار وأي احتياجات خاصة.' : 'Tell me ages and any specific needs.')}</p>}
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length} {answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}</summary>
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : day.travel ? (answerArabic ? 'انتقال وراحة' : 'Transfer & rest') : (answerArabic ? 'وقت حر — بدون زيارات مجدولة' : 'Free time — no scheduled visits')}</summary>
                 {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
                 {day.rest_minutes > 0 && <p>{answerArabic ? `وقت راحة مقترح: ${day.rest_minutes} دقيقة` : `Suggested rest: ${day.rest_minutes} minutes`}</p>}
                 {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
@@ -323,8 +338,11 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
               <button type="button" disabled={busy || !selectedConversation} onClick={restoreConversation}>{lang === 'ar' ? 'استرجاع' : 'Restore'}</button>
               <button type="button" disabled={busy || !selectedConversation} onClick={deleteConversation}>{lang === 'ar' ? 'حذف المحفوظة' : 'Delete saved'}</button>
             </div>}
-            {cloudStatus && <small role="status">{cloudStatus}</small>}
           </div></details>
+          {cloudStatus && <div role="status" className="consult-help">
+            <p>{cloudStatus}</p>
+            {!getSession()?.token && <button type="button" className="btn secondary" onClick={() => onNavigate?.('account')}>{lang === 'ar' ? 'تسجيل الدخول / إنشاء حساب' : 'Sign in / create account'}</button>}
+          </div>}
         </section>
         <aside className="guide-side">
           <div className="side-card suggested">

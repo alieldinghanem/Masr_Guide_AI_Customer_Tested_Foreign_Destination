@@ -15,7 +15,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, EmailStr, Field, ValidationError
 
-from .schemas import TripState
+from .schemas import TripState, TravelerProfile
 from .database import get_place
 from .conversation_router import payment_sensitive
 from .durable_storage import configured as postgres_configured, connect_traveler
@@ -81,6 +81,8 @@ def setup():
           CREATE TABLE IF NOT EXISTS partner_interest (
             id TEXT PRIMARY KEY, company TEXT NOT NULL, email TEXT NOT NULL, website TEXT,
             city TEXT, description TEXT, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new');
+          CREATE TABLE IF NOT EXISTS account_mail_requests (
+            address_hash TEXT PRIMARY KEY, next_at TEXT NOT NULL);
         ''')
 
 
@@ -121,6 +123,8 @@ def _validate_saved_itinerary(plan: dict) -> str:
     generated trips must have unique, contiguous positive day numbers.
     """
     try:
+        if isinstance(plan, dict) and 'traveler_profile' in plan:
+            TravelerProfile.model_validate(plan['traveler_profile'])
         raw = json.dumps(plan, ensure_ascii=False, allow_nan=False)
     except (TypeError, ValueError) as exc:
         raise HTTPException(422, detail='Itinerary contains invalid numeric or object values') from exc
@@ -335,13 +339,15 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
             raise HTTPException(403, detail='Incorrect current password')
         from .ratings import delete_account_reviews
         delete_account_reviews(user['id'])
+        c.execute('DELETE FROM account_mail_requests WHERE address_hash=?',
+                  (hashlib.sha256(user['email'].encode()).hexdigest(),))
         c.execute('DELETE FROM account_users WHERE id=?', (user['id'],))
     return {'deleted': True}
 
 
 def _favorite_place_id(place_id: str) -> str:
     # Explicitly allow catalogue slugs, not arbitrary text or external links.
-    if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', place_id) or len(place_id) > 90:
+    if not re.fullmatch(r'(?:coast:)?[a-z0-9]+(?:-[a-z0-9]+)*', place_id) or len(place_id) > 90:
         raise HTTPException(422, detail='Invalid place identifier')
     return place_id
 
@@ -358,7 +364,8 @@ def my_favorites(user=Depends(current_user)):
 @router.post('/my/favorites/{place_id}')
 def add_favorite(place_id: str, user=Depends(current_user)):
     ident = _favorite_place_id(place_id)
-    if get_place(ident) is None:
+    from .ratings import COASTAL_GUIDE_IDS
+    if get_place(ident) is None and not (ident.startswith('coast:') and ident[6:] in COASTAL_GUIDE_IDS):
         raise HTTPException(404, detail='Place not found in the curated catalogue')
     with _open() as c:
         # Write-lock before the cap check; concurrent writes cannot exceed 500.
@@ -433,6 +440,8 @@ def save_trip(body: TripSave, user=Depends(current_user)):
     stamp = _now().isoformat()
     with _open() as c:
         c.execute('INSERT INTO account_trips VALUES (?,?,?,?,?,?)', (tid, user['id'], body.title, raw, stamp, stamp))
+    from .metrics import record
+    record('trip_saved')
     return {'id': tid, 'title': body.title, 'created_at': stamp}
 
 
@@ -548,3 +557,8 @@ def partner_apply(body: PartnerInterest):
         c.execute('INSERT INTO partner_interest (id,company,email,website,city,description,created_at) VALUES (?,?,?,?,?,?,?)',
                   (pid, body.company, _validate_email(body.email), body.website, body.city, body.description, _now().isoformat()))
     return {'received': True, 'reference': pid}
+
+
+@router.get('/partners/status')
+def partner_status():
+    return {'inquiries_enabled': os.getenv('PARTNER_INQUIRIES_ENABLED', '').lower() in ('1', 'true')}

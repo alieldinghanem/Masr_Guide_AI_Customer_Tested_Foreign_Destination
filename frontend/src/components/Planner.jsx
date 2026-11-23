@@ -15,29 +15,33 @@ const DRAFT_KEY = 'masr-guide-draft-v1'
 // Only hydrate objects matching the public itinerary shape (storage may hold older/foreign data).
 export const isValidPlan = isValidPlannerPlan
 
+function restoredPlanner() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+    const saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null')
+    if (isValidPlan(draft)) return { plan: draft, saved: false }
+    if (isValidPlan(saved)) return { plan: saved, saved: true }
+  } catch { /* unavailable storage or invalid JSON */ }
+  return { plan: null, saved: false }
+}
+
 export default function Planner({ cities, interests, openPlace }) {
   const { t, lang, cityName, interestName, placeName, duration } = useI18n()
-  const [selectedCities, setSelectedCities] = useState(['Cairo'])
-  const [chosenInterests, setChosenInterests] = useState(['history'])
-  const [days, setDays] = useState(3)
-  const [pace, setPace] = useState('balanced')
-  const [family, setFamily] = useState(false)
-  const [optimize, setOptimize] = useState(true)
-  const [plan, setPlan] = useState(null)
+  // Restore before the first editable frame. A later effect could overwrite
+  // the visitor's first keystroke with the saved duration/cities.
+  const [restored] = useState(restoredPlanner)
+  const initial = restored.plan
+  const [selectedCities, setSelectedCities] = useState(() => initial ? [...new Set(initial.days.map(day => day.city))] : ['Cairo'])
+  const [chosenInterests, setChosenInterests] = useState(() => Array.isArray(initial?._request?.interests) && initial._request.interests.length ? initial._request.interests : ['history'])
+  const [days, setDays] = useState(initial?.days.length || 3)
+  const [pace, setPace] = useState(PACES.includes(initial?.pace) ? initial.pace : 'balanced')
+  const [family, setFamily] = useState(!!initial?.family || !!initial?.traveler_profile?.children_ages?.length)
+  const [travelerProfile, setTravelerProfile] = useState(initial?.traveler_profile || null)
+  const [optimize, setOptimize] = useState(initial ? !!initial.route_optimized : true)
+  const [plan, setPlan] = useState(initial)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    try {
-      const savedPlan = localStorage.getItem(SAVED_KEY)
-      const draftPlan = sessionStorage.getItem(DRAFT_KEY)
-      const savedData = savedPlan ? JSON.parse(savedPlan) : null
-      const draftData = draftPlan ? JSON.parse(draftPlan) : null
-      if (isValidPlan(draftData)) { setPlan(draftData); setSaved(false) }
-      else if (isValidPlan(savedData)) { setPlan(savedData); setSaved(true) }
-    } catch { /* storage may be disabled or data from an older version */ }
-  }, [])
+  const [saved, setSaved] = useState(restored.saved)
 
   const persist = (data, isSaved) => {
     try {
@@ -48,7 +52,8 @@ export default function Planner({ cities, interests, openPlace }) {
 
   const requestBody = () => ({
     cities: selectedCities, days: Number(days), interests: chosenInterests, pace, family,
-    optimize_route: optimize, language: lang, budget_usd: null
+    optimize_route: optimize, language: lang, budget_usd: plan?.budget_usd || plan?._request?.budget_usd || null,
+    ...(travelerProfile ? { traveler_profile: travelerProfile } : {})
   })
 
   const toggleCity = c => setSelectedCities(old => old.includes(c) ? old.filter(x => x !== c) : [...old, c])
@@ -59,6 +64,7 @@ export default function Planner({ cities, interests, openPlace }) {
     if (!isValidPlan(response)) throw new Error('The planner returned an invalid itinerary. Your previous plan was not replaced.')
     const withRequest = { ...response, _request: body }
     setPlan(withRequest)
+    if (response.family !== undefined) setFamily(response.family)
     if (keepSaved) persist(withRequest, true)
     else { setSaved(false); persist(withRequest, false) }
   }, [])
@@ -88,6 +94,7 @@ export default function Planner({ cities, interests, openPlace }) {
   const clear = () => {
     try { localStorage.removeItem(SAVED_KEY); sessionStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
     setPlan(null); setSaved(false)
+    setTravelerProfile(null)
   }
   const download = () => {
     if (!plan) return

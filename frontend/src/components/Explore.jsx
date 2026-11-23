@@ -4,6 +4,7 @@ import { useI18n } from '../i18n'
 import { getMapUrl } from './Common'
 import { getExploreGroup, orderExplorePlaces } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
+import { matchesPlaceSearch } from '../placeSearch'
 import { EditorialImage, LANDMARK_MEDIA, LANDMARK_THUMBNAILS, PhotoCredit, getLandmarkFraming } from './EditorialMedia'
 
 const ALL = '__all__'
@@ -14,11 +15,10 @@ export default function Explore({ places, cities, interests, highlight, setHighl
   const [search, setSearch] = useState('')
   const [interest, setInterest] = useState(initialInterest || ALL)
   const detailRef = useRef(null)
-  const needle = search.trim().toLowerCase()
   const visible = orderExplorePlaces(places.filter(p =>
     (city === ALL || p.city === city) &&
     (interest === ALL || p.tags.includes(interest)) &&
-    [p.name, p.name_ar, p.city, cityName(p.city), p.description, p.summary_ar].filter(Boolean).join(' ').toLowerCase().includes(needle)), 'heritage')
+    matchesPlaceSearch(search, [p.name, p.name_ar, p.city, cityName(p.city), p.description, p.summary_ar])), 'heritage')
   const current = visible.find(p => p.id === highlight?.id) || visible[0] || null
   return (
     <main className="page-wrap container explore-page">

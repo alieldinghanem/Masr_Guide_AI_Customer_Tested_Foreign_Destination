@@ -45,10 +45,11 @@ def _place(destination: dict) -> dict:
         'city': destination['en'],
         'category': 'Beach',
         'tags': ['beaches'],
-        'description': f"A swimming-area suggestion for {destination['en']}. {destination['noteEn']}",
-        'summary_ar': f"مثال لمنطقة سباحة في {destination['ar']}. {destination['noteAr']}",
-        'details': f"Area: {destination['regionEn']}. Access and sea conditions are not live verified.",
+        'description': f"A swimming-area suggestion for {destination['en']}. {destination.get('aboutEn', destination['noteEn'])}",
+        'summary_ar': f"مثال لمنطقة سباحة في {destination['ar']}. {destination.get('aboutAr', destination['noteAr'])}",
+        'details': f"Area: {destination['regionEn']}. {destination.get('visitEn', '')} Access and sea conditions are not live verified.",
         'tip': destination['noteEn'],
+        'tip_ar': destination['noteAr'],
         'source_url': destination['url'],
     }
 

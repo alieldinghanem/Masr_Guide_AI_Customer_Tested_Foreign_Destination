@@ -38,7 +38,7 @@ describe('TravelTech discovery MVP', () => {
     await user.click(screen.getByRole('button',{name:'Save place'}))
     expect(JSON.parse(localStorage.getItem('masr-guide-saved-places-v3'))).toHaveLength(1)
     await user.click(within(screen.getByRole('banner')).getByRole('button',{name:'Saved places'}))
-    expect(screen.getByText('1 saved places')).toBeInTheDocument()
+    expect(screen.getByText('1 saved place')).toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:'Remove'}))
     expect(JSON.parse(localStorage.getItem('masr-guide-saved-places-v3'))).toHaveLength(0)
   })

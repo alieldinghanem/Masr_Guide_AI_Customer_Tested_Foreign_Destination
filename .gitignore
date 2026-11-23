@@ -41,6 +41,7 @@ backups/
 *.sqlite3-wal
 *.sqlite3-shm
 release-verification-local.json
+frontend-test-results.json
 
 # Local launcher diagnostic output
 .local-logs/

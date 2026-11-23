@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .accounts import current_user
 from .database import connect, get_place
 from .durable_storage import configured as postgres_configured, connect_traveler
+from .moderation import VISIBLE_SQL, public_comment, setup as setup_moderation
 
 router = APIRouter(prefix='/api/ratings', tags=['ratings'])
 
@@ -59,6 +60,7 @@ def setup():
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (target_id, voter_hash)
         )''')
+        setup_moderation(db)
         db.commit()
 
 
@@ -76,11 +78,11 @@ def _valid_target(target_id: str) -> bool:
 
 
 def _comments(db, target_id: str):
-    rows = db.execute('''SELECT display_name AS name, comment, updated_at
-                         FROM visitor_comments WHERE target_id = ? AND voter_hash LIKE 'account:%'
+    rows = db.execute('''SELECT target_id,voter_hash,display_name AS name, comment, updated_at
+                         FROM visitor_comments c WHERE target_id = ? AND voter_hash LIKE 'account:%' AND ''' + VISIBLE_SQL + '''
                          ORDER BY updated_at DESC, voter_hash DESC LIMIT 30''', (target_id,)).fetchall()
-    total = db.execute("SELECT COUNT(*) FROM visitor_comments WHERE target_id = ? AND voter_hash LIKE 'account:%'", (target_id,)).fetchone()[0]
-    return {'comments': [dict(row) for row in rows], 'count': total, 'temporary_storage': _temporary_storage()}
+    total = db.execute("SELECT COUNT(*) FROM visitor_comments c WHERE target_id = ? AND voter_hash LIKE 'account:%' AND " + VISIBLE_SQL, (target_id,)).fetchone()[0]
+    return {'comments': [public_comment(row) for row in rows], 'count': total, 'temporary_storage': _temporary_storage()}
 
 
 def _account_hash(user_id: str) -> str:
@@ -94,6 +96,8 @@ def delete_account_reviews(user_id: str):
             voter_hash = _account_hash(user_id)
             db.execute('DELETE FROM visitor_ratings WHERE voter_hash = ?', (voter_hash,))
             db.execute('DELETE FROM visitor_comments WHERE voter_hash = ?', (voter_hash,))
+            db.execute('DELETE FROM visitor_comment_reports WHERE voter_hash=? OR reporter_hash=?', (voter_hash, voter_hash))
+            db.execute('DELETE FROM visitor_comment_moderation WHERE voter_hash=?', (voter_hash,))
 
 
 def account_reviews(user_id: str):
@@ -124,10 +128,10 @@ def my_ratings(user=Depends(current_user)):
 def recent_comments():
     """Public place discussions for the traveler community; never expose account IDs."""
     with closing(_connect_reviews()) as db:
-        rows = db.execute('''SELECT target_id, display_name AS name, comment, updated_at
-                             FROM visitor_comments WHERE voter_hash LIKE 'account:%'
+        rows = db.execute('''SELECT target_id,voter_hash, display_name AS name, comment, updated_at
+                             FROM visitor_comments c WHERE voter_hash LIKE 'account:%' AND ''' + VISIBLE_SQL + '''
                              ORDER BY updated_at DESC, voter_hash DESC LIMIT 12''').fetchall()
-    return {'comments': [dict(row) for row in rows]}
+    return {'comments': [public_comment(row) for row in rows]}
 
 
 @router.post('/{target_id}')
@@ -163,6 +167,9 @@ def submit_comment(target_id: str, body: VisitorComment, user=Depends(current_us
     display_name = 'Traveler #' + user['id'][:6].upper()
     with closing(_connect_reviews()) as db:
         with db:
+            hidden = db.execute("SELECT 1 FROM visitor_comment_moderation WHERE target_id=? AND voter_hash=? AND status='hidden'", (target_id, voter_hash)).fetchone()
+            if hidden:
+                raise HTTPException(403, 'This comment is under moderation. Please contact support.')
             db.execute('''INSERT INTO visitor_comments (target_id, voter_hash, display_name, comment)
                           VALUES (?, ?, ?, ?)
                           ON CONFLICT(target_id, voter_hash) DO UPDATE SET

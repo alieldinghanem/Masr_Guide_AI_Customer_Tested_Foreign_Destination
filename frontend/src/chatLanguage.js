@@ -1,3 +1,20 @@
+export const CHAT_LANGUAGE_KEY = 'masr-guide-reply-language-v1'
+const LANGUAGES = new Set(['Arabic', 'English', 'French'])
+
+export function restoreChatLanguage(messages, fallback = 'English') {
+  try {
+    const stored = sessionStorage.getItem(CHAT_LANGUAGE_KEY)
+    if (LANGUAGES.has(stored)) return stored
+  } catch { /* storage unavailable */ }
+  return conversationLanguage(messages, fallback)
+}
+
+export function conversationLanguage(messages, fallback = 'English') {
+  // Replay visitor turns so a short "ok" retains the preceding language.
+  return messages.filter(m => m.role === 'user').reduce((language, m) =>
+    inferChatLanguage(m.text || m.content || '', language), fallback)
+}
+
 // The chat follows the language used in this message; the site's language stays put.
 export function inferChatLanguage(message, fallback = 'English') {
   const text = message.toLowerCase()

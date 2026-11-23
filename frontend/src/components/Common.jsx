@@ -1,5 +1,5 @@
 import React from 'react'
-import { CircleAlert, Sunrise } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { DESTINATION_MEDIA } from './EditorialMedia'
 
@@ -25,8 +25,7 @@ export function Logo({ go }) {
   const { t } = useI18n()
   return (
     <button type="button" className="logo" onClick={() => go('home')} aria-label={t('logo.aria')}>
-      <span className="logo-icon"><Sunrise size={23} strokeWidth={2.5} /></span>
-      <span dir="ltr">MASR<span className="logo-light">GUIDE</span><span className="logo-ai">.AI</span><small>{t('logo.small')}</small></span>
+      <span className="logo-brand" dir="ltr"><img className="logo-wordmark" src="/assets/brand/masr-guide-logo.svg" width="1219" height="230" alt="" /><small dir="auto">{t('logo.small')}</small></span>
     </button>
   )
 }

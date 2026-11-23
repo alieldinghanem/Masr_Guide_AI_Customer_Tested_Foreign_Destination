@@ -14,16 +14,18 @@ import TravelerReviews from './components/TravelerReviews'
 import PlaceDetails from './components/PlaceDetails'
 import CoastalDetails from './components/CoastalDetails'
 import { COASTAL_DESTINATIONS } from './coastalDestinations'
+import { CHAT_LANGUAGE_KEY, restoreChatLanguage } from './chatLanguage'
 import Saved from './components/Saved'
 import Account, { getSession } from './components/Account'
 import Budget from './components/Budget'
 import {Stories, Offers, Partners, Staff, Project} from './components/Portal'
+import ServiceInfo from './components/ServiceInfo'
 
 const GUIDE_LANGUAGE = { en: 'English', ar: 'Arabic' }
-const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'reviews', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget']
+const PAGES = ['home', 'heritage', 'coast', 'explore', 'destinations', 'experiences', 'essentials', 'reviews', 'saved', 'planner', 'guide', 'account', 'stories', 'offers', 'partners', 'staff', 'project', 'budget', 'privacy', 'terms', 'support']
 const SAVED_PLACES_KEY = 'masr-guide-saved-places-v3'
 const pageFromHash = () => {
-  const name = window.location.hash.replace(/^#\/?/, '')
+  const name = window.location.hash.replace(/^#\/?/, '').split('?')[0]
   return PAGES.includes(name) || /^(?:place|coast)\/[a-z0-9_-]+$/i.test(name) ? name : 'home'
 }
 
@@ -51,14 +53,15 @@ function Shell({ meta }) {
   useEffect(() => {
     try { sessionStorage.setItem('masr-guide-chat-session-v7', JSON.stringify(guideMessages.slice(-24))) } catch { /* private mode or storage quota */ }
   }, [guideMessages])
-  const [guideLanguage, setGuideLanguage] = useState(GUIDE_LANGUAGE[lang])
-  const guideLanguageChosen = useRef(false)
+  const [guideLanguage, setGuideLanguage] = useState(() => restoreChatLanguage(guideMessages, GUIDE_LANGUAGE[lang]))
+  const guideLanguageChosen = useRef(guideMessages.length > 0 || (() => { try { return !!sessionStorage.getItem(CHAT_LANGUAGE_KEY) } catch { return false } })())
   useEffect(() => {
     if (!guideLanguageChosen.current) setGuideLanguage(GUIDE_LANGUAGE[lang])
   }, [lang])
   const chooseGuideLanguage = next => {
     guideLanguageChosen.current = true
     setGuideLanguage(next)
+    try { sessionStorage.setItem(CHAT_LANGUAGE_KEY, next) } catch { /* private browsing */ }
   }
   const [highlight, setHighlight] = useState(null)
   const [detailReturnPage, setDetailReturnPage] = useState('explore')
@@ -76,20 +79,23 @@ function Shell({ meta }) {
     } catch { return [] }
   })
   const [favoritesError, setFavoritesError] = useState('')
+  const [favoritesLoadError, setFavoritesLoadError] = useState(false)
+  const [favoritesAttempt, setFavoritesAttempt] = useState(0)
   const [favoritesLoading, setFavoritesLoading] = useState(!!travelerSession?.token)
   const pendingFavorites = useRef(new Set())
   useEffect(() => {
-    if (!travelerSession?.token) { setFavoritesLoading(false); return }
+    if (!travelerSession?.token) { setFavoritesLoading(false); setFavoritesLoadError(false); return }
     let active = true
     // Never implicitly copy anonymous-device browsing preferences into an account.
     setSavedIds([])
+    setFavoritesLoadError(false)
     setFavoritesLoading(true)
     api('/my/favorites', { token: travelerSession.token })
       .then(data => { if (active) setSavedIds(Array.isArray(data.place_ids) ? data.place_ids : []) })
-      .catch(() => { if (active) setFavoritesError('Could not load saved places. Please sign in again or retry.') })
+      .catch(() => { if (active) setFavoritesLoadError(true) })
       .finally(() => { if (active) setFavoritesLoading(false) })
     return () => { active = false }
-  }, [travelerSession])
+  }, [travelerSession, favoritesAttempt])
   const [discovery, setDiscovery] = useState({ destinations: [], experiences: [], essentials: [] })
   const [ratings, setRatings] = useState({})
   const [myRatings, setMyRatings] = useState({})
@@ -129,10 +135,10 @@ function Shell({ meta }) {
     return () => { live = false }
   }, [])
   const toggleSaved = async id => {
-    if (!meta.places.some(p => p.id === id) || favoritesLoading || pendingFavorites.current.has(id)) return
+    if (!(meta.places.some(p => p.id === id) || COASTAL_DESTINATIONS.some(item => `coast:${item.id}` === id)) || favoritesLoading || favoritesLoadError || pendingFavorites.current.has(id)) return
     const wasSaved = savedIds.includes(id)
     if (!wasSaved && savedIds.length >= 500) {
-      setFavoritesError('A maximum of 500 places can be saved.')
+      setFavoritesError('limit')
       return
     }
     setFavoritesError('')
@@ -149,7 +155,7 @@ function Shell({ meta }) {
       }
     } catch (error) {
       setSavedIds(old => wasSaved ? [...old, id] : old.filter(x => x !== id))
-      setFavoritesError(error.message || 'Could not update favorite. Please retry.')
+      setFavoritesError(error.status === 401 ? 'session' : 'update')
     } finally { pendingFavorites.current.delete(id) }
   }
   useEffect(() => { setGuideMode(meta.guideMode) }, [meta.guideMode])
@@ -209,7 +215,8 @@ function Shell({ meta }) {
           </div>
         </div>
       </header>
-      {favoritesError && <div className="container" role="alert"><p className="account-error">{favoritesError}</p></div>}
+      {favoritesError && <div className="container" role="alert"><p className="account-error">{t(`saved.error.${favoritesError}`)}</p></div>}
+      {favoritesLoadError && <div className="container" role="alert"><p className="account-error">{t('saved.error.load')}</p><button type="button" className="btn secondary" onClick={() => setFavoritesAttempt(value => value + 1)}>{t('nav.retry')}</button></div>}
       {meta.loading && <div className="load-status container" role="status">{t('nav.loading')}</div>}
       {meta.error && (
         <div className="load-error container">
@@ -217,17 +224,17 @@ function Shell({ meta }) {
           <button className="btn secondary" type="button" onClick={meta.retry}>{t('nav.retry')}</button>
         </div>
       )}
-      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide prompt={guideDraft} setPrompt={setGuideDraft} composeFocusKey={composeFocusKey} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
+      {(page === 'home' || page === 'guide') && <div className="mg-chat-home"><Guide initialConnection={meta.geminiConnection} prompt={guideDraft} setPrompt={setGuideDraft} composeFocusKey={composeFocusKey} messages={guideMessages} setMessages={setGuideMessages} language={guideLanguage} setLanguage={chooseGuideLanguage} guideMode={guideMode} setGuideMode={setGuideMode} openTrip={() => go('planner')} onNavigate={go} home /></div>}
       {page === 'heritage' && <CategoryPlaces type="heritage" places={places} openDetails={openDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'coast' && <CategoryPlaces type="coast" places={places} openDetails={openDetails} openCoastalDetails={openCoastalDetails} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'destinations' && <Destinations destinations={discovery.destinations} places={places} go={go} openPlace={openPlace} askQuestion={askQuestion} />}
       {page === 'experiences' && <Experiences experiences={discovery.experiences} places={places} onExplore={exploreTheme} askQuestion={askQuestion} />}
       {page === 'essentials' && <Essentials items={discovery.essentials} />}
       {page === 'reviews' && <TravelerReviews onExplore={() => go('explore')} places={places} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
-      {page === 'saved' && <Saved places={places} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={openPlace} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} />}
+      {page === 'saved' && <Saved places={[...places, ...COASTAL_DESTINATIONS.map(item => ({ id: `coast:${item.id}`, name: item.en, name_ar: item.ar, city: item.en, description: item.noteEn, summary_ar: item.noteAr }))]} savedIds={savedIds} toggleSaved={toggleSaved} openPlace={place => place.id.startsWith('coast:') ? openCoastalDetails(COASTAL_DESTINATIONS.find(item => `coast:${item.id}` === place.id)) : openPlace(place)} go={go} cloud={!!travelerSession?.token} loading={favoritesLoading} loadError={favoritesLoadError} />}
       {page === 'explore' && <Explore key={exploreKey} places={places} cities={cities} interests={interests} highlight={highlight} setHighlight={setHighlight} askQuestion={askQuestion} openDetails={openDetails} savedIds={savedIds} toggleSaved={toggleSaved} initialInterest={exploreInterest} />}
       {page.startsWith('place/') && <PlaceDetails place={places.find(place => place.id === page.slice(6))} onBack={() => go(detailReturnPage)} backLabel={detailReturnPage === 'heritage' ? (lang === 'ar' ? 'الأماكن الأثرية' : 'Historical places') : detailReturnPage === 'coast' ? (lang === 'ar' ? 'الشواطئ والبحر' : 'Beaches & sea') : undefined} askQuestion={askQuestion} saved={savedIds.includes(page.slice(6))} toggleSaved={toggleSaved} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
-      {page.startsWith('coast/') && <CoastalDetails destination={COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))} onBack={() => go('coast')} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
+      {page.startsWith('coast/') && <CoastalDetails savedIds={savedIds} toggleSaved={toggleSaved} destination={COASTAL_DESTINATIONS.find(item => item.id === page.slice(6))} onBack={() => go('coast')} askQuestion={askQuestion} ratings={ratings} myRatings={myRatings} onRate={rate} temporaryStorage={ratingsTemporary} session={travelerSession} onSignIn={reviewSignIn} registrationEnabled={meta.registrationEnabled} />}
       {page === 'planner' && <Planner cities={cities} interests={interests} openPlace={openPlace} />}
       {page === 'account' && <Account registrationEnabled={meta.registrationEnabled} onOpenPlanner={() => go('planner')} onSignOut={clearTravelerUi} onSignIn={next => { setSavedIds([]); setFavoritesError(''); setTravelerSession(next); if (reviewReturnPage) { go(reviewReturnPage); setReviewReturnPage(null) } }} />}
       {page === 'stories' && <Stories go={go} />}
@@ -236,8 +243,10 @@ function Shell({ meta }) {
       {page === 'staff' && <Staff />}
       {page === 'project' && <Project />}
       {page === 'budget' && <Budget />}
+      {['privacy', 'terms', 'support'].includes(page) && <ServiceInfo section={page} />}
 
       <footer className="footer">
+        <nav className="container" aria-label={lang === 'ar' ? 'الخصوصية والمساعدة' : 'Privacy and help'}>{[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}</nav>
         <div className="container footer-top">
           <div><Logo go={go} /><p>{t('footer.tagline')}</p></div>
           <div className="footer-links">
@@ -262,17 +271,29 @@ function Shell({ meta }) {
 
 export default function App() {
   const [attempt, setAttempt] = useState(0)
-  const [meta, setMeta] = useState({ places: [], cities: [], interests: [], cityNamesAr: {}, guideMode: 'offline-preview', registrationEnabled: true, error: null, loading: true })
+  const [meta, setMeta] = useState({ places: [], cities: [], interests: [], cityNamesAr: {}, guideMode: 'offline-preview', registrationEnabled: null, error: null, loading: true })
   useEffect(() => {
     let active = true
-    Promise.all([api('/cities'), api('/places'), api('/health')])
-      .then(([loc, attractions, health]) => {
-        if (active) setMeta(m => ({ ...m,
-          cities: loc.cities, interests: loc.interests, cityNamesAr: loc.city_names_ar || {},
-          places: attractions.places, guideMode: health.guide_mode, registrationEnabled: health.registration_enabled !== false, error: null, loading: false
+    Promise.allSettled([api('/cities'), api('/places'), api('/health')])
+      .then(([locations, attractions, service]) => {
+        if (!active) return
+        // A status or filter outage must not discard a successfully loaded catalog.
+        // Retain prior successful data on retry; never assume account availability.
+        setMeta(previous => ({ ...previous,
+          ...(locations.status === 'fulfilled' ? {
+            cities: locations.value.cities, interests: locations.value.interests,
+            cityNamesAr: locations.value.city_names_ar || {}
+          } : {}),
+          ...(attractions.status === 'fulfilled' ? { places: attractions.value.places } : {}),
+          ...(service.status === 'fulfilled' ? {
+            geminiConnection: service.value.gemini_connection,
+            guideMode: service.value.guide_mode,
+            registrationEnabled: service.value.registration_enabled !== false
+          } : { geminiConnection: undefined, guideMode: 'offline-preview', registrationEnabled: null }),
+          error: [locations, attractions, service].find(result => result.status === 'rejected')?.reason || null,
+          loading: false
         }))
       })
-      .catch(error => { if (active) setMeta(m => ({ ...m, error, loading: false })) })
     return () => { active = false }
   }, [attempt])
   const retry = () => {

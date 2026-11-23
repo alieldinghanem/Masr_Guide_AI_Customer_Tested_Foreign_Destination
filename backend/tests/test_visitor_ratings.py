@@ -91,6 +91,7 @@ def test_public_community_feed_shows_account_comments_without_identity(client, m
         'name': posted.json()['comments'][0]['name'],
         'comment': 'Check the beach access before visiting.',
         'updated_at': posted.json()['comments'][0]['updated_at'],
+        'comment_id': posted.json()['comments'][0]['comment_id'],
     }]
     assert user['email'] not in str(feed.json())
     assert user['id'] not in str(feed.json())

@@ -7,6 +7,7 @@ import { COASTAL_MEDIA } from '../coastalMedia'
 import { getReligiousGroup, isSwimmingBeach, matchesPlaceCategory, orderCategoryPlaces, RELIGIOUS_GROUP_ORDER } from '../categoryFilters'
 import DiscoveryNav from './DiscoveryNav'
 import RatingWidget from './RatingWidget'
+import { matchesPlaceSearch } from '../placeSearch'
 
 
 /** Separate, data-driven collections. Results are sourced from /api/places,
@@ -19,15 +20,12 @@ export default function CategoryPlaces({ type, places = [], openDetails, openPla
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('editorial')
   const selection = useMemo(() => orderCategoryPlaces(places.filter(place => matchesPlaceCategory(place, type)), type), [places, type])
-  const visible = useMemo(() => selection.filter(place => {
-    const text = [place.name, place.name_ar, place.city, place.category, place.description, place.summary_ar].join(' ').toLocaleLowerCase()
-    return text.includes(query.trim().toLocaleLowerCase())
-  }), [query, selection])
+  const visible = useMemo(() => selection.filter(place => matchesPlaceSearch(query,
+    [place.name, place.name_ar, place.city, place.category, place.description, place.summary_ar])), [query, selection])
   const secularPlaces = coast ? [] : visible.filter(place => !getReligiousGroup(place))
   const religiousGroups = coast ? [] : RELIGIOUS_GROUP_ORDER.map(group => [group, visible.filter(place => getReligiousGroup(place) === group)]).filter(([, items]) => items.length)
   const coastalGuides = coast ? COASTAL_DESTINATIONS.filter(item =>
-    [item.en, item.ar, item.regionEn, item.regionAr, item.spotEn, item.spotAr, item.noteEn, item.noteAr]
-      .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) : []
+    matchesPlaceSearch(query, [item.en, item.ar, item.regionEn, item.regionAr, item.spotEn, item.spotAr, item.noteEn, item.noteAr])) : []
   const coastalEntries = coast ? [
     ...coastalGuides.map(item => ({ kind: 'guide', value: item, targetId: `coast:${item.id}` })),
     ...visible.map(item => ({ kind: 'place', value: item, targetId: item.id })),

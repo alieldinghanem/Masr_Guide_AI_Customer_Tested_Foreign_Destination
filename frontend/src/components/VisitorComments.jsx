@@ -11,6 +11,17 @@ export default function VisitorComments({ targetId, session, onSignIn, onPosted,
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
+  const [reportMessage, setReportMessage] = useState('')
+  const [reportTarget, setReportTarget] = useState(null)
+  const [reason, setReason] = useState('spam')
+  const report = async event => {
+    event.preventDefault(); setBusy(true); setReportMessage('')
+    try {
+      await api('/community/reports', { method: 'POST', token: session?.token, body: { target_id: targetId, comment_id: reportTarget, reason } })
+      setReportTarget(null); setReportMessage(ar ? 'تم إرسال البلاغ للمراجعة.' : 'Report sent for review.')
+    } catch { setReportMessage(ar ? 'تعذّر إرسال البلاغ. سجّل الدخول وحاول مجددًا.' : 'Could not report. Sign in and retry.') }
+    finally { setBusy(false) }
+  }
 
   useEffect(() => {
     let active = true
@@ -45,7 +56,9 @@ export default function VisitorComments({ targetId, session, onSignIn, onPosted,
     </form> : <p className="mg-review-signin">{ar ? 'سجّل دخولك بالبريد الإلكتروني لكتابة تعليق.' : 'Sign in with email to comment.'} <button type="button" onClick={onSignIn}>{ar ? 'تسجيل الدخول' : 'Sign in'}</button>{!registrationEnabled && <small>{ar ? 'إنشاء حساب جديد متوقف مؤقتًا حتى يتوفر تخزين دائم.' : 'New registration is paused until durable storage is available.'}</small>}</p>}
     {error && <p role="alert" className="mg-comment-error">{error}</p>}
     {sent && <p role="status" className="mg-comment-success">{ar ? 'تم نشر تعليقك.' : 'Your comment is published.'}</p>}
-    <div className="mg-comment-list">{items.length ? items.map((item, index) => <article key={`${item.name}-${item.updated_at}-${index}`}><strong>{ar ? item.name.replace(/^Traveler #/, 'مسافر #') : item.name}</strong><p>{item.comment}</p></article>)
+    {reportMessage && <p role="status">{reportMessage}</p>}
+    {reportTarget && <form onSubmit={report}><label>{ar ? 'سبب البلاغ' : 'Report reason'}<select value={reason} onChange={event => setReason(event.target.value)}>{['spam', 'abuse', 'unsafe', 'privacy', 'misinformation'].map((value, index) => <option key={value} value={value}>{ar ? ['رسائل مزعجة', 'إساءة', 'محتوى خطير', 'خصوصية', 'معلومات خاطئة'][index] : value}</option>)}</select></label><button type="submit" disabled={busy}>{ar ? 'إرسال البلاغ' : 'Send report'}</button><button type="button" onClick={() => setReportTarget(null)}>{ar ? 'إلغاء' : 'Cancel'}</button></form>}
+    <div className="mg-comment-list">{items.length ? items.map((item, index) => <article key={`${item.name}-${item.updated_at}-${index}`}><strong>{ar ? item.name.replace(/^Traveler #/, 'مسافر #') : item.name}</strong><p>{item.comment}</p>{item.comment_id && <button type="button" onClick={() => session?.token ? setReportTarget(item.comment_id) : onSignIn?.()}>{ar ? 'إبلاغ' : 'Report'}</button>}</article>)
       : <p>{ar ? 'لا توجد تعليقات بعد. كن أول من يكتب تعليقًا.' : 'No comments yet. Be the first to comment.'}</p>}</div>
   </section>
 }

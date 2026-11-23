@@ -1075,18 +1075,30 @@ def _make_plan(state: dict, lang: str):
             if place['id'] not in {item['id'] for item in sources}:
                 sources.append({'id': place['id'], 'title': place['name'],
                                 'title_ar': place['name_ar'], 'url': place['source_url']})
+    young_children = any(age < 5 for age in state.get('traveler_profile', {}).get('children_ages', []))
+    if young_children:
+        warnings.append('For young children, plan shaded breaks and confirm age restrictions with operators.' if lang == 'en' else
+                        'مع الأطفال الصغار، خصص فترات راحة في الظل وأكد قيود الأعمار مع مقدمي الأنشطة.')
+        for day in days:
+            if day['stops']:
+                day['rest_minutes'] = max(day.get('rest_minutes', 0), 60)
     total_places = sum(len(day['stops']) for day in days)
     if state.get('accessibility_needs'):
         warnings.append(('Accessibility has NOT been verified at any attraction, entrance, transfer, or hotel. Confirm step-free routes and assistance with each operator before booking.' if lang == 'en' else
                          'إمكانية الوصول بالكراسي المتحركة غير متحقق منها للمعالم والمداخل والانتقالات والفنادق. يجب تأكيد الممرات والمساعدة مع كل جهة قبل الحجز.'))
-    disclaimer = ('Illustrative plan. Many beach days are intentionally free time, not a fabricated activity. '
+    has_beach = any(phase['kind'] == 'beach' for phase in state['phases'])
+    beach_note = ('Many beach days are intentionally free time, not a fabricated activity. ' if lang == 'en' else
+                  'الأيام البحرية الحرة مقصودة وليست أنشطة مخترعة. ') if has_beach else ''
+    disclaimer = ('Illustrative plan. ' + beach_note +
                   'No live prices, hotel/flight availability or schedules; cross-city travel is approximate. '
                   'Verify opening hours, routes and ticket prices independently.' if lang == 'en'
-                  else 'خطة استرشادية؛ الأيام البحرية الحرة مقصودة وليست أنشطة مخترعة. لا تتوفر أسعار أو حجوزات أو مواعيد حية، والانتقالات تقريبية؛ تحقق منها قبل الحجز.')
+                  else 'خطة استرشادية؛ ' + beach_note + 'لا تتوفر أسعار أو حجوزات أو مواعيد حية، والانتقالات تقريبية؛ تحقق منها قبل الحجز.')
     allocations = {}
     for day in days:
         allocations[day['city']] = allocations.get(day['city'], 0) + 1
     return {'days': days, 'warnings': warnings, 'route': route, 'route_optimized': False,
+            'traveler_profile': state.get('traveler_profile', {'adults': None, 'children_ages': [], 'food_preferences': []}),
+            'family': state['family'], 'budget_usd': state.get('budget_usd'), 'budget_egp': state.get('budget_egp'),
             'total_travel_minutes': travel_minutes, 'total_places': total_places, 'pace': state['pace'],
             'accessibility_needs': bool(state.get('accessibility_needs', False)),
             'disclaimer': disclaimer, 'sources': sources, 'day_allocation': allocations}
@@ -1108,7 +1120,7 @@ def _with_verified_dialogue(request, message: str, response: dict) -> dict:
     return {**response, 'answer': answer, 'mode': mode or response['mode']}
 
 
-def consult_travel(request):
+def _consult_travel_core(request):
     # Egyptian colloquial requests often include shadda: خلّي / بدّل / زوّد.
     # Parse the normalized text but retain the original visitor turn and history
     # for any conversational answer or provider-native chat context.
@@ -1750,3 +1762,45 @@ def consult_travel(request):
                    else '\nPlease clarify whether the stated figure is in EGP or thousands of EGP.')
     references = [{**ref, 'number': i} for i, ref in enumerate(itinerary['sources'], 1)]
     return _with_verified_dialogue(request, message, {'answer': answer, 'mode': mode, 'sources': references, 'trip_state': validated.model_dump(), 'itinerary': itinerary})
+
+
+def consult_travel(request):
+    """Carry explicit traveler details independently of itinerary transitions."""
+    from .traveler_profile import update_profile
+    original = request.trip_state.model_dump() if request.trip_state else None
+    profile = (original or {}).get('traveler_profile', {})
+    if not original:
+        for turn in request.history:
+            if turn.role == 'user':
+                profile = update_profile(profile, turn.content)
+    profile = update_profile(profile, request.message)
+    if original and profile['children_ages'] and re.search(r'how old|what (?:are (?:the|their) )?ages|كم.*عمر|أعمار.*(?:ايه|كام)|quel.*âge', request.message, re.I) and not re.search(r'\d|[٠-٩]', request.message):
+        ages = ', '.join(map(str, profile['children_ages']))
+        answer = (f'أعمار الأطفال المسجلة في رحلتك: {ages} سنوات.' if request.language == 'Arabic' else
+                  f'Les âges des enfants enregistrés pour ce voyage : {ages} ans.' if request.language == 'French' else
+                  f'The children’s ages recorded for your trip are {ages} years.')
+        return {'answer': answer, 'mode': 'local-assistant', 'trip_state': original, 'itinerary': None, 'sources': []}
+    result = _consult_travel_core(request)
+    if original and result.get('mode') in ('needs-clarification', 'unsupported-destination'):
+        # A mixed, rejected itinerary edit must not partially apply new profile fields.
+        return result
+    state = result.get('trip_state')
+    if state:
+        previous_profile = state.get('traveler_profile')
+        changed = previous_profile != profile
+        state = {**state, 'traveler_profile': profile}
+        family_changed = bool(profile['children_ages']) and not state['family']
+        if family_changed:
+            state['family'] = True
+        state = TripState.model_validate(state).model_dump()
+        result['trip_state'] = state
+        if family_changed or (changed and result.get('itinerary') is not None) or (changed and original and result.get('itinerary') is None):
+            result['itinerary'] = _make_plan(state, 'ar' if request.language == 'Arabic' else 'en')
+            if changed and original:
+                result['answer'] = ('سجّلت تفاصيل المسافرين في الرحلة الحالية، مع الحفاظ على المدن وعدد الأيام. الإرشادات الغذائية وإمكانية الوصول تحتاج تأكيدًا من مقدمي الخدمة.'
+                                    if request.language == 'Arabic' else
+                                    'Les détails des voyageurs sont enregistrés. Les villes et leurs jours sont conservés. Confirmez les besoins alimentaires et l’accessibilité auprès des prestataires.' if request.language == 'French' else
+                                    'Traveler details are recorded in your current trip. Cities and day allocations are preserved. Confirm dietary and access requirements with operators.')
+                result['mode'] = 'local-planner'
+                result['sources'] = result['itinerary'].get('sources', [])
+    return result
