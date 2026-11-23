@@ -959,3 +959,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:380px) {
   .logo .logo-wordmark { width:144px; }
 }
+
+.google-signin { max-width: 680px; margin: 1rem auto; padding: 1rem; border: 1px solid #e7ddd5; border-radius: 16px; } .google-signin small { display: block; margin-top: .75rem; line-height: 1.6; } .google-signin form { display: grid; gap: .75rem; } .google-sdk-button { min-height: 44px; max-width: 100%; overflow: auto; }

@@ -32,6 +32,7 @@ from .ratings import router as ratings_router, setup as setup_ratings
 from .partner_pilot import router as pilot_router, setup as setup_pilot
 from .durable_storage import configured as postgres_configured
 from .account_recovery import router as recovery_router, setup as setup_recovery
+from .google_auth import router as google_router
 from .moderation import router as moderation_router
 from .provider_status import snapshot as provider_snapshot
 from .metrics import router as metrics_router, setup as setup_metrics, consultation as record_consultation
@@ -102,6 +103,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", 
                    allow_headers=["Content-Type", "Authorization"], allow_credentials=False)
 app.include_router(account_router)
 app.include_router(recovery_router)
+app.include_router(google_router)
 app.include_router(moderation_router)
 app.include_router(metrics_router)
 app.include_router(commerce_router)

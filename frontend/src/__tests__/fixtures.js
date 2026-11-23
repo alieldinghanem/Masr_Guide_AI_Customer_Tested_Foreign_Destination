@@ -86,6 +86,7 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrat
       ratingVotes.set(target, votes)
       return reply({ target_id: target, average: Math.round((Array.from(votes.values()).reduce((sum, value) => sum + value, 0) / votes.size) * 10) / 10, count: votes.size, your_rating: body.rating, temporary_storage: true })
     }
+    if (path === '/auth/google/config') return reply({ enabled: false, client_id: null })
     if (path === '/my/favorites') return reply({ place_ids: [] })
     if (path === '/my/trips') return reply({ trips: [] })
     if (path === '/plan') return reply(planFor(body))

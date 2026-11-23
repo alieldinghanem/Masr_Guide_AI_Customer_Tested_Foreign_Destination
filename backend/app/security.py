@@ -27,6 +27,8 @@ def sensitive_requests(request) -> int:
         bucket, limit = 'login', _limit('AUTH_LOGIN_RATE_PER_MINUTE', 15)
     elif method == 'POST' and path == '/api/auth/register':
         bucket, limit = 'register', _limit('AUTH_REGISTER_RATE_PER_MINUTE', 12)
+    elif method == 'POST' and path.startswith('/api/auth/google'):
+        bucket, limit = 'google-auth', _limit('AUTH_GOOGLE_RATE_PER_MINUTE', 12)
     elif method == 'POST' and path.startswith(('/api/auth/password-reset/', '/api/auth/email-verification/')):
         bucket, limit = 'account-email', _limit('AUTH_EMAIL_RATE_PER_MINUTE', 6)
     elif method == 'POST' and path == '/api/partners/apply':

@@ -99,6 +99,10 @@ def _request(address, purpose, tasks):
         db.execute('DELETE FROM account_mail_requests WHERE next_at < ?', ((now - timedelta(days=1)).isoformat(),))
         if claim:
             user = db.execute('SELECT id FROM account_users WHERE email=?', (address,)).fetchone()
+            if user and purpose == 'reset':
+                from .google_auth import methods
+                if not methods(db, user['id'])['password']:
+                    user = None  # Google-only accounts recover through Google.
             if user:
                 token = secrets.token_urlsafe(40)
                 db.execute('DELETE FROM account_actions WHERE user_id=? AND purpose=?', (user['id'], purpose))

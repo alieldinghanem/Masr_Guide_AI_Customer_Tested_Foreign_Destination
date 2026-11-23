@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from pydantic import BaseModel, EmailStr, Field, ValidationError
+from pydantic import BaseModel, EmailStr, Field, ValidationError, model_validator
 
 from .schemas import TripState, TravelerProfile
 from .database import get_place
@@ -84,6 +84,8 @@ def setup():
           CREATE TABLE IF NOT EXISTS account_mail_requests (
             address_hash TEXT PRIMARY KEY, next_at TEXT NOT NULL);
         ''')
+    from .google_auth import setup as setup_google
+    setup_google()
 
 
 def _now():
@@ -97,6 +99,17 @@ def _hash_password(password, salt):
 class Credentials(BaseModel):
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=12, max_length=128)
+
+
+class Registration(Credentials):
+    # Older API clients remain compatible; the website always requires/sends it.
+    password_confirmation: str | None = Field(default=None, min_length=12, max_length=128)
+
+    @model_validator(mode='after')
+    def matching_passwords(self):
+        if self.password_confirmation is not None and self.password != self.password_confirmation:
+            raise ValueError('Passwords do not match')
+        return self
 
 
 class TripSave(BaseModel):
@@ -226,8 +239,15 @@ def _conversation_payload(body: ConversationSave):
 
 
 class AccountDeletion(BaseModel):
-    password: str = Field(min_length=12, max_length=128)
+    password: str | None = Field(default=None, min_length=12, max_length=128)
+    google_proof: str | None = Field(default=None, min_length=40, max_length=120, pattern=r'^[A-Za-z0-9_-]+$')
     confirmation: str = Field(pattern=r'^DELETE MY ACCOUNT$')
+
+    @model_validator(mode='after')
+    def one_proof(self):
+        if bool(self.password) == bool(self.google_proof):
+            raise ValueError('Provide one current password or fresh Google deletion proof')
+        return self
 
 
 def _strict_writes() -> bool:
@@ -286,7 +306,7 @@ def registration_enabled() -> bool:
 
 
 @router.post('/auth/register', status_code=201)
-def register(body: Credentials):
+def register(body: Registration):
     if not registration_enabled():
         raise HTTPException(503, detail='Account registration is unavailable on temporary-storage previews')
     setup()
@@ -308,14 +328,17 @@ def login(body: Credentials):
     email = _validate_email(body.email)
     with _open() as c:
         row = c.execute('SELECT * FROM account_users WHERE email=?', (email,)).fetchone()
-        if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
+        from .google_auth import methods
+        if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])) or not methods(c, row['id'])['password']:
             raise HTTPException(401, detail='Incorrect email or password')
-        return {'user': {'id': row['id'], 'email': email}, **_issue(c, row['id'])}
+        return {'user': {'id': row['id'], 'email': email}, 'auth_methods': methods(c, row['id']), **_issue(c, row['id'])}
 
 
 @router.get('/auth/me')
 def me(user=Depends(current_user)):
-    return {'user': {'id': user['id'], 'email': user['email']}}
+    from .google_auth import methods
+    with _open() as db:
+        return {'user': {'id': user['id'], 'email': user['email']}, 'auth_methods': methods(db, user['id'])}
 
 
 @router.post('/auth/logout')
@@ -335,7 +358,10 @@ def delete_account(body: AccountDeletion, user=Depends(current_user)):
     with _open() as c:
         row = c.execute('SELECT password_hash,salt FROM account_users WHERE id=?',
                         (user['id'],)).fetchone()
-        if not row or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
+        from .google_auth import consume_delete_proof, methods
+        if body.google_proof:
+            consume_delete_proof(c, body.google_proof, user['id'])
+        elif not row or not methods(c, user['id'])['password'] or not hmac.compare_digest(row['password_hash'], _hash_password(body.password, row['salt'])):
             raise HTTPException(403, detail='Incorrect current password')
         from .ratings import delete_account_reviews
         delete_account_reviews(user['id'])

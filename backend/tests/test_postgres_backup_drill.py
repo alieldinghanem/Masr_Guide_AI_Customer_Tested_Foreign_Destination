@@ -54,6 +54,9 @@ def test_real_backup_restore_and_account_trip_ownership(tmp_path, monkeypatch):
         trip = client.post('/api/my/trips', headers=headers, json={'title': 'Restore rehearsal', 'itinerary': {'days': [{'day': 1, 'city': 'Cairo', 'stops': []}]}})
         assert trip.status_code == 201, trip.text
         trip_id = trip.json()['id']
+        # A linked legacy account must keep its identity and password after restore.
+        with accounts._open() as db:
+            db.execute('INSERT INTO account_google_identities VALUES (?,?,?,?)', ('restore-sub-' + user_id, user_id, 1, accounts._now().isoformat()))
     with psycopg.connect(source, autocommit=True) as admin:
         admin.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(target_name)))
     try:
@@ -68,6 +71,7 @@ def test_real_backup_restore_and_account_trip_ownership(tmp_path, monkeypatch):
         with TestClient(app) as restored_app:
             logged_in = restored_app.post('/api/auth/login', json={'email': email, 'password': password})
             assert logged_in.status_code == 200
+            assert logged_in.json()['auth_methods'] == {'google': True, 'password': True}
             headers = {'Authorization': 'Bearer ' + logged_in.json()['token']}
             assert restored_app.get('/api/my/trips/' + trip_id, headers=headers).json()['title'] == 'Restore rehearsal'
             outsider = restored_app.post('/api/auth/register', json={'email': 'other-' + uuid4().hex + '@example.org', 'password': password})
