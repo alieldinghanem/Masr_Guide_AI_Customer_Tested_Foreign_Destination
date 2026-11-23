@@ -29,7 +29,7 @@ describe('startup', () => {
   it('shows a localised error when the backend is unreachable', async () => {
     mockApi({ failNetwork: true })
     render(<App />)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot connect to the backend')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to connect. Check your internet connection and try again.')
   })
 })
 

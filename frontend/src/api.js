@@ -34,7 +34,7 @@ export async function api(path, { method = 'GET', body, token, ifMatch, headers 
     if (controller.signal.aborted) {
       throw new ApiError('Request timed out. Please try again.', { code: 'timeout' })
     }
-    throw new ApiError('Cannot connect to the backend. Start the FastAPI server on port 8000.', { code: 'network' })
+    throw new ApiError('Unable to connect. Check your internet connection and try again.', { code: 'network' })
   } finally {
     clearTimeout(timeout)
   }
