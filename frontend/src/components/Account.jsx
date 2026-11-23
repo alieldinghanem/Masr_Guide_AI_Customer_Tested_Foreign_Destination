@@ -183,7 +183,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
 
   return (
     <main className="page-wrap container account-page">
-      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك.' : 'Save Egypt itineraries and share reviews from your account.'}{!registrationEnabled && ` ${ar ? 'التخزين مؤقت في هذه النسخة، وقد تختفي البيانات بعد إعادة تشغيل الموقع.' : 'Storage is temporary in this preview, and data may disappear after a restart.'}`}</p></div>
+      <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك.' : 'Save Egypt itineraries and share reviews from your account.'}{registrationEnabled === false && ` ${ar ? 'التخزين مؤقت في هذه النسخة، وقد تختفي البيانات بعد إعادة تشغيل الموقع.' : 'Storage is temporary in this preview, and data may disappear after a restart.'}`}</p></div>
       {error && <p role="alert" className="account-error">{error}</p>}
       <AccountEmail session={session} onPasswordReset={() => { sessionStorage.removeItem(SESSION); setSession(null); onSignOut() }} />
       {!session ? (
@@ -193,7 +193,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
           <label>{ar ? 'كلمة المرور' : 'Password'}<input required minLength={12} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
           <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى. يمكنك استخدام عنوان Gmail كبريد إلكتروني؛ تسجيل Google بضغطة واحدة غير مفعّل حاليًا.' : 'Use at least 12 characters and do not reuse another password. A Gmail address works as an email address; one-click Google sign-in is not enabled yet.'}</small>
           <button className="btn primary" disabled={busy} type="submit">{busy ? (ar ? 'انتظر...' : 'Please wait…') : signup ? (ar ? 'إنشاء الحساب' : 'Register') : (ar ? 'تسجيل الدخول' : 'Sign in')}</button>
-          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
+          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : registrationEnabled == null ? <p role="status">{ar ? 'جار التحقق من توفر إنشاء الحسابات. إذا تعذر الاتصال، أعد المحاولة من التنبيه أعلاه.' : 'Checking registration availability. If the connection fails, retry using the message above.'}</p> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
         </form>
       ) : (
         <section className="account-panel">
