@@ -14,12 +14,26 @@ LANG_FR = 'French'
 
 def _affirmed_dive_request(text: str) -> bool:
     """Ignore excluded activities while retaining genuine dive-safety questions."""
-    dive = r'(?:الغوص|غوص|الغطس|غطس|dive|diving|scuba|snorkeling|plongée|plongee)'
+    dive = r'(?:الغوص|غوص|الغطس|غطس|dive|diving|scuba|snorkeling|plonger|plongée|plongee)'
     excluded = re.sub(
         r'(?:مش|مو|ما|بدون|من غير|لا اريد|لا عايز|لا عاوز|not|no|without|pas de|sans)'
         r'\s+(?:(?:عايز|عاوز|اريد|اروح|مكان|موقع|نشاط|شاطئ|ل|لل|a|any|site|spot|place|for|to|de|du|la|le|pour)\s+){0,4}' + dive,
         '', text, flags=re.I)
     return bool(re.search(dive, excluded))
+
+
+def unsafe_dive_request(message: str) -> bool:
+    """Route explicit high-risk diving intent without hijacking excluded diving."""
+    text = re.sub(r'\s+', ' ', message.strip().lower())
+    if not _affirmed_dive_request(text):
+        return False
+    # A visitor choosing a buddy/instructor is not asking to dive alone.
+    risks = re.sub(r"(?:not|never|won't|will not|don't want to)\s+(?:go |dive |be )?(?:alone|solo)|(?:مش|لن|لا)\s+(?:هغوص |اغوص |أغوص )?(?:لوحدي|بمفردي)|pas\s+seul(?:e)?", '', text)
+    solo = re.search(r"\b(?:alone|solo|by myself|on my own)\b|لوحد[يى]|بمفرد[يى]|منفرد[ًا]*|\bseul(?:e)?\b", risks)
+    untrained = re.search(r"(?:without|sans)\s+(?:(?:a|an|my|un|une)\s+)?(?:buddy|instructor|guide|training|certification|certificate|moniteur|formation)|(?:بدون|من غير)\s+(?:مدرب|مرشد|رفيق|تدريب|شهاد)|\b(?:uncertified|untrained)\b", risks)
+    beginner = re.search(r'مبتد[ئءي]|اول مرة|أول مرة|\b(?:beginner|first dive|first time|debutant|débutant)\b', text)
+    advanced_site = re.search(r'بلو\s*هول|البلو هول|blue hole|cave|technical|كهف|كهوف|تقني|grotte|technique', text)
+    return bool(solo or untrained or (beginner and advanced_site))
 
 
 _CITY_NAMES = {
@@ -43,7 +57,7 @@ def detect_language(message: str, fallback: str = LANG_EN) -> str:
         return LANG_EN
     if re.search(r'(?:speak|reply|respond|answer) (?:to me )?in french|بالفرنساوي|parlez en fran[çc]ais|en fran[çc]ais', t):
         return LANG_FR
-    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
+    if re.search(r'\b(?:bonjour|bonsoir|salut|merci|parlez|français|francais|comment aller|louxor|assouan|je vais|je voudrais|je suis|je veux|pouvez-vous|peux-tu|avec mes enfants|pour cinq jours|dix jours|pendant \w+ jours)\b', t):
         return LANG_FR
     arabic_letters = len(re.findall(r'[\u0621-\u064a]', t))
     latin_letters = len(re.findall(r'[a-z]', t))
@@ -111,6 +125,15 @@ def special_reply(message: str, language: str, history=None) -> dict | None:
         return reply('ماتشاركش رقم بطاقتك البنكية أو CVV أو أي بيانات دفع في المحادثة. لا يمكنني إتمام حجز أو تحصيل أموال من هنا. استخدم صفحة دفع آمنة وموثوقة عند مزود خدمة معتمد فقط.',
                      'Do not share card numbers, CVV or payment credentials in this chat. I cannot process a booking or payment. Use only a trusted provider’s secure checkout.',
                      'Ne partagez jamais de numéro de carte ou CVV ici. Aucun paiement ou réservation ne peut être traité dans ce chat.')
+    if unsafe_dive_request(message):
+        result = reply(
+            'ما تنزلش للغوص لوحدك أو من غير التدريب والإشراف المناسبين. لو أنت مبتدئ، ابدأ مع مدرب معتمد في موقع يختاره لمستواك، وبلّغه بخبرتك قبل اختيار البلو هول أو أي موقع متقدم. التزم بحدود تدريبك ونظام الرفيق؛ المحادثة لا تؤكد صلاحية الموقع أو حالة البحر اليوم. [1]',
+            'Do not dive alone or without appropriate training and supervision. As a beginner, start with a qualified instructor at a site they select for your level; discuss your experience before considering the Blue Hole or any advanced site. Stay within your training and use the buddy system. This chat cannot verify site suitability or current sea conditions. [1]',
+            'Ne plongez pas seul ou sans formation et encadrement adaptés. Débutant, commencez avec un moniteur qualifié sur un site adapté à votre niveau. Respectez vos limites de formation et plongez en binôme. Ce chat ne confirme ni la sécurité du site ni les conditions actuelles. [1]')
+        result['sources'] = [{'number': 1, 'id': 'padi-safe-diving',
+            'title': 'PADI — Standard Safe Diving Practices', 'title_ar': 'PADI — قواعد ممارسات الغوص الآمن',
+            'url': 'https://pro-cms.padi.com/sites/default/files/documents/training-hub/10060_Statement_of_Understanding_v201_EN.pdf'}]
+        return result
     # Do not turn an accessibility question into an unqualified historical
     # description. Accessibility can change by entrance, route and season;
     # our static attractions catalogue does not certify step-free access.

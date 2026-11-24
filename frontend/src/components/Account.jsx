@@ -3,6 +3,7 @@ import { api } from '../api'
 import { isValidItinerary } from '../tripValidation'
 import { useI18n } from '../i18n'
 import AccountEmail from './AccountEmail'
+import GoogleSignIn from './GoogleSignIn'
 
 async function request(path, method = 'GET', payload, token, ifMatch) {
   // Browsers reject a request body on GET/HEAD; omitted body must stay undefined.
@@ -34,6 +35,7 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
   const [session, setSession] = useState(getSession)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [signup, setSignup] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,6 +45,14 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
   const [currentPlan, setCurrentPlan] = useState(null)
   const [deletionPassword, setDeletionPassword] = useState('')
   const [deletionOpen, setDeletionOpen] = useState(false)
+  const [googleProof, setGoogleProof] = useState('')
+  const hasPassword = session?.auth_methods?.password !== false
+
+  useEffect(() => {
+    if (!googleProof) return
+    const timer = setTimeout(() => setGoogleProof(''), 5 * 60 * 1000)
+    return () => clearTimeout(timer)
+  }, [googleProof])
 
   useEffect(() => {
     try {
@@ -64,13 +74,22 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
     return () => { active = false }
   }, [session])
 
+  function acceptSession(data) {
+    const next = { token: data.token, user: data.user, ...(data.auth_methods ? { auth_methods: data.auth_methods } : {}) }
+    sessionStorage.setItem(SESSION, JSON.stringify(next))
+    setSession(next); onSignIn(next); setPassword(''); setPasswordConfirmation(''); setError('')
+  }
+
   async function signIn(e) {
-    e.preventDefault(); setError(''); setBusy(true)
+    e.preventDefault(); setError('')
+    if (signup && password !== passwordConfirmation) {
+      setError(ar ? 'كلمتا المرور غير متطابقتين. اكتب نفس كلمة المرور في الخانتين.' : 'Passwords do not match. Enter the same password in both fields.')
+      return
+    }
+    setBusy(true)
     try {
-      const data = await request(signup ? '/auth/register' : '/auth/login', 'POST', { email, password })
-      const next = { token: data.token, user: data.user }
-      sessionStorage.setItem(SESSION, JSON.stringify(next))
-      setSession(next); onSignIn(next); setPassword('')
+      const data = await request(signup ? '/auth/register' : '/auth/login', 'POST', { email, password, ...(signup ? { password_confirmation: passwordConfirmation } : {}) })
+      acceptSession(data)
     } catch (err) {
       setError(ar && err.message === 'Incorrect email or password' ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' : err.message)
     } finally { setBusy(false) }
@@ -163,20 +182,21 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
     clearBrowserTravelerData()
     onSignOut()
     setSession(null); setTrips([]); setSelected(null); setCurrentPlan(null); setError('')
+    setGoogleProof(''); setDeletionOpen(false); setDeletionPassword('')
   }
 
   async function deleteMyAccount(e) {
     e.preventDefault()
-    if (!session?.token || busy || !deletionPassword) return
+    if (!session?.token || busy || (!deletionPassword && !googleProof)) return
     if (!window.confirm('Permanently delete your account, saved trips and conversations? This cannot be undone.')) return
     setError(''); setBusy(true)
     try {
-      await request('/my/account', 'DELETE', { password: deletionPassword, confirmation: 'DELETE MY ACCOUNT' }, session.token)
+      await request('/my/account', 'DELETE', { ...(googleProof ? { google_proof: googleProof } : { password: deletionPassword }), confirmation: 'DELETE MY ACCOUNT' }, session.token)
       try { sessionStorage.removeItem(SESSION) } catch { /* private browsing */ }
       clearBrowserTravelerData()
       onSignOut()
       setSession(null); setTrips([]); setSelected(null); setCurrentPlan(null)
-      setDeletionPassword(''); setDeletionOpen(false)
+      setDeletionPassword(''); setGoogleProof(''); setDeletionOpen(false)
     } catch (err) { setError(err.message) }
     finally { setBusy(false) }
   }
@@ -186,15 +206,17 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
       <div className="page-intro"><span className="eyebrow">TRAVELER ACCOUNT</span><h1>{ar ? 'حسابي' : 'My Travel Account'}</h1><p>{ar ? 'احفظ خطط رحلتك وشارك بتقييماتك من حسابك.' : 'Save Egypt itineraries and share reviews from your account.'}{registrationEnabled === false && ` ${ar ? 'التخزين مؤقت في هذه النسخة، وقد تختفي البيانات بعد إعادة تشغيل الموقع.' : 'Storage is temporary in this preview, and data may disappear after a restart.'}`}</p></div>
       {error && <p role="alert" className="account-error">{error}</p>}
       <AccountEmail session={session} onPasswordReset={() => { sessionStorage.removeItem(SESSION); setSession(null); onSignOut() }} />
-      {!session ? (
+      {!session ? (<>
+        <GoogleSignIn onSuccess={acceptSession} disabled={busy} onBusyChange={setBusy} />
         <form className="account-panel" onSubmit={signIn}>
           <h2>{signup ? (ar ? 'إنشاء حساب' : 'Create an account') : (ar ? 'تسجيل الدخول' : 'Sign in')}</h2>
           <label>{ar ? 'البريد الإلكتروني' : 'Email'}<input required autoComplete="email" type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
-          <label>{ar ? 'كلمة المرور' : 'Password'}<input required minLength={12} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
-          <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى. يمكنك استخدام عنوان Gmail كبريد إلكتروني؛ تسجيل Google بضغطة واحدة غير مفعّل حاليًا.' : 'Use at least 12 characters and do not reuse another password. A Gmail address works as an email address; one-click Google sign-in is not enabled yet.'}</small>
+          <label>{ar ? 'كلمة المرور' : 'Password'}<input required minLength={12} maxLength={128} autoComplete={signup ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} /></label>
+          {signup && <label>{ar ? 'تأكيد كلمة المرور' : 'Confirm password'}<input required minLength={12} maxLength={128} autoComplete="new-password" type="password" value={passwordConfirmation} onChange={e => setPasswordConfirmation(e.target.value)} /></label>}
+          <small>{ar ? 'استخدم 12 حرفًا على الأقل، ولا تكرر كلمة مرور خدمة أخرى.' : 'Use at least 12 characters and do not reuse another password.'}</small>
           <button className="btn primary" disabled={busy} type="submit">{busy ? (ar ? 'انتظر...' : 'Please wait…') : signup ? (ar ? 'إنشاء الحساب' : 'Register') : (ar ? 'تسجيل الدخول' : 'Sign in')}</button>
-          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : registrationEnabled == null ? <p role="status">{ar ? 'جار التحقق من توفر إنشاء الحسابات. إذا تعذر الاتصال، أعد المحاولة من التنبيه أعلاه.' : 'Checking registration availability. If the connection fails, retry using the message above.'}</p> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
-        </form>
+          {registrationEnabled ? <button className="btn secondary" type="button" onClick={() => { setSignup(v => !v); setPassword(''); setPasswordConfirmation(''); setError('') }}>{signup ? (ar ? 'لديك حساب بالفعل؟' : 'Already have an account?') : (ar ? 'إنشاء حساب' : 'Create an account')}</button> : registrationEnabled == null ? <p role="status">{ar ? 'جار التحقق من توفر إنشاء الحسابات. إذا تعذر الاتصال، أعد المحاولة من التنبيه أعلاه.' : 'Checking registration availability. If the connection fails, retry using the message above.'}</p> : <p role="status">{ar ? 'إنشاء حساب جديد متوقف في هذه النسخة لأن التخزين مؤقت. سيعود عند توفير قاعدة بيانات دائمة.' : 'Registration is disabled on this temporary-storage public preview. It will return when durable storage is available.'}</p>}
+        </form></>
       ) : (
         <section className="account-panel">
           <div className="account-bar"><p>{ar ? 'تم تسجيل الدخول بالبريد' : 'Signed in as'} <strong>{session.user.email}</strong></p><button className="btn secondary" onClick={signOut}>{ar ? 'تسجيل الخروج' : 'Sign out'}</button></div>
@@ -216,9 +238,11 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
             <p>Deleting your account permanently removes your saved trips, conversations, sessions, ratings, and comments. Partner inquiries submitted separately are not linked to this account.</p>
             {!deletionOpen ? <button type="button" className="btn secondary" onClick={() => setDeletionOpen(true)}>Delete my account</button> : (
               <form onSubmit={deleteMyAccount}>
-                <label>Confirm with your current password<input required type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>
-                <button className="btn secondary" type="submit" disabled={busy || !deletionPassword}>{busy ? 'Deleting…' : 'Permanently delete account'}</button>
-                <button className="btn secondary" type="button" disabled={busy} onClick={() => { setDeletionOpen(false); setDeletionPassword('') }}>Cancel</button>
+                {hasPassword && <label>Confirm with your current password<input required={!googleProof} type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>}
+                {googleProof && <p role="status">{ar ? 'تم تأكيد هويتك. أكّد الحذف خلال خمس دقائق.' : 'Identity confirmed. Confirm deletion within five minutes.'}</p>}
+                {session.auth_methods?.google && !googleProof && <GoogleSignIn purpose="delete" token={session.token} disabled={busy} onBusyChange={setBusy} onSuccess={data => { setGoogleProof(data.google_proof); setDeletionPassword('') }} />}
+                <button className="btn secondary" type="submit" disabled={busy || (!deletionPassword && !googleProof)}>{busy ? 'Deleting…' : 'Permanently delete account'}</button>
+                <button className="btn secondary" type="button" disabled={busy} onClick={() => { setDeletionOpen(false); setDeletionPassword(''); setGoogleProof('') }}>Cancel</button>
               </form>
             )}
           </section>

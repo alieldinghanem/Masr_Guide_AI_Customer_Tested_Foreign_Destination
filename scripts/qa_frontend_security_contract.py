@@ -26,4 +26,8 @@ assert {'https://images.unsplash.com', 'https://commons.wikimedia.org', 'https:/
 assert "'unsafe-inline'" not in directives.get('script-src', set()), 'Do not allow inline scripts'
 assert "'unsafe-eval'" not in directives.get('script-src', set()), 'Do not allow dynamic eval'
 assert 'https://www.openstreetmap.org' in directives.get('frame-src', set()), 'Maps iframe blocked by CSP'
+assert 'https://accounts.google.com/gsi/client' in directives.get('script-src', set()), 'Google sign-in library blocked'
+assert 'https://accounts.google.com/gsi/' in directives.get('frame-src', set()), 'Google sign-in frame blocked'
+assert 'https://accounts.google.com/gsi/' in directives.get('connect-src', set()), 'Google sign-in connection blocked'
+assert 'https://accounts.google.com/gsi/style' in directives.get('style-src', set()), 'Google sign-in stylesheet blocked'
 print('PASS: Nginx image/map allowlist matches React assets without unsafe scripts')

@@ -25,7 +25,7 @@ export default function RatingWidget({ targetId, name, summary, yourRating = 0, 
         <Star size={19} fill={stars <= yourRating ? 'currentColor' : 'none'} aria-hidden="true" />
       </button>)}
     </div>
-    {!session?.token && <p className="mg-review-signin">{ar ? 'سجّل دخولك بالبريد الإلكتروني للتقييم.' : 'Sign in with email to rate.'} <button type="button" onClick={onSignIn}>{ar ? 'تسجيل الدخول' : 'Sign in'}</button>{!registrationEnabled && <small>{ar ? 'إنشاء حساب جديد متوقف مؤقتًا حتى يتوفر تخزين دائم.' : 'New registration is paused until durable storage is available.'}</small>}</p>}
+    {!session?.token && <p className="mg-review-signin">{ar ? 'سجّل دخولك بالبريد الإلكتروني للتقييم.' : 'Sign in with email to rate.'} <button type="button" onClick={onSignIn}>{ar ? 'تسجيل الدخول' : 'Sign in'}</button>{registrationEnabled === false && <small>{ar ? 'إنشاء حساب جديد متوقف مؤقتًا حتى يتوفر تخزين دائم.' : 'New registration is paused until durable storage is available.'}</small>}</p>}
     {yourRating > 0 && <span className="mg-rating-yours">{ar ? `تقييمك: ${yourRating} من 5` : `Your rating: ${yourRating} / 5`}</span>}
     {error && <p role="alert" className="mg-rating-error">{error}</p>}
   </div>

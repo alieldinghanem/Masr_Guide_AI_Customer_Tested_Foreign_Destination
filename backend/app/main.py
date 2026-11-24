@@ -29,9 +29,11 @@ from .accounts import router as account_router, setup as setup_accounts
 from . import accounts
 from .commerce import router as commerce_router, setup as setup_commerce
 from .ratings import router as ratings_router, setup as setup_ratings
+from .community import router as community_router, setup as setup_community
 from .partner_pilot import router as pilot_router, setup as setup_pilot
 from .durable_storage import configured as postgres_configured
 from .account_recovery import router as recovery_router, setup as setup_recovery
+from .google_auth import router as google_router
 from .moderation import router as moderation_router
 from .provider_status import snapshot as provider_snapshot
 from .metrics import router as metrics_router, setup as setup_metrics, consultation as record_consultation
@@ -93,20 +95,23 @@ async def lifespan(app: FastAPI):
     setup_commerce()
     setup_pilot()
     setup_ratings()
+    setup_community()
     yield
 
 app = FastAPI(title="Masr Guide AI", version="7.8.1", lifespan=lifespan,
               description="A curated Egypt travel guide with optional LLM-grounded RAG chat.")
 origins = [v.strip() for v in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if v.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST", "PUT", "DELETE"],
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
                    allow_headers=["Content-Type", "Authorization"], allow_credentials=False)
 app.include_router(account_router)
 app.include_router(recovery_router)
+app.include_router(google_router)
 app.include_router(moderation_router)
 app.include_router(metrics_router)
 app.include_router(commerce_router)
 app.include_router(pilot_router)
 app.include_router(ratings_router)
+app.include_router(community_router)
 # Outer ASGI guard measures actual received bytes, not only the advertised length.
 app.add_middleware(LimitApiBody)
 
@@ -130,7 +135,7 @@ async def protect_sensitive_endpoints(request: Request, call_next):
                             content={'detail': 'Too many requests. Please try again later.'},
                             headers={'Retry-After': str(denied), 'Cache-Control': 'no-store'})
     response = await call_next(request)
-    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/', '/api/ratings')):
+    if request.url.path.startswith(('/api/auth/', '/api/my/', '/api/admin/', '/api/ratings', '/api/community/')):
         response.headers['Cache-Control'] = 'no-store'
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('X-Frame-Options', 'DENY')

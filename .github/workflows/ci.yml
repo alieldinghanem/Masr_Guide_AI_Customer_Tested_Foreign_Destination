@@ -112,7 +112,7 @@ jobs:
       - name: Start integrated production-style FastAPI server
         run: |
           cd backend
-          GEMINI_API_KEY= OPENAI_API_KEY= DATABASE_PATH=${{ runner.temp }}/masr_catalog.sqlite3 MASR_USER_DB=${{ runner.temp }}/masr_accounts.sqlite3 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/masr_browser_server.log 2>&1 &
+          ADMIN_API_TOKEN=isolated-ci-community-staff-token GEMINI_API_KEY= OPENAI_API_KEY= DATABASE_PATH=${{ runner.temp }}/masr_catalog.sqlite3 MASR_USER_DB=${{ runner.temp }}/masr_accounts.sqlite3 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/masr_browser_server.log 2>&1 &
           echo $! > /tmp/masr_browser_server.pid
           for i in $(seq 1 35); do
             if curl -fsS http://127.0.0.1:8000/api/ready >/dev/null; then exit 0; fi
