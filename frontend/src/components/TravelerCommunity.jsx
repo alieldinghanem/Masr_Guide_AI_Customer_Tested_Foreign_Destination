@@ -241,7 +241,10 @@ function SocialFeed({ places, session, onSignIn, onOpenTarget }) {
     finally { setBusy(false) }
   }
   return <main className="container page-wrap social-community">
-    <span className="eyebrow">{lang === 'ar' ? 'مجتمع المسافرين' : 'TRAVELER COMMUNITY'}</span><h1>{copy.title}</h1><p>{copy.intro}</p>
+    <header className="social-hero">
+      <div className="social-hero-copy"><span className="social-hero-icon"><UsersRound size={25} aria-hidden="true" /></span><span className="eyebrow">{lang === 'ar' ? 'مجتمع المسافرين' : 'TRAVELER COMMUNITY'}</span><h1>{copy.title}</h1><p>{copy.intro}</p></div>
+      <div className="social-hero-note"><span>{lang === 'ar' ? 'من مسافر لمسافر' : 'FROM ONE TRAVELER TO ANOTHER'}</span><h2>{lang === 'ar' ? 'سؤال صغير. تجربة أحسن.' : 'A small question. A better trip.'}</h2><p>{lang === 'ar' ? 'ابدأ بسؤال، شارك حاجة اتعلمتها، أو دوّن تجربة تفيد اللي جاي بعدك.' : 'Ask a question, share something you learned, or leave an experience for the next traveler.'}</p><div className="social-topic-preview">{topics.map(item => <span key={item}>{copy[item]}</span>)}</div></div>
+    </header>
     <div className="social-disclosure"><ShieldCheck size={18} aria-hidden="true" />{copy.disclosure}</div>
     <div className="social-layout"><aside className="social-composer"><h2>{copy.draft}</h2><p>{copy.guidelines}</p>
       {!posting && <p role="status">{copy.unavailable}</p>}
@@ -270,9 +273,9 @@ export default function TravelerCommunity(props) {
   const { lang } = useI18n()
   const [tab, setTab] = useState('posts')
   const copy = labels[lang]
-  return <>
+  return <div className="community-shell">
     <nav className="container social-tabs" aria-label={lang === 'ar' ? 'أقسام المجتمع' : 'Community sections'}>{['posts', 'places'].map(item => <button type="button" key={item} aria-pressed={tab === item} onClick={() => setTab(item)}>{copy[item]}</button>)}</nav>
     <div hidden={tab !== 'posts'}><SocialFeed key={props.session?.token || 'guest'} {...props} /></div>
     <div hidden={tab !== 'places'}><TravelerReviews {...props} /></div>
-  </>
+  </div>
 }
