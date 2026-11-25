@@ -257,10 +257,10 @@ function Shell({ meta }) {
             <button onClick={() => go('coast')}>{lang === 'ar' ? 'الشواطئ' : 'Beaches'}</button>
             <button onClick={() => go('destinations')}>{t('footer.destinations')}</button>
             <button onClick={() => go('essentials')}>{t('nav.essentials')}</button>
+            {[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}
             <details className="mg-footer-more"><summary>{lang === 'ar' ? 'روابط إضافية' : 'More links'}</summary><div>
               {[[ 'planner', t('footer.plan') ], ['saved', t('nav.saved')], ['account', lang === 'ar' ? 'حسابي' : 'My account'], ['experiences', t('nav.experiences')], ['stories', lang === 'ar' ? 'المجلة' : 'Journal'], ['offers', lang === 'ar' ? 'عروض الشركاء' : 'Partner offers'], ['budget', lang === 'ar' ? 'الميزانية' : 'Budget'], ['partners', lang === 'ar' ? 'انضم كشريك' : 'Partner enquiry'], ['project', lang === 'ar' ? 'عن المشروع' : 'Project case study'], ['staff', lang === 'ar' ? 'الإدارة' : 'Staff']].map(([route, label]) => <button key={route} type="button" onClick={() => go(route)}>{label}</button>)}
             </div></details>
-            <nav className="footer-legal" aria-label={lang === 'ar' ? 'الخصوصية والمساعدة' : 'Privacy and help'}>{[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}</nav>
           </div>
         </div>
         <div className="container footer-bottom"><span>{t('footer.copy', { year: new Date().getFullYear() })}</span><span>{t('footer.note')}</span></div>
