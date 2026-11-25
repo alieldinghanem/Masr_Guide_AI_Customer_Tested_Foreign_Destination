@@ -1838,14 +1838,13 @@ def _consult_travel_core(request):
     if validated.swimming_days:
         answer += (f'\nخصصت {validated.swimming_days} أيام سباحة كاملة، بخلاف يوم الانتقال. الدخول وحالة البحر يحتاجان تأكيدًا مع المشغّل.' if request.language == 'Arabic' else
                    f'\nReserved {validated.swimming_days} full swimming days, separate from the transfer day. Confirm beach entry and sea conditions with the operator.')
-    flexible_days = sum(1 for day in itinerary['days'] if not day['stops'] and not day.get('travel')
-                        and not day.get('swimming_day') and validated.day_overrides.get(day['day'], None) is None)
+    flexible_days = sum(1 for day in itinerary['days'] if not day['stops'])
     if flexible_days:
-        answer += (f'\nتنبيه: {flexible_days} يوم بدون زيارات محددة من كتالوجنا؛ أضفت أفكارًا اختيارية غير محجوزة. '
+        answer += (f'\nتنبيه: {flexible_days} يوم بدون زيارات مجدولة؛ قد تكون للانتقال أو الراحة أو السباحة أو وقت حر. راجع سبب كل يوم في الجدول. '
                    'دي مسودة قابلة للتطوير وليست برنامجًا يوميًا مكتمل التحقق.' if request.language == 'Arabic' else
-                   f'\nAttention : {flexible_days} jours sans visite vérifiée dans notre catalogue. '
+                   f'\nAttention : {flexible_days} jours sans visite planifiée : transport, repos, plage ou temps libre selon le détail du jour. '
                    'Ce programme reste un brouillon, sans réservation.' if request.language == 'French' else
-                   f'\nNote: {flexible_days} days have no curated attraction stops; optional, unbooked ideas are shown. '
+                   f'\nNote: {flexible_days} days have no scheduled attraction stops: transfer, rest, swimming or free time, as explained in each day. '
                    'This is a draft, not a fully verified daily itinerary.')
     if validated.budget_usd:
         answer += (f'\nسجّلت الميزانية التي ذكرتها: {validated.budget_usd:,} دولار. لا يمكن تأكيد أن الخطة داخل ميزانيتك دون عروض إقامة وانتقالات وأسعار حديثة.'
