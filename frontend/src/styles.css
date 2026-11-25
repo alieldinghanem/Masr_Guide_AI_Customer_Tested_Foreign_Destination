@@ -1085,7 +1085,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(hover:hover) and (prefers-reduced-motion:no-preference){.mg-place-card:hover,.v3-destination-card:hover{box-shadow:0 12px 32px #39230f10;border-color:#dac4b2}}
 @media(max-width:620px){.account-page{padding-block:28px 40px}.account-panel,.google-signin{padding:20px}.page-intro p,.mg-category-hero p{font-size:14px}.mg-place-content{padding:18px}.mg-place-content h2{font-size:19px}.mg-chat-home .msg-text{font-size:14px}.mg-chat-home .guide-welcome p{font-size:13px}.mg-chat-home .chat-compose>small{font-size:11px}.nav-saved,.lang-toggle,.mobile-toggle,.nav-safety{min-height:44px;min-width:44px}.account-bar{gap:12px;flex-wrap:wrap}.account-bar strong{overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
-
-.footer-legal{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px 24px;padding-block:8px 20px}
-.footer-legal button{background:none;border:0;color:#6d5c50;font:inherit;font-size:12px;font-weight:700;min-height:44px;padding:8px 4px;cursor:pointer}
-.footer-legal button:hover{color:var(--mg-primary);text-decoration:underline;text-underline-offset:4px}
+/* Use the shared footer link styling and an explicit disclosure chevron. */
+.mg-footer-more summary{display:flex;align-items:center;gap:6px;list-style:none;min-height:44px}
+.mg-footer-more summary::marker{content:''}
+.mg-footer-more summary::-webkit-details-marker{display:none}
+.mg-footer-more summary svg{flex-shrink:0;transition:transform .16s}
+.mg-footer-more[open] summary svg{transform:rotate(180deg)}
