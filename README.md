@@ -1,52 +1,30 @@
 # Masr Guide AI
 
-<p align="center">
-  <img src="frontend/public/assets/brand/social-preview.png" alt="Masr Guide AI — discover Egypt and build smarter itineraries" width="900">
-</p>
+**Explore Egypt and build an editable, day-by-day trip plan.** Search for places such as the Pyramids of Giza or Karnak Temple, ask the travel guide for suggestions in Arabic, English, or French, and organize your chosen places into a multi-day itinerary.
+
+[Hosted preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/) · [دليل التشغيل بالعربية](START_LOCAL_FIRST_AR.md) · [Quick start](#quick-start)
+
+## What you can do
+
+- **Explore destinations.** Browse Egyptian cities, historical sites, and beaches. Search the catalogue and use maps and travel information to decide where to go.
+- **Plan a trip.** Pick your destinations and trip length to build a day-by-day itinerary. Adjust it as your plans change.
+- **Ask the guide.** Request places to visit or ask a follow-up in Arabic, English, or French. The guide can use the local catalogue when its optional AI provider is unavailable.
+
+### Try this example
+
+Explore Cairo and Luxor, then ask the guide: **“What should I visit in Luxor if I like ancient Egyptian history?”** Build a five-day trip across the two cities. Open the itinerary to see which places are scheduled each day, then use the planner to adjust it.
+
+> **بالعربي:** اكتشف أماكن ومعالم في مصر، واسأل المساعد عن اقتراحات، واعمل برنامج رحلة يوم بيوم تقدر تعدّله.
 
 <p align="center">
-  <a href="https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/workflows/ci.yml"><img src="https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=111827" alt="React 18">
-  <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready">
+  <img src="frontend/public/assets/brand/social-preview.png" alt="Masr Guide AI project preview" width="780">
 </p>
 
-<p align="center">
-  A multilingual, full-stack Egypt travel discovery and itinerary-planning portfolio project.
-</p>
+## How it works
 
-<p align="center">
-  <a href="https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/"><strong>Live demo</strong></a>
-  ·
-  <a href="START_LOCAL_FIRST_AR.md"><strong>دليل التشغيل بالعربية</strong></a>
-  ·
-  <a href="#quick-start"><strong>Quick start</strong></a>
-</p>
+React provides the traveller interface and FastAPI serves the catalogue and trip planner. An optional Gemini or OpenAI integration helps answer guide questions. The itinerary validator checks trip edits and keeps the saved plan consistent.
 
-## Overview
-
-Masr Guide AI helps visitors discover Egyptian destinations, ask a multilingual travel guide for grounded suggestions, and create editable multi-day itineraries.
-
-The application combines a React interface with a FastAPI backend. Gemini or OpenAI can provide optional AI responses, while the application's validated itinerary engine remains the authoritative source of trip state. A local catalogue-based fallback keeps the core experience usable when an AI provider is unavailable.
-
-> **Portfolio scope:** This project is a travel-planning and product-engineering demonstration. It does not process real bookings, payments, hotel inventory, live prices, or confirmed partner reservations.
-
-## Highlights
-
-- **Egypt discovery:** Curated destinations, attractions, coastal locations, maps, search, editorial content, and practical travel information.
-- **Validated trip planning:** Build and revise 1–30 day itineraries while preserving explicit cities, day allocations, and unrelated trip choices.
-- **Multilingual guide:** Arabic, English, and French conversation flows with contextual follow-ups and catalogue-backed recommendations.
-- **Traveler accounts:** Saved trips, ratings, comments, export, and deletion flows with server-side data isolation.
-- **Operational tooling:** Protected content management and partner-offer demonstrations, disabled or restricted by default.
-- **Resilient AI integration:** Optional Gemini/OpenAI providers, honest fallback behavior, server-side keys, rate limits, and release checks.
-- **Responsive product experience:** Mobile and desktop layouts, RTL support, accessible components, and production-build browser testing.
-
-## Live demo
-
-Open the [hosted portfolio preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/).
-
-The free Render service may need time to wake up. Its default storage is not a durable customer-data service, so accounts or saved data can be reset after redeployment. New public registration may be disabled unless persistent storage is configured.
+This portfolio preview is for discovery and itinerary planning. Bookings and payments are outside its scope. The hosted preview can take time to start, and account features depend on its storage configuration.
 
 ## Architecture
 
@@ -107,7 +85,7 @@ Activate the environment:
 
 ```powershell
 # Windows PowerShell
-backend\.venv\Scripts\Activate.ps1
+.\backend\.venv\Scripts\Activate.ps1
 ```
 
 ```bash
