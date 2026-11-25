@@ -9,6 +9,7 @@
   the first day in a new city. Live traffic, schedules, opening hours, prices and availability
   are NOT modelled.
 """
+from collections import Counter
 from itertools import permutations
 from math import atan2, cos, radians, sin, sqrt
 
@@ -44,6 +45,27 @@ def score(place, interests, family=False):
         base += 5 + {"Park": park_bonus, "Museum": 8, "Culture": 5}.get(place["category"], 0)
     if family and not place["family_friendly"]: base -= 14
     return base
+
+
+def experience_group(place):
+    """Separate worship visits from the broad Heritage category in our catalogue."""
+    slug = place['id']
+    if slug == 'coptic-cairo' or any(word in slug for word in ('mosque', 'church', 'synagogue', 'monastery')):
+        return 'Worship'
+    return place['category']
+
+
+def variety_penalty(place, interests, city_counts, day_counts, family=False):
+    group = experience_group(place)
+    # A focused museum/beach request should keep its requested experience.
+    focused = {'museums': 'Museum', 'beaches': 'Beach'}
+    if len(interests) == 1 and focused.get(interests[0]) == group:
+        return 0
+    # Soft preference only: scarce same-type attractions remain selectable.
+    penalty = 4 * city_counts[group] + 6 * day_counts[group]
+    # Preserve the established family preference for museums and open spaces;
+    # diversity must not push children toward less suitable monument-heavy days.
+    return min(penalty, 4) if family and group in {'Museum', 'Park'} else penalty
 
 
 def city_centres(places):
@@ -205,6 +227,7 @@ def build_plan(request):
     # shorter stays can fit several. This preserves uniqueness and honest free days.
     remaining_city_days = allocations.copy()
     used = set()
+    experience_counts = {}
     itinerary = []
     warnings = []
     total_travel = 0
@@ -237,6 +260,8 @@ def build_plan(request):
             daily_stop_limit = min(daily_stop_limit, 2)
         # If all spots in a city were exhausted, keep the day empty, not fake repeated plans.
         stops = []
+        city_counts = experience_counts.setdefault(city, Counter())
+        day_counts = Counter()
         elapsed = 0
         prev = None
         while pool and len(stops) < daily_stop_limit:
@@ -246,7 +271,8 @@ def build_plan(request):
                 cost = p["visit_minutes"] + buffer
                 if elapsed + cost > day_budget: continue
                 distance_penalty = min(distance_km(prev,p)/12, 4) if prev else 0
-                choices.append((score(p, request.interests, request.family)-distance_penalty,p))
+                penalty = variety_penalty(p, request.interests, city_counts, day_counts, request.family)
+                choices.append((score(p, request.interests, request.family)-distance_penalty-penalty,p))
             if not choices: break
             choices.sort(key=lambda pair: (-pair[0], pair[1]["name"]))
             chosen = choices[0][1]
@@ -256,6 +282,9 @@ def build_plan(request):
             stops.append({"place": chosen, "suggested_visit_minutes": chosen["visit_minutes"], "matched": matched,
                           "why": msg["matches"].format(list=", ".join(matched) or msg["popular"])})
             used.add(chosen["id"])
+            group = experience_group(chosen)
+            city_counts[group] += 1
+            day_counts[group] += 1
             pool.remove(chosen)
             prev = chosen
         note = None
