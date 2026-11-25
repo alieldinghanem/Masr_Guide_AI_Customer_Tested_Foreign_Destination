@@ -85,7 +85,7 @@ export function isValidTripState(state) {
       Object.keys(state.day_overrides).length > 30 ||
       Object.entries(state.day_overrides).some(([day, edit]) =>
         !/^[1-9]\d*$/.test(day) || Number(day) > state.days ||
-        !edit || typeof edit !== 'object' || edit.max_stops !== 1 ||
+        !edit || typeof edit !== 'object' || ![0, 1].includes(edit.max_stops) ||
         typeof edit.family_friendly !== 'boolean'))) return false
   let count = 0
   for (const phase of state.phases) {
@@ -97,6 +97,12 @@ export function isValidTripState(state) {
     count += phase.days
   }
   const plannedCities = new Set(state.phases.flatMap(phase => phase.cities))
+  if ('required_place_ids' in state && (!Array.isArray(state.required_place_ids) ||
+    state.required_place_ids.length > 2 || new Set(state.required_place_ids).size !== state.required_place_ids.length ||
+    state.required_place_ids.some(id => !['giza-pyramids', 'grand-egyptian-museum'].includes(id)) ||
+    (state.required_place_ids.length > 0 && !plannedCities.has('Giza')))) return false
+  if ('swimming_days' in state && (!Number.isInteger(state.swimming_days) || state.swimming_days < 0 ||
+    state.swimming_days > state.phases.filter(p => p.kind === 'beach').reduce((n, p) => n + p.days, 0))) return false
   return count === state.days && (!state.lighter_cities || state.lighter_cities.every(city => plannedCities.has(city)))
 }
 
@@ -121,5 +127,9 @@ export function isCompatibleTripPlan(state, itinerary) {
     return !entry || entry.stops.length > edit.max_stops ||
       (edit.family_friendly && entry.stops.some(stop => stop.place.family_friendly !== true))
   })) return false
+  const ids = new Set(itinerary.days.flatMap(day => day.stops.map(stop => stop.place.id)))
+  if (state.required_place_ids?.some(id => !ids.has(id))) return false
+  if (state.swimming_days && itinerary.days.filter(day => day.swimming_day === true &&
+    day.phase_kind === 'beach' && !day.travel && day.stops.length === 0).length !== state.swimming_days) return false
   return offset === itinerary.days.length
 }

@@ -12,7 +12,7 @@ export class ApiError extends Error {
  */
 export async function api(path, { method = 'GET', body, token, ifMatch, headers = {} } = {}) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), ['/chat','/consult'].includes(path) ? 65000 : 20000)
+  const timeout = setTimeout(() => controller.abort(), ['/chat','/consult','/photo-helper/compare'].includes(path) ? 65000 : 20000)
   try {
     const response = await fetch(`/api${path}`, {
       method,

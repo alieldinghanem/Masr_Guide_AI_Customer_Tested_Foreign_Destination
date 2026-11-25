@@ -68,8 +68,15 @@ class TripPhase(BaseModel):
 
 class DayOverride(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    max_stops: Literal[1]
+    max_stops: Literal[0, 1]
     family_friendly: bool = False
+
+    @field_validator('max_stops', mode='before')
+    @classmethod
+    def strict_stop_count(cls, value):
+        if type(value) is not int:
+            raise ValueError('Stop count must be an integer')
+        return value
 
 
 class TravelerProfile(BaseModel):
@@ -98,17 +105,25 @@ class TripState(BaseModel):
     accessibility_needs: bool = False
     lighter_cities: list[str] = Field(default_factory=list, max_length=5)
     day_overrides: dict[int, DayOverride] = Field(default_factory=dict)
+    required_place_ids: list[Literal['giza-pyramids', 'grand-egyptian-museum']] = Field(default_factory=list, max_length=2)
+    swimming_days: int = Field(default=0, ge=0, le=30, strict=True)
 
     @model_validator(mode='after')
     def validate_trip_invariants(self):
         if sum(phase.days for phase in self.phases) != self.days:
             raise ValueError('Phase days must equal total trip days')
+        if self.swimming_days > sum(p.days for p in self.phases if p.kind == 'beach'):
+            raise ValueError('Swimming days must fit the coastal allocation')
         for phase in self.phases:
             if phase.days < len(phase.cities):
                 raise ValueError('Each planned city needs at least one day')
             if len(set(phase.cities)) != len(phase.cities):
                 raise ValueError('Duplicate city in itinerary phase')
         planned_cities = {city for phase in self.phases for city in phase.cities}
+        if self.required_place_ids and 'Giza' not in planned_cities:
+            raise ValueError('Requested Giza attractions need Giza in the route')
+        if len(set(self.required_place_ids)) != len(self.required_place_ids):
+            raise ValueError('Requested attractions must be unique')
         if len(set(self.lighter_cities)) != len(self.lighter_cities) or not set(self.lighter_cities) <= planned_cities:
             raise ValueError('Lighter days must name distinct planned cities')
         if len(self.day_overrides) > 30 or any(day < 1 or day > self.days for day in self.day_overrides):

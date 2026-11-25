@@ -23,6 +23,7 @@ import os
 from .guide import answer_chat
 from .planner import build_plan, city_centres, estimate_transfer
 from .schemas import PlanRequest, TripState
+from .trip_constraints import required_places, swimming_days, late_arrival, rest_only
 
 _CITY_ALIASES = {
     'cairo': 'Cairo', 'القاهره': 'Cairo', 'القاهرة': 'Cairo', 'للقاهرة': 'Cairo',
@@ -355,7 +356,9 @@ def _apply_relative_extension(state: dict, amount: int, city: str | None) -> dic
 
 
 def wants_beach(message: str) -> bool:
-    return any(w in message.lower() for w in _BEACH)
+    return (any(w in message.lower() for w in _BEACH) or
+            bool(re.search(r'\bswim(?:ming)?\b', message.lower()) and not
+                 re.search(r'\b(?:no|not|without)\s+(?:any\s+)?swim|\bpools?\b', message.lower())))
 
 
 def wants_history(message: str) -> bool:
@@ -408,6 +411,11 @@ def _budget_usd(message: str) -> int | None:
 
 def _beach_duration(message: str, days: int) -> int | None:
     t = _digits(message)
+    swimming = swimming_days(message)
+    if swimming:
+        # The first coastal day can be consumed by the transfer. Keep the
+        # requested full swimming days separate from that estimated travel day.
+        return min(days - 1, swimming + 1)
     if not wants_beach(t) and not any(c in t for c in ('hurghada','الغردقة','الغردقه','sharm','شرم الشيخ','dahab','دهب')):
         return None
     explicit = _explicit_phase_days(t, 'beach')
@@ -427,6 +435,10 @@ def _beach_duration(message: str, days: int) -> int | None:
 
 
 def _standard_state(days: int, history: bool, beach: bool, cities: list[str], message: str = '', budget_egp: int | None = None, city_allocations: list[tuple[str, int]] | None = None):
+    anchors = required_places(message)
+    cities = list(cities)
+    if anchors and 'Giza' not in cities and not city_allocations:
+        cities.append('Giza')
     beach_cities = [x for x in cities if x in ('Hurghada', 'Sharm El Sheikh', 'Dahab', 'Alexandria')]
     historic_cities = [x for x in cities if x not in beach_cities]
     family = bool(re.search(r'(?:طفل(?:ين|ان|ة|ين)?|أطفال|اطفال|عائلي|عائلية|عيلة|عايلة|عيلتي|عائلتي|أسرتي|اسرتي|family|kids?|children|toddler|bébé|enfants?)', message.lower()))
@@ -462,7 +474,9 @@ def _standard_state(days: int, history: bool, beach: bool, cities: list[str], me
                    # did not ask for beach time. Keep every named destination.
                    'cities': cities or ['Cairo'], 'interests': ['history', 'culture'] if history else ['culture', 'nature']}]
     return {'days': days, 'phases': phases, 'pace': pace, 'family': family, 'budget_egp': budget_egp,
-            'accessibility_needs': needs_accessibility(message)}
+            'accessibility_needs': needs_accessibility(message),
+            'required_place_ids': anchors, 'swimming_days': swimming_days(message),
+            'day_overrides': {1: {'max_stops': 0, 'family_friendly': family}} if late_arrival(message) else {}}
 
 
 def _extract_gemini(message: str, state: dict | None, available: set[str], *, provider: str = 'gemini'):
@@ -854,7 +868,7 @@ def _explain_day(state: dict, day_number: int, language: str) -> dict:
                          for i, stop in enumerate(day['stops'], 1))
             lines.append('الترتيب والمدة مقترحان، وتأكد من المواعيد والتذاكر قبل الخروج.')
         else:
-            lines.append('ده يوم حر؛ مفيش زيارة موثقة مناسبة أضيفها من دليلنا.')
+            lines.append(day.get('note') or 'ده يوم حر؛ مفيش زيارة موثقة مناسبة أضيفها من دليلنا.')
             lines.extend(f'فكرة اختيارية: {idea}' for idea in day.get('activity_ideas', [])[:2])
         lines.append(f'لو عايز اليوم أخف، قل: خفف أيام {city}.')
     else:
@@ -866,7 +880,7 @@ def _explain_day(state: dict, day_number: int, language: str) -> dict:
                          for i, stop in enumerate(day['stops'], 1))
             lines.append('The order and durations are suggestions. Check hours and tickets before you go.')
         else:
-            lines.append('This is a free day; I have no additional curated visit to assign reliably.')
+            lines.append(day.get('note') or 'This is a free day; I have no additional curated visit to assign reliably.')
             lines.extend(f'Optional idea: {idea}' for idea in day.get('activity_ideas', [])[:2])
         lines.append(f'If this day feels busy, say: Make {city} days lighter.')
     sources = [{'number': i, 'id': stop['place']['id'], 'title': stop['place']['name'],
@@ -978,6 +992,7 @@ def _apply_edit(state, message, cities, hint, available):
 
 
 def _make_plan(state: dict, lang: str):
+    family_rest = (60 if any(age < 5 for age in state.get('traveler_profile', {}).get('children_ages', [])) else 45) if state['family'] else 0
     days = []
     warnings = []
     route = []
@@ -987,7 +1002,8 @@ def _make_plan(state: dict, lang: str):
     centres = city_centres(all_places())
     for segment in state['phases']:
         req = PlanRequest(cities=segment['cities'], days=segment['days'], interests=segment['interests'],
-                          pace=state['pace'], family=state['family'], optimize_route=False, language=lang)
+                          pace=state['pace'], family=state['family'], optimize_route=False, language=lang,
+                          traveler_profile=state.get('traveler_profile'))
         part = build_plan(req)
         if route and part['route']:
             prev_city, city = route[-1], part['route'][0]
@@ -998,12 +1014,13 @@ def _make_plan(state: dict, lang: str):
                                  if lang == 'en' else f'الانتقال بين {CITY_AR.get(prev_city, prev_city)} و{CITY_AR.get(city, city)} حوالي {transfer["minutes"]} دقيقة تقريبية؛ تأكد من وسائل النقل.'))
                 if part['days']:
                     part['days'][0]['travel'] = {'from_city': prev_city, **transfer}
+                    part['days'][0]['estimated_travel_minutes'] = transfer['minutes']
         offset = len(days)
         if route and part['days'] and part['days'][0].get('travel'):
             first = part['days'][0]
             first_day_allowance = {'relaxed': 240, 'balanced': 360, 'packed': 450}[state['pace']]
             if state['family']:
-                first_day_allowance -= 45
+                first_day_allowance -= family_rest
             # Travel to a phase consumes first-day capacity; drop stops rather than promising
             # physically impossible activity. Approximate, not live-routing.
             while first['stops'] and (first['estimated_activity_minutes'] + first['travel']['minutes'] > first_day_allowance
@@ -1039,6 +1056,25 @@ def _make_plan(state: dict, lang: str):
                 p = stop['place']
                 if p['id'] not in {x['id'] for x in sources}:
                     sources.append({'id': p['id'], 'title': p['name'], 'title_ar': p['name_ar'], 'url': p['source_url']})
+    # Explicit named attractions are obligations, not merely scoring hints.
+    for slug in state.get('required_place_ids', []):
+        if any(s['place']['id'] == slug for d in days for s in d['stops']):
+            continue
+        place = next((p for p in all_places() if p['id'] == slug), None)
+        candidates = [d for d in days if place and d['city'] == place['city']
+                      and state.get('day_overrides', {}).get(d['day'], {}).get('max_stops') != 0
+                      and not any(s['place']['id'] in state.get('required_place_ids', []) for s in d['stops'])]
+        selected = next((d for d in candidates if place['visit_minutes'] +
+                         (d.get('travel') or {}).get('minutes', 0) + family_rest
+                         <= {'relaxed': 240, 'balanced': 360, 'packed': 450}[state['pace']]), None)
+        if selected is None:
+            raise ValueError('The requested attraction needs a usable day in its city')
+        selected['stops'] = [{'place': place, 'suggested_visit_minutes': place['visit_minutes'],
+                              'matched': [], 'why': 'Explicitly requested attraction'}]
+        selected['estimated_activity_minutes'] = place['visit_minutes']
+        selected['rest_minutes'] = family_rest
+        selected['activity_ideas'] = []
+        selected['note'] = None
     # Day-specific edits apply to the built itinerary, so every other day's
     # city, stops and travel estimate remain byte-for-byte stable.
     for raw_day, preference in state.get('day_overrides', {}).items():
@@ -1046,6 +1082,11 @@ def _make_plan(state: dict, lang: str):
         if not 0 <= index < len(days):
             continue
         day = days[index]
+        if preference['max_stops'] == 0:
+            day.update(stops=[], estimated_activity_minutes=0, rest_minutes=0, activity_ideas=[],
+                       note=('Arrival / rest day; no sightseeing scheduled. Any intercity transfer is shown separately.' if lang == 'en'
+                             else 'يوم وصول أو راحة بلا زيارات. أي انتقال بين المدن معروض بشكل منفصل.'))
+            continue
         if preference['max_stops'] != 1:
             continue
         used_elsewhere = {stop['place']['id'] for i, other in enumerate(days) if i != index
@@ -1059,15 +1100,28 @@ def _make_plan(state: dict, lang: str):
         allowance = {'relaxed': 240, 'balanced': 360, 'packed': 450}[state['pace']]
         allowance -= day['travel']['minutes'] if day.get('travel') else 0
         if preference['family_friendly'] or state['family']:
-            allowance -= 45  # a visible rest allowance, not predicted transport
+            allowance -= max(45, family_rest)  # a visible rest allowance, not predicted transport
         chosen = next((place for place in candidates if place['visit_minutes'] <= allowance), None)
         day['stops'] = ([{'place': chosen, 'suggested_visit_minutes': chosen['visit_minutes'],
                           'matched': [], 'why': 'Family-friendly, single-activity day'}] if chosen else [])
         day['estimated_activity_minutes'] = chosen['visit_minutes'] if chosen else 0
-        day['rest_minutes'] = 45 if chosen and (preference['family_friendly'] or state['family']) else 0
+        day['rest_minutes'] = max(45, family_rest) if chosen and (preference['family_friendly'] or state['family']) else 0
         day['activity_ideas'] = [] if chosen else day.get('activity_ideas', [])
         day['note'] = ('One family-friendly visit with a rest period.' if lang == 'en' else
                        'زيارة واحدة مناسبة للأطفال مع وقت راحة.') if chosen else day.get('note')
+    swimming = state.get('swimming_days', 0)
+    if swimming:
+        usable = [d for d in days if d['phase_kind'] == 'beach' and not d.get('travel')
+                  and d['day'] not in state.get('day_overrides', {})]
+        if len(usable) < swimming:
+            raise ValueError('Not enough full coastal days after transfers and day edits')
+        for day in usable[-swimming:]:
+            day.update(stops=[], estimated_activity_minutes=0, rest_minutes=0, activity_ideas=[], swimming_day=True,
+                       note=('Swimming / free beach day. Choose an accessible designated beach and confirm entry, child suitability and sea conditions with its operator. No booking is included.' if lang == 'en'
+                             else 'يوم سباحة واسترخاء على البحر. اختر شاطئًا مخصصًا وأكد الدخول وملاءمته للأطفال وحالة البحر مع المشغّل. لا يوجد حجز ضمن الخطة.'))
+    actual_ids = {s['place']['id'] for d in days for s in d['stops']}
+    if not set(state.get('required_place_ids', [])) <= actual_ids:
+        raise ValueError('A requested attraction conflicts with a day override')
     sources = []
     for day in days:
         for stop in day['stops']:
@@ -1132,6 +1186,12 @@ def _consult_travel_core(request):
     available = {p['city'] for p in all_places()}
     state = request.trip_state.model_dump() if request.trip_state else None
     cities = mentioned_cities(message, available)
+    if (not state and required_places(message) and cities == ['Cairo'] and
+            re.search(r'\bonly\s+(?:in\s+)?cairo\b|\bcairo\s+only\b|القاهرة\s*(?:فقط|بس)', lowered)):
+        return {'answer': ('الأهرامات والمتحف المصري الكبير في الجيزة. هل تسمح بإضافة زيارة للجيزة إلى طلب القاهرة فقط؟ لم أضع خطة بعد.'
+                           if request.language == 'Arabic' else
+                           'The pyramids and Grand Egyptian Museum are in Giza. May the Cairo-only trip include a Giza visit? I have not generated a conflicting itinerary.'),
+                'mode': 'needs-clarification', 'sources': [], 'trip_state': None, 'itinerary': None}
     if not state and not cities and total_days(message) is not None and request.history:
         previous_assistant = next((turn.content for turn in reversed(request.history)
                                    if turn.role == 'assistant'), '')
@@ -1191,6 +1251,36 @@ def _consult_travel_core(request):
         safety = special_reply(message, request.language, request.history)
         if safety:
             return {**safety, 'itinerary': None, 'trip_state': state}
+    if state:
+        planned_cities = {c for phase in state['phases'] for c in phase['cities']}
+        accommodation_question = bool(re.search(r'\bhotels?\b|\brestaurants?\b|فندق|فنادق|مطعم|مطاعم', lowered))
+        constraint_edit = bool(re.search(r'\b(?:add|include|visit|want|missed|forgot|fix|replace|swap)\b|ضيف|أضف|اضف|نزور|زور|عايز|أريد|اريد|نسيت|فاتك', lowered))
+        missing_giza = constraint_edit and not accommodation_question and required_places(message) and 'Giza' not in planned_cities
+        missing_swimming = constraint_edit and not accommodation_question and swimming_days(message) > state.get('swimming_days', 0)
+        if missing_giza or missing_swimming:
+            answer = ('فهمت طلب الأهرامات أو أيام السباحة. الأهرامات في الجيزة، والسباحة تحتاج وجهة ساحلية. '
+                      'قبل تغيير توزيع رحلتك: أي أيام تريد نقلها، وما الوجهة الساحلية المفضلة؟ أم تريد زيادة إجمالي الرحلة؟ لم أغيّر الخطة بعد.'
+                      if request.language == 'Arabic' else
+                      'I noted the pyramids / swimming request. The pyramids are in Giza and swimming needs a coastal destination. '
+                      'Before changing your trip allocation, which days should move and which beach destination do you prefer, or should the total trip grow? Your trip is unchanged.')
+            return {'answer': answer, 'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+        if not accommodation_question and (rest_only(message) or late_arrival(message)):
+            day = _day_number(message) or (1 if late_arrival(message) else None)
+            if day is None or not 1 <= day <= state['days']:
+                return {'answer': ('حدد رقم اليوم المطلوب للراحة؛ الخطة لم تتغير.' if request.language == 'Arabic' else
+                                   'Which existing day should be rest only? Your trip is unchanged.'),
+                        'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+            updated = deepcopy(state)
+            updated.setdefault('day_overrides', {})[day] = {'max_stops': 0, 'family_friendly': state['family']}
+            try:
+                itinerary = _make_plan(updated, 'ar' if request.language == 'Arabic' else 'en')
+            except ValueError:
+                return {'answer': ('يوم الراحة يتعارض مع أيام السباحة أو المعالم المطلوبة. أي قيد تريد تغييره؟ الخطة كما هي.' if request.language == 'Arabic' else
+                                   'That rest day conflicts with requested swimming days or attractions. Which constraint should change? Your trip is unchanged.'),
+                        'mode': 'needs-clarification', 'sources': [], 'trip_state': state, 'itinerary': None}
+            return {'answer': (f'عدّلت اليوم {day} ليكون وصولًا أو راحة فقط بلا زيارات، مع الحفاظ على بقية الأيام والمدن.' if request.language == 'Arabic' else
+                               f'I changed Day {day} to arrival / rest only with no sightseeing. Other days and cities are unchanged.'),
+                    'mode': 'local-planner', 'sources': itinerary['sources'], 'trip_state': updated, 'itinerary': itinerary}
     if state and (edited_day := _single_activity_day_edit(message)) is not None:
         if not 1 <= edited_day <= state['days']:
             return {'answer': (f'الرحلة {state["days"]} أيام؛ اليوم {edited_day} خارجها. لم أغيّر الخطة.'
@@ -1742,13 +1832,19 @@ def _consult_travel_core(request):
         answer += ('\nلأنك لم تحدد مدنًا، اقترحت مسارًا متنوعًا لزيارة مصر؛ يمكنك تغيير المدن أو عدد الأيام.'
                    if request.language == 'Arabic' else
                    '\nYou did not specify destinations, so these cities are a provisional Egypt-wide suggestion that you can change.')
+    if validated.day_overrides.get(1) and validated.day_overrides[1].max_stops == 0:
+        answer += ('\nاليوم الأول مخصص للوصول والراحة بلا زيارات.' if request.language == 'Arabic' else
+                   '\nDay 1 is reserved for arrival and rest, with no sightseeing.')
+    if validated.swimming_days:
+        answer += (f'\nخصصت {validated.swimming_days} أيام سباحة كاملة، بخلاف يوم الانتقال. الدخول وحالة البحر يحتاجان تأكيدًا مع المشغّل.' if request.language == 'Arabic' else
+                   f'\nReserved {validated.swimming_days} full swimming days, separate from the transfer day. Confirm beach entry and sea conditions with the operator.')
     flexible_days = sum(1 for day in itinerary['days'] if not day['stops'])
     if flexible_days:
-        answer += (f'\nتنبيه: {flexible_days} يوم بدون زيارات محددة من كتالوجنا؛ أضفت أفكارًا اختيارية غير محجوزة. '
+        answer += (f'\nتنبيه: {flexible_days} يوم بدون زيارات مجدولة؛ قد تكون للانتقال أو الراحة أو السباحة أو وقت حر. راجع سبب كل يوم في الجدول. '
                    'دي مسودة قابلة للتطوير وليست برنامجًا يوميًا مكتمل التحقق.' if request.language == 'Arabic' else
-                   f'\nAttention : {flexible_days} jours sans visite vérifiée dans notre catalogue. '
+                   f'\nAttention : {flexible_days} jours sans visite planifiée : transport, repos, plage ou temps libre selon le détail du jour. '
                    'Ce programme reste un brouillon, sans réservation.' if request.language == 'French' else
-                   f'\nNote: {flexible_days} days have no curated attraction stops; optional, unbooked ideas are shown. '
+                   f'\nNote: {flexible_days} days have no scheduled attraction stops: transfer, rest, swimming or free time, as explained in each day. '
                    'This is a draft, not a fully verified daily itinerary.')
     if validated.budget_usd:
         answer += (f'\nسجّلت الميزانية التي ذكرتها: {validated.budget_usd:,} دولار. لا يمكن تأكيد أن الخطة داخل ميزانيتك دون عروض إقامة وانتقالات وأسعار حديثة.'
@@ -1780,7 +1876,13 @@ def consult_travel(request):
                   f'Les âges des enfants enregistrés pour ce voyage : {ages} ans.' if request.language == 'French' else
                   f'The children’s ages recorded for your trip are {ages} years.')
         return {'answer': answer, 'mode': 'local-assistant', 'trip_state': original, 'itinerary': None, 'sources': []}
-    result = _consult_travel_core(request)
+    try:
+        result = _consult_travel_core(request)
+    except ValueError:
+        return {'answer': ('القيود المطلوبة لا تتسع لها الخطة الحالية. حدد أي أيام أو مدن أو معالم تريد تغييرها؛ لم أغيّر الرحلة.'
+                           if _reply_language(request.message, request.language) == 'Arabic' else
+                           'The requested constraints do not fit the current trip. Which days, cities or required attractions should change? Your trip is unchanged.'),
+                'mode': 'needs-clarification', 'sources': [], 'trip_state': original, 'itinerary': None}
     if original and result.get('mode') in ('needs-clarification', 'unsupported-destination'):
         # A mixed, rejected itinerary edit must not partially apply new profile fields.
         return result

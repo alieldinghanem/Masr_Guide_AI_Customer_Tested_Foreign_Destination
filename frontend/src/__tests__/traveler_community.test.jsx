@@ -109,9 +109,9 @@ describe('traveler posts and existing place reviews', () => {
   it('gates posting honestly when moderation is not configured', async () => {
     communityApi({ enabled: false })
     render(wrap(<TravelerCommunity places={PLACES} session={SESSION} />))
+    expect(screen.getByRole('button', { name: 'Write a post' })).toBeDisabled()
     await userEvent.click(screen.getByRole('button', { name: 'Write a post' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Your post', exact: true }), 'A helpful community question.')
-    expect(screen.getByRole('button', { name: 'Publish post', exact: true })).toBeDisabled()
+    expect(screen.queryByRole('textbox', { name: 'Your post', exact: true })).not.toBeInTheDocument()
     expect(screen.getByText(/Posting is currently unavailable/)).toBeInTheDocument()
   })
 

@@ -244,7 +244,8 @@ def build_plan(request):
         prev_city = city
         # Family days need an explicit pause and transfer days should not
         # promise sightseeing after several hours in transit.
-        rest_allowance = 45 if request.family else 0
+        young_children = any(age < 5 for age in (getattr(request, 'traveler_profile', None) or {}).get('children_ages', []))
+        rest_allowance = (60 if young_children else 45) if request.family else 0
         day_budget = max(0, max_minutes - (travel["minutes"] if travel else 0) - rest_allowance)
         if request.family and travel and travel['minutes'] >= 180:
             day_budget = 0
