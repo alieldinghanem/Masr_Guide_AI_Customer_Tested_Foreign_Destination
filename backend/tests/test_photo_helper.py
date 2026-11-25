@@ -137,3 +137,10 @@ def test_gemini_transport_sends_inline_image_in_final_user_turn(monkeypatch):
     assert gemini_client.generate('Identify product', 'JSON only', inline_image=photo) == 'result'
     assert seen[0]['contents'][-1]['role'] == 'user'
     assert seen[0]['contents'][-1]['parts'][-1] == {'inline_data':photo}
+
+
+def test_arabic_city_material_and_cm_dimensions_match_same_reference(monkeypatch, tmp_path):
+    observation(monkeypatch); refs(monkeypatch, tmp_path)
+    request = body().model_copy(update={'city':'القاهرة','material':'بردي','size':'٢٠ × ٣٠ سم', 'language':'ar'})
+    result = helper.compare(request)
+    assert result['estimate']['min_egp'] == 100 and result['estimate']['max_egp'] == 140

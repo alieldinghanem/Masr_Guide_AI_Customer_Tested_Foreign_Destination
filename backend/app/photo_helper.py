@@ -5,6 +5,7 @@ from datetime import date
 from io import BytesIO
 import json
 import os
+import re
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -14,8 +15,27 @@ from fastapi import APIRouter, HTTPException
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field
 from .gemini_client import gemini_key, generate
+from .catalog_extra import CITY_AR
 
 router = APIRouter(prefix='/api/photo-helper', tags=['photo-helper'])
+
+
+def city_key(value):
+    text = value.strip().casefold()
+    return next((city.casefold() for city, arabic in CITY_AR.items()
+                 if text in (city.casefold(), arabic)), text)
+
+
+def material_key(value):
+    text = value.strip().casefold()
+    return {'بردي': 'papyrus', 'بابيروس': 'papyrus', 'ورق': 'paper', 'راتنج': 'resin',
+            'ريزن': 'resin', 'حجر': 'stone', 'قطن': 'cotton', 'خزف': 'ceramic', 'سيراميك': 'ceramic'}.get(text, text)
+
+
+def size_key(value):
+    text = value.strip().casefold().translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    match = re.fullmatch(r'(\d{1,3}(?:\.\d+)?)\s*[x×*]\s*(\d{1,3}(?:\.\d+)?)\s*(?:cm|سم)', text)
+    return tuple(sorted((float(match[1]), float(match[2])))) if match else text
 
 
 class PhotoRequest(BaseModel):
@@ -110,9 +130,9 @@ def compare(body: PhotoRequest):
     except (ValueError, HTTPException) as exc:
         raise HTTPException(502, 'Photo recognition could not be verified. Please try again; no price estimate was made.') from exc
     matched = [r for r in references() if r['category'] == observation.category
-               and r['city'].casefold() == body.city.strip().casefold()
-               and r['material'].casefold() == body.material.strip().casefold()
-               and r['size'].casefold() == body.size.strip().casefold()]
+               and city_key(r['city']) == city_key(body.city)
+               and material_key(r['material']) == material_key(body.material)
+               and size_key(r['size']) == size_key(body.size)]
     enough = observation.confidence == 'high' and observation.category != 'other' and len({urlsplit(r['source_url']).hostname for r in matched}) >= 2
     estimate = None
     if enough:
