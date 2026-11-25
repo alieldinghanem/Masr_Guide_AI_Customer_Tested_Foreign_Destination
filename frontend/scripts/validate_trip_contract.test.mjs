@@ -111,3 +111,23 @@ test('accessibility requirement remains a strict boolean on imported itineraries
   assert.equal(isValidItinerary({days:[day()],accessibility_needs:'yes'}), false)
   assert.equal(isValidItinerary({days:[day()],accessibility_needs:1}), false)
 })
+
+
+test('rest-only day constraints survive restore without accepting scheduled visits', () => {
+  const trip = {...state(), day_overrides: {'1': {max_stops: 0, family_friendly: false}}}
+  const plan = {days: [{...day(1), stops: [], note: 'Arrival and rest'}, day(2)]}
+  assert.equal(isCompatibleTripPlan(trip, plan), true)
+  plan.days[0].stops = day(1).stops
+  assert.equal(isCompatibleTripPlan(trip, plan), false)
+})
+
+test('required attractions and full swimming days are checked against displayed stops', () => {
+  const trip = {days:2, phases:[{days:1, kind:'history', cities:['Giza']},{days:1, kind:'beach', cities:['Hurghada']}], required_place_ids:['giza-pyramids'], swimming_days:1}
+  const plan = {days:[{...day(1), city:'Giza', phase_kind:'history', stops:[{place:{id:'giza-pyramids',name:'Pyramids'}}]}, {...day(2), city:'Hurghada', phase_kind:'beach', stops:[], swimming_day:true}]}
+  assert.equal(isCompatibleTripPlan(trip, plan), true)
+  plan.days[1].travel = {from_city:'Giza', minutes:240}
+  assert.equal(isCompatibleTripPlan(trip, plan), false)
+  delete plan.days[1].travel
+  plan.days[0].stops[0].place.id = 'another-place'
+  assert.equal(isCompatibleTripPlan(trip, plan), false)
+})

@@ -1,3 +1,4 @@
+import PhotoHelper from './PhotoHelper'
 import React, { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Bot, ChevronDown, ExternalLink, Globe2, LoaderCircle, MessageCircle, SendHorizontal, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { api } from '../api'
@@ -218,7 +219,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
     for (const d of itinerary.days) {
       lines.push(`Day ${d.day} — ${d.city}`)
       for (const s of d.stops) lines.push(` - ${s.place.name}`)
-      if (!d.stops.length) lines.push(' - Free day / no matching curated activity')
+      if (!d.stops.length) lines.push(d.note || ' - Free day / no matching curated activity')
       lines.push('')
     }
     lines.push(itinerary.disclaimer)
@@ -291,6 +292,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
               <button className="send-button" type="submit" disabled={busy || prompt.trim().length < 2} aria-label={t('guide.send')}><SendHorizontal size={19} /></button>
             </form>
             <small>{t('guide.privacy')}</small>
+            <PhotoHelper ar={lang === 'ar'} disabled={busy} />
             <button type="button" className="guide-manual-planner" onClick={() => onNavigate?.('planner')}>{t('guide.manualPlanner')}</button>
           </div>
           {itinerary && <section className="consult-trip" aria-label={answerArabic ? 'الرحلة المقترحة' : 'Suggested itinerary'}>
@@ -302,11 +304,11 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             {tripState?.traveler_profile && <p className="consult-help">{answerArabic ? 'تفاصيل المسافرين: ' : 'Traveler details: '}{tripState.traveler_profile.adults ? `${tripState.traveler_profile.adults} ${answerArabic ? 'بالغين' : 'adults'} · ` : ''}{tripState.traveler_profile.children_ages?.length ? `${answerArabic ? 'أعمار الأطفال' : 'Children ages'}: ${tripState.traveler_profile.children_ages.join(', ')} · ` : ''}{tripState.traveler_profile.food_preferences?.map(value => answerArabic ? ({ vegetarian: 'نباتي', vegan: 'نباتي صرف', halal: 'حلال' }[value]) : value).join(', ') || (answerArabic ? 'أخبرني بالأعمار وأي احتياجات خاصة.' : 'Tell me ages and any specific needs.')}</p>}
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : day.travel ? (answerArabic ? 'انتقال وراحة' : 'Transfer & rest') : (answerArabic ? 'وقت حر — بدون زيارات مجدولة' : 'Free time — no scheduled visits')}</summary>
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : day.travel ? (answerArabic ? 'انتقال وراحة' : 'Transfer & rest') : day.swimming_day ? (answerArabic ? 'سباحة واسترخاء' : 'Swimming & beach time') : tripState?.day_overrides?.[day.day]?.max_stops === 0 ? (answerArabic ? 'وصول أو راحة بلا زيارات' : 'Arrival / rest — no visits') : (answerArabic ? 'وقت حر — بدون زيارات مجدولة' : 'Free time — no scheduled visits')}</summary>
                 {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
                 {day.rest_minutes > 0 && <p>{answerArabic ? `وقت راحة مقترح: ${day.rest_minutes} دقيقة` : `Suggested rest: ${day.rest_minutes} minutes`}</p>}
                 {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
-                  : <div><p>{answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits'}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
+                  : <div><p>{day.note || (answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits')}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
               </details>)}
             </div>
             {tripState?.accessibility_needs && (

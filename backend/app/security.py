@@ -23,7 +23,9 @@ def _limit(name: str, default: int) -> int:
 
 def sensitive_requests(request) -> int:
     path, method = request.url.path, request.method
-    if method == 'POST' and path == '/api/auth/login':
+    if method == 'POST' and path == '/api/photo-helper/compare':
+        bucket, limit = 'photo-compare', _limit('PHOTO_COMPARE_RATE_PER_MINUTE', 4)
+    elif method == 'POST' and path == '/api/auth/login':
         bucket, limit = 'login', _limit('AUTH_LOGIN_RATE_PER_MINUTE', 15)
     elif method == 'POST' and path == '/api/auth/register':
         bucket, limit = 'register', _limit('AUTH_REGISTER_RATE_PER_MINUTE', 12)

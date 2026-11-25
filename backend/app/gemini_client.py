@@ -53,7 +53,7 @@ def _require_complete_candidate(candidate: dict) -> None:
         raise ValueError(f'Gemini completion status: {reason}')
 
 
-def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tokens: int = 1300, history=None) -> str:
+def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tokens: int = 1300, history=None, inline_image=None) -> str:
     key = gemini_key()
     if not key:
         raise ValueError('GEMINI_API_KEY is not configured')
@@ -87,6 +87,8 @@ def generate(prompt: str, instructions: str, *, json_mode: bool = False, max_tok
         contents[-1]['parts'][0]['text'] += '\n\n' + redact_payment_data(prompt[:16000])
     else:
         contents.append({'role': 'user', 'parts': [{'text': redact_payment_data(prompt[:16000])}]})
+    if inline_image is not None:
+        contents[-1]['parts'].append({'inline_data': inline_image})
     payload = {
         'system_instruction': {'parts': [{'text': instructions[:6000]}]},
         'contents': contents,

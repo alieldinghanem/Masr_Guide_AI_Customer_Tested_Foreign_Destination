@@ -218,6 +218,19 @@ def _check_phase_allocation(state: TripState, plan: dict):
                 or any(not any(day['city'] == city for day in segment) for city in phase.cities)):
             raise HTTPException(422, detail='Itinerary destinations conflict with trip constraints')
         offset += phase.days
+    for number, edit in state.day_overrides.items():
+        stops = days[number - 1]['stops']
+        if len(stops) > edit.max_stops or (edit.family_friendly and any(
+                stop['place'].get('family_friendly') is not True for stop in stops)):
+            raise HTTPException(422, detail='Itinerary conflicts with a day edit')
+    ids = {s['place']['id'] for day in days for s in day['stops']}
+    if not set(state.required_place_ids) <= ids:
+        raise HTTPException(422, detail='Itinerary omits a requested attraction')
+    if state.swimming_days:
+        swimming = [day for day in days if day.get('swimming_day') is True
+                    and day.get('phase_kind') == 'beach' and not day.get('travel') and not day['stops']]
+        if len(swimming) != state.swimming_days:
+            raise HTTPException(422, detail='Itinerary conflicts with requested swimming days')
 
 
 def _conversation_payload(body: ConversationSave):
