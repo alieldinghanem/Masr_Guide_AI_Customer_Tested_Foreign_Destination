@@ -1,151 +1,158 @@
 # Masr Guide AI
 
-An Egypt travel discovery and itinerary portfolio project. Visitors can explore a sourced place catalogue, ask a multilingual guide for suggestions, and build and edit a validated trip. The application uses React and FastAPI, with optional Gemini or OpenAI responses; the itinerary engine keeps the authoritative trip state.
+<p align="center">
+  <img src="frontend/public/assets/brand/social-preview.png" alt="Masr Guide AI — discover Egypt and build smarter itineraries" width="900">
+</p>
 
-**[Open the hosted preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/)** · **[Review the latest chatbot changes](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/pull/5)**
+<p align="center">
+  <a href="https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/workflows/ci.yml"><img src="https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=111827" alt="React 18">
+  <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready">
+</p>
 
-The hosted preview may run an earlier commit until these changes are approved and deployed. This project does not sell travel bookings or provide live prices, opening hours, transport schedules, or safety guarantees.
+<p align="center">
+  A multilingual, full-stack Egypt travel discovery and itinerary-planning portfolio project.
+</p>
 
-## What it demonstrates
+<p align="center">
+  <a href="https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/"><strong>Live demo</strong></a>
+  ·
+  <a href="START_LOCAL_FIRST_AR.md"><strong>دليل التشغيل بالعربية</strong></a>
+  ·
+  <a href="#quick-start"><strong>Quick start</strong></a>
+</p>
 
-- **Conversational trip planning:** structured, validated 1–30 day itineraries; explicit city and day edits preserve unrelated trip choices.
-- **Context-aware guide:** Arabic, English, and French responses; sourced attraction and beach suggestions; follow-up questions retain recommended places.
-- **Travel-aware safeguards:** family pacing and rest, approximate intercity transfers, honest fallback when an AI provider is unavailable, and clear separation of local and model-generated replies.
-- **Full-stack product flows:** responsive discovery pages, traveler accounts, saved trips, ratings, and comments. Account availability depends on durable storage configuration.
+## Overview
 
-## Stack and verification
+Masr Guide AI helps visitors discover Egyptian destinations, ask a multilingual travel guide for grounded suggestions, and create editable multi-day itineraries.
 
-React, Vite, FastAPI, Python, SQL storage, Docker, GitHub Actions, and optional Gemini/OpenAI APIs. The latest chatbot change set (`e10389a`, 9 Nov 2026) passed **488 backend tests (1 skipped)**, **107 frontend tests**, **25 contract tests**, lint, a production build, and desktop/mobile Chromium checks. The [GitHub CI run](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/runs/42564239743) passed. Automated checks use local planning or mocked AI calls; they do not prove that a live Gemini request will succeed in every environment.
+The application combines a React interface with a FastAPI backend. Gemini or OpenAI can provide optional AI responses, while the application's validated itinerary engine remains the authoritative source of trip state. A local catalogue-based fallback keeps the core experience usable when an AI provider is unavailable.
 
-For local setup, see [START_LOCAL_FIRST_AR.md](START_LOCAL_FIRST_AR.md) and the detailed instructions below. Never commit API keys or user databases. The free hosted preview may use temporary storage, so it is not a durable customer-data service.
+> **Portfolio scope:** This project is a travel-planning and product-engineering demonstration. It does not process real bookings, payments, hotel inventory, live prices, or confirmed partner reservations.
 
-## Historical development notes
+## Highlights
 
-The dated reports below describe earlier checkpoints and may list checks that were unavailable at the time. The verification summary above describes the current reviewed change set.
+- **Egypt discovery:** Curated destinations, attractions, coastal locations, maps, search, editorial content, and practical travel information.
+- **Validated trip planning:** Build and revise 1–30 day itineraries while preserving explicit cities, day allocations, and unrelated trip choices.
+- **Multilingual guide:** Arabic, English, and French conversation flows with contextual follow-ups and catalogue-backed recommendations.
+- **Traveler accounts:** Saved trips, ratings, comments, export, and deletion flows with server-side data isolation.
+- **Operational tooling:** Protected content management and partner-offer demonstrations, disabled or restricted by default.
+- **Resilient AI integration:** Optional Gemini/OpenAI providers, honest fallback behavior, server-side keys, rate limits, and release checks.
+- **Responsive product experience:** Mobile and desktop layouts, RTL support, accessible components, and production-build browser testing.
 
-> **31 Oct 2026 handoff:** Start with [FINAL_FULLSTACK_QA_2026-10-31_AR.md](FINAL_FULLSTACK_QA_2026-10-31_AR.md). The AI chat is the homepage, with separate heritage/beach pages, mobile-first EN/AR navigation, and orange visual identity. Backend tests and offline customer QA passed, but the production React build/browser and live AI providers were not verified in that review environment.
+## Live demo
 
-> **Company deployment note (30 Oct 2026):** This repository is a commercial-pilot candidate, not a verified live booking service. Start with [COMPANY_RELEASE_GATE_AR.md](COMPANY_RELEASE_GATE_AR.md) and run `python scripts/check_company_release.py` before any public launch. React browser and live Gemini checks remain required.
+Open the [hosted portfolio preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/).
 
-# Masr Guide AI — current repository entry (28 October 2026)
+The free Render service may need time to wake up. Its default storage is not a durable customer-data service, so accounts or saved data can be reset after redeployment. New public registration may be disabled unless persistent storage is configured.
 
-**Start here:** [START_HERE_VERIFIED_2026-10-28_AR.md](START_HERE_VERIFIED_2026-10-28_AR.md).
-Run `OPEN_WEBSITE_WINDOWS.bat` for the actual local React + FastAPI site; wait for `[READY]` before opening `http://127.0.0.1:5173/` in a browser on the same PC. `VERIFY_LOCAL_WINDOWS.bat` reruns a local multi-suite QA report. `TEST_GEMINI_LIVE_WINDOWS.bat` is opt-in and requires a private local API key.
+## Architecture
 
-**Release truth:** Backend checks pass, but React production build/browser and a real Gemini call were not verified in the October 28 review environment due to missing npm access and no available API key. See the report; do not call this production-ready. Historical earlier-stage reports are preserved below for auditability.
+```text
+Browser
+  └─ React + Vite
+       ├─ discovery and search
+       ├─ multilingual guide
+       ├─ itinerary planner
+       └─ traveler account experience
+             │
+             ▼
+FastAPI
+  ├─ catalogue and editorial APIs
+  ├─ deterministic itinerary validation
+  ├─ optional Gemini / OpenAI integration
+  ├─ accounts, trips, ratings, and comments
+  └─ protected staff operations
+             │
+             ▼
+SQLite for local development
+PostgreSQL-compatible configuration for durable deployments
+```
 
----
+## Technology stack
 
-# Masr Guide AI — ONE ENTRY POINT FOR LOCAL TESTING (17 October 2026)
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, Vite, Vitest, Testing Library, ESLint |
+| Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
+| Data | SQLite for local development, PostgreSQL support for deployment |
+| AI | Optional Gemini or OpenAI, plus catalogue-based fallback |
+| Quality | Pytest, contract tests, planner stress tests, Chromium desktop/mobile E2E |
+| Delivery | Docker, Docker Compose, GitHub Actions, Render blueprint |
 
-**ابدأ من [START_HERE_2026-10-17_AR.md](START_HERE_2026-10-17_AR.md).**
+## Quick start
 
-- **Main React tourism website:** double-click `OPEN_WEBSITE_WINDOWS.bat`, wait for `[READY]`, then visit `http://127.0.0.1:5173/` on the same PC. Requires Python 3.11+, Node 20+ and npm internet access for first-time install.
-- **Limited API-only demo when npm is unavailable:** double-click `RUN_FREE_DEMO_WINDOWS.bat`, wait for `[READY]`, then visit `http://127.0.0.1:8000/demo` on the same PC. **This is not React and is not a substitute for the main website.**
-- Live Gemini requires configuring `backend/.env` locally; never publish secrets.
-- Local/backend source checks passing **do not prove** a successful React build, Chromium UI or public production deployment. See `docs/LOCAL_RELEASE_VERIFICATION_2026-10-17_AR.md`.
+### Requirements
 
----
+- Python 3.11 or 3.12
+- Node.js 20+ (Node.js 22 recommended)
+- Git
 
-# Masr Guide AI — current local-testing entry point (16 October 2026)
+### 1. Clone the repository
 
-The current source is the **v7.8.1 baseline plus documented incremental fixes**. For the Windows local-first workflow use **`START_LOCAL_FIRST_AR.md`**, then `SETUP_AND_TEST_LOCAL_WINDOWS.bat` and `RUN_STARTUP_WINDOWS.bat`. See `LOCAL_TEST_STATUS_2026-10-16_AR.md` for freshly executed QA and environment-specific blocked checks. The main React tourism website runs on `http://localhost:5173`; `http://localhost:8000/demo` is only a mini demo, not a substitute for testing React.
+```bash
+git clone https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination.git
+cd Masr_Guide_AI_Customer_Tested_Foreign_Destination
+```
 
-**Release status:** source packaged for local acceptance; not yet a verified full-browser/real-Gemini or production deployment. Do not publish test accounts, private keys, or temporary SQLite data as a live customer service.
+### 2. Set up the backend
 
----
+```bash
+python -m venv backend/.venv
+```
 
-> **ابدأ التجربة المحلية من هنا:** [START_LOCAL_FIRST_AR.md](START_LOCAL_FIRST_AR.md). هذه حزمة المصدر كاملة؛ نجاح اختبارات Backend وحده لا يثبت React أو Gemini أو النشر.
+Activate the environment:
 
-> **Continuing the original Masr Guide AI project (16 Oct 2026):** Full repository handoff and up-to-date status: [CONTINUE_HERE_MASR_GUIDE_AI_AR.md](CONTINUE_HERE_MASR_GUIDE_AI_AR.md). **232/232 Python tests, 27/27 local HTTP checks, 52/52 corrected offline conversation checks** ran successfully. React compilation/Chromium and real Gemini integration remain **BLOCKED / NOT EXECUTED** here. Do not describe this source as a verified production launch. Existing earlier release history below is retained for auditability.
+```powershell
+# Windows PowerShell
+backend\.venv\Scripts\Activate.ps1
+```
 
-> **Part 2 actual-code audit (16 October 2026):** [Engineering patch and executed QA report](docs/PART2_ENGINEERING_AUDIT_2026-10-16_AR.md). Backend 228/228 and Node contract 4/4 passed; React build, compiled-browser E2E, live Gemini and deployment still BLOCKED/NOT EXECUTED. Earlier 219-test status below is historical.
+```bash
+# macOS / Linux
+source backend/.venv/bin/activate
+```
 
-> **Single-source handoff (16 October 2026):** Start with [START_HERE_DELIVERY_AR.md](START_HERE_DELIVERY_AR.md). Full copyable build/review prompt: [docs/MASTER_PROMPT_MASR_GUIDE_AI.md](docs/MASTER_PROMPT_MASR_GUIDE_AI.md). Earlier version notes below are historical; frontend build, real browser and live Gemini remain unverified here.
+Install dependencies and run the API:
 
-> **Latest audited source patch v7.8.1:** See [FINAL_RELEASE_STATUS_AR.md](FINAL_RELEASE_STATUS_AR.md) for executed tests and mandatory deployment gates.
+```bash
+pip install -r backend/requirements-dev.txt
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+```
 
-> **v7.8 — Portfolio release candidate.** Full-stack Egypt tourism platform with destination discovery, planning, account-based trip storage, CMS and an AI companion. New: Gemini rolling-model compatibility fix, cloud save from the guide, tested SQLite account backup, unified fail-closed release verification. Run `VERIFY_FULL_RELEASE_WINDOWS.bat` before putting any live link on a CV. See `docs/PORTFOLIO_RELEASE_V7_8_AR.md` for exact validated and blocked tests. This is **not** a production booking platform.
+### 3. Set up the frontend
 
-> **Current candidate:** v7.7 verification release. See [START_HERE_V7_7_AR.md](START_HERE_V7_7_AR.md) for the browser CI gate, real Gemini opt-in smoke test, and unverified production requirements.
+In a second terminal from the repository root:
 
-# v7.6 Hardening Update (15 October 2026)
+```bash
+cd frontend
+npm ci
+npm run dev
+```
 
-Security and data-integrity fixes: actual streamed-request body limits, stricter
-trip stop validation, production optimistic concurrency enforcement, account
-and session erasure, closing SQLite connections, deployment safeguards and
-database readiness. See [`docs/RELIABILITY_AUDIT_V7_6_AR.md`](docs/RELIABILITY_AUDIT_V7_6_AR.md).
+Open:
 
-**Status: Portfolio candidate, NOT verified production-ready.** React dependencies
-could not be installed in the audit container (missing npm cache tarball); full
-React build, browser E2E, live Gemini, dependency vulnerability scan, external
-security audit, live hosting and backup/restore drills remain release blockers.
+- Website: http://localhost:5173
+- API documentation: http://localhost:8000/docs
+- Readiness check: http://localhost:8000/api/ready
 
----
+Windows users can follow [START_LOCAL_FIRST_AR.md](START_LOCAL_FIRST_AR.md) and use the included setup and launcher scripts.
 
-**v7.5 Reliability Hardening (latest):** Additional credential/partner abuse throttling, saved-trip validation, optimistic concurrency on saved conversations, safer partner redirects and expanded adversarial tests. Local backend 170/170 passed; corrected Chatbot QA 52/52, original 50/52; full React build, live Gemini and deployment remain unverified. See [Arabic release notes](START_HERE_V7_5_AR.md) and [risk register](docs/RELIABILITY_HARDENING_V7_5_AR.md).
+### Optional AI provider
 
-**v7.4 transactional safety update:** See [Arabic quick start](START_HERE_V7_4_AR.md) and [transactional AI guard verification](docs/TRANSACTIONAL_AI_GUARDS_V7_4_AR.md). This update prevents unauthorized destination swaps, rejects invalid trip states, and preserves prior state on rejected edits. Backend 143/143 passed; corrected offline QA 52/52 passed; React build and live Gemini are not yet independently verified.
+The catalogue and deterministic planner work without a live AI key. To enable an AI provider, copy `backend/.env.example` to `backend/.env`, configure the provider and model, and add a private server-side API key.
 
-**v7.3 release review:** See [START_HERE_V7_3_AR.md](START_HERE_V7_3_AR.md) and [release QA report](docs/RELEASE_QA_V7_3_AR.md) for verified tests, legacy QA caveats and deployment limitations. This is a portfolio release candidate, **not a production-approved travel booking service**.
+Never place an API key in frontend code or commit `.env` files.
 
-# Masr Guide AI — TravelTech Portfolio v7.2
+## Tests and quality gates
 
-**Current release:** improved multilingual tourist intent routing, explicit day-allocation parsing, safe AI outage fallback, and opt-in account-backed conversation save/restore/delete. The full app includes discovery, trips, content and partner demos, but **does not process real reservations/payments**. See [Arabic release notes](docs/AI_AND_STARTUP_RELEASE_V7_AR.md) and [Windows quick start](START_HERE_V7_AR.md).
-
-**QA:** 99/99 backend tests passed; frontend syntax checked. React production build and live Gemini/hosting are not validated in the build environment. Use GitHub Actions and local `npm ci && npm test && npm run lint && npm run build` before a public demo.
-
----
-
-# Masr Guide AI · TravelTech Global Tourism UI Portfolio v6.0
-
-**Discover Egypt · Plan smarter · Travel better**
-
-An Egypt-focused **full-stack travel-discovery and planning portfolio application** with an editorial tourism website, multilingual AI travel companion, curated attraction data, saved itineraries, a configurable cost calculator, and content/partner operations tooling. This is an **MVP/portfolio release, not a live travel booking agency**.
-
-## What works
-
-| Product area | Implemented |
-|---|---|
-| Destination and attraction discovery | Curated catalogue (12 cities / ~40 attractions), searchable places, maps and bilingual pages |
-| Tourism experiences and practical travel info | Interest-based experiences, useful external institutional sources |
-| Editorial travel journal | Seeded articles, published/draft state, authoring through a staff CMS |
-| AI guide | Gemini integration using server-only API key, fallback to catalogue-based guide, sourced tourism responses |
-| Itinerary planner | 1–30 days, interest selection, validated daily planning, revisions via conversation; unbooked editorial suggestions for free days |
-| Travel budget | Editable EGP budget calculator based on traveller inputs; **not live prices** |
-| Traveler accounts | Password-hashed signup/login, revocable sessions, trip create/read/update/delete, server-side trip isolation |
-| Saved places | Browser-local favourites |
-| Commercial operations | Partner enquiries (disabled by default), staff review, manually approved external offers, privacy-minimal outbound-click counters |
-| Administration | Protected editorial CMS and partner-offer dashboard (separate server-side staff token) |
-| Portfolio presentation | Project case-study page + docs + CI + Docker/Render deployment recipes |
-
-## Quick start: Windows / VS Code
-
-Install Python 3.11+ and Node.js 20+ (Node 22 recommended).
-
-1. Download/extract this repository; open the **Masr_Guide_AI** root in VS Code.
-2. Backend: `cd backend && python -m pip install -r requirements-dev.txt`, then `python -m uvicorn app.main:app --reload --port 8000`.
-3. In a **second** terminal: `cd frontend && npm ci && npm run dev`.
-4. Open **http://localhost:5173**. This is the main website, **not** `/demo`.
-5. Open **http://localhost:8000/docs** to explore FastAPI endpoints.
-
-Or, run `RUN_STARTUP_WINDOWS.bat` from the repository root (opens two windows and performs the normal setup).
-
-### Gemini (optional)
-
-Copy `backend/.env.example` to `backend/.env` and set **your NEW, private** `GEMINI_API_KEY`. `GEMINI_MODEL=gemini-3.5-flash-lite` selects the current default; availability and quotas vary by project. Turn on `GEMINI_SEARCH_GROUNDING=true` only after reviewing its quotas and terms; a live search must be confirmed using returned grounding metadata. Read `GEMINI_SEARCH_GROUNDING_START_HERE_AR.md` for details. Google's free tier may use prompts to improve its products; avoid personal data. **Never commit `.env`, screenshots with secrets, or leaked keys.** Without Gemini, the local catalogue guide and planning engine still work.
-
-### Staff CMS (optional)
-
-Set a random, server-only `ADMIN_API_TOKEN` **at least 24 characters long** before starting the backend. Access the private console at `/#/staff` and enter that token. Staff credentials are **not** traveller accounts. Content drafts and offers stay unpublished until enabled.
-
-For partner interest intake, set `PARTNER_INQUIRIES_ENABLED=true` only once you are ready to collect, protect, and handle emails. It is **false by default**.
-
-## Build and tests
+Run the main local checks:
 
 ```bash
 cd backend
-python -m pip install -r requirements-dev.txt
 python -m pytest -q
 
 cd ../frontend
@@ -155,76 +162,56 @@ npm run lint
 npm run build
 ```
 
-The GitHub Actions workflow under `.github/workflows/ci.yml` runs these checks on push/PR. **Do not describe frontend CI as passing until you see its green status in your own repository.**
+The [GitHub Actions workflow](https://github.com/alieldinghanem/Masr_Guide_AI_Customer_Tested_Foreign_Destination/actions/workflows/ci.yml) also runs:
 
-## Run both tiers as a single Docker service
+- backend tests and source-secret checks;
+- frontend unit tests, lint, and production build;
+- conversation and API contract checks;
+- a 1,500-scenario planner stress suite;
+- compiled React + FastAPI desktop/mobile Chromium E2E.
 
-```bash
-docker compose -f docker-compose.prod.yml up --build -d
-# website and backend: http://localhost:8000
-# stop: docker compose -f docker-compose.prod.yml down
-```
+Automated checks use isolated or mocked provider behavior unless a live-provider test is explicitly started. A green CI run does not prove live AI availability, production security, storage durability, or real-world travel accuracy.
 
-Docker Compose uses the persistent local named volume `masr_data` for SQLite. For Render hosting, `render.yaml` offers a simple **portfolio preview** service using GitHub + Docker. **Free Render instances use ephemeral storage**; account records, staff edits, trip saves, and referral click counts can disappear on restart/redeploy. Do **not** use the free configuration as a durable production service with real user data. Upgrade to paid persistent disk and backup procedures or migrate to a managed database before onboarding real customers. See `docs/DEPLOY_GITHUB_RENDER_AR.md`.
-
-Visitor star ratings and comments use the tourism SQLite database and now require a signed-in traveler account. One account can revise its vote and comment for a place or coastal destination; the public sees a generated member alias, not the account email. The account export includes reviews, and account deletion removes them. Prior browser-only anonymous submissions are excluded from public listings. Account membership does **not** verify a visit. Comments reject links and email addresses and public submissions have a basic per-peer rate limit. They persist across normal page reloads but can disappear when the free Render instance is recreated or redeployed. New account registration is disabled on that temporary-storage preview; one-click Google OAuth is not configured. Before using reviews as a durable public feature, provide persistent storage, backups, and a moderation workflow, then verify recovery.
-
-## Architecture
+## Repository structure
 
 ```text
-Browser (React/Vite, Arabic + English, discovery-first)
-   |
-   | /api calls (same origin in Docker / Vite proxy in dev)
-   v
-FastAPI service
-   |-- Discovery catalogue + article CMS
-   |-- Gemini + RAG + deterministic planner
-   |-- Accounts and saved trips
-   |-- Partner enquiries, offers and referral redirects
-   |-- Staff operation endpoints (token protected)
-   |
-   +-- SQLite MVP storage (persistent volume required in production)
+backend/        FastAPI application, data access, AI adapters, and tests
+frontend/       React application, public assets, and frontend tests
+scripts/        release, security, backup, browser, and QA tooling
+qa_chatbot/     conversational acceptance and regression checks
+docs/           engineering, deployment, product, and audit documentation
+Dockerfile      production-style single-service build
+render.yaml     Render portfolio-preview blueprint
 ```
 
-## HR / recruiter quick demo (5 minutes)
+## Docker
 
-Open `/#/project` for the case study. Then demonstrate: Discover Egypt → attractions → ask the AI about Karnak → create a 14-day plan → adjust it → calculate an example budget → register a **test account** and save the trip → show the Journal → open the Staff CMS if privately authorised. Staff CMS and partner referrals are **demonstration infrastructure**, not proof of real travel bookings or earned commissions. See `docs/HR_DEMO_SCRIPT_AR.md`.
+Build and run the integrated app:
 
-## Important limitations / honesty policy
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
 
-- **No real bookings, prices, hotel inventory, payouts, credit-card processing, live travel availability, or established partner contracts.** Approved external offers can be added after real partner agreements.
-- The catalogue is curated but small. Extra days carry clearly identified optional themes, not fabricated attraction reservations. Road/flight times are estimates, not live routing.
-- RAG and AI outputs require verification of changing hours/visa/prices. Gemini costs and provider availability are external dependencies.
-- No email verification, password reset, robust edge rate-limiting, managed Postgres, full compliance audit, or independent security penetration test. Configure TLS, a protected reverse proxy, logging and database backups before public onboarding.
-- React dependency install / production build must pass on your PC and in GitHub CI. The package was assembled with backend tests passing and JSX syntax checked, **but no successful React build/browser proof is claimed for this environment**.
-- Confirm licensing of all photos/assets before public commercial marketing.
+Then open http://localhost:8000.
 
-For global UI design decisions, see `docs/V6_GLOBAL_BENCHMARK_AR.md` and for photography attribution/hosting issues see `docs/EDITORIAL_IMAGE_CREDITS.md`.
+For any real deployment, configure a durable database, backups, TLS, protected administration, monitoring, and reviewed secrets before enabling public accounts.
 
-For Arabic setup and GitHub/Render steps: **`docs/DEPLOY_GITHUB_RENDER_AR.md`**. For commercialization boundaries and the next stage: **`docs/PRODUCTION_GAPS_AR.md`**.
+## Important limitations
 
+- No real bookings, payment processing, hotel inventory, live pricing, or guaranteed partner offers.
+- AI answers and changing travel details such as opening hours, visas, transport, and prices require independent verification.
+- The free hosted preview may use temporary storage.
+- Production use requires a security review, durable database, tested backup and recovery, moderation, and operational monitoring.
+- Confirm licensing and attribution for all media before commercial use.
 
-## Current QA improvement — v7.2 (15 October 2026)
+## Documentation
 
-The earlier 3 real stop-day coverage failures are now addressed by spreading unique
-curated stops over longer stays, adding 10 ministry/UNESCO-backed Cairo landmarks,
-and suggesting a disclosed multi-city route for a long Egypt trip where the user
-specified no destinations. Existing explicit destination requirements are not overwritten.
+- [Arabic local setup](START_LOCAL_FIRST_AR.md)
+- [Deployment guidance](docs/DEPLOY_GITHUB_RENDER_AR.md)
+- [Production gaps](docs/PRODUCTION_GAPS_AR.md)
+- [Photography credits](docs/EDITORIAL_IMAGE_CREDITS.md)
+- [Recruiter demo script](docs/HR_DEMO_SCRIPT_AR.md)
 
-**118/118 backend tests pass.** The 67-case local API probe passes **52/52 of the
-corrected acceptance criteria**. The original v7 acceptance script remains verbatim
-as `qa_chatbot/legacy_acceptance_v7.py`, where **50/52 pass**; Q49 and Q52 were
-logically contradictory to correctly replacing Hurghada with Sharm El Sheikh.
-The corrections, score comparison and limitations are documented in
-`docs/V7_2_52_OF_52_QA_AR.md`. The CI workflow reruns the corrected suite.
+---
 
-**NOT PRODUCTION READY:** these tests are local/offline only. React production
-build, real Gemini answers and real-world travel pricing/transport times have
-not been verified. A 60% stop-day coverage threshold is an acceptance heuristic,
-not proof that a trip is feasible, priced, bookable or enjoyable.
-
-## Latest tested code patch (v7.1 — 15 October 2026)
-
-The independently tested **v7.1 QA remediation** closes multiple critical local chatbot and itinerary errors. **112 Backend tests pass** and the original independent offline acceptance suite reports **47/52 Pass** (v7 baseline was 22/52). Three true travel-catalog coverage failures remain; two other false negatives are legacy benchmark defects. Frontend production build and live Gemini testing remain unverified.
-
-Read `docs/V7_1_CODE_FIX_QA_AR.md` before deploying.
+Built as a full-stack AI travel-product portfolio project focused on transparent behavior, validated state changes, and practical release engineering.
