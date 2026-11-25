@@ -35,3 +35,18 @@ describe.each([['en', 0], ['ar', 1]])('accessibility (%s)', (lang, i) => {
     expect(found).toEqual([])
   })
 })
+
+
+it.each(['en', 'ar'])('keyboard skip link reaches content without changing the route (%s)', async lang => {
+  mockApi()
+  localStorage.setItem('masr-guide-lang', lang)
+  render(<App />)
+  const user = userEvent.setup()
+  const route = window.location.hash
+  await user.tab()
+  const skip = screen.getByRole('link', { name: lang === 'ar' ? 'انتقل إلى المحتوى' : 'Skip to content' })
+  expect(skip).toHaveFocus()
+  await user.keyboard('{Enter}')
+  expect(document.getElementById('main-content')).toHaveFocus()
+  expect(window.location.hash).toBe(route)
+})

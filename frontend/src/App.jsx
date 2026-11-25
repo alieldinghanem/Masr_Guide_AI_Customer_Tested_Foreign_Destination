@@ -193,6 +193,7 @@ function Shell({ meta }) {
 
   return (
     <div className="app-shell">
+      <a className="skip-to-content" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>{lang === 'ar' ? 'انتقل إلى المحتوى' : 'Skip to content'}</a>
       <header className="site-header">
         <div className="nav-wrap container">
           <Logo go={go} />
@@ -215,6 +216,7 @@ function Shell({ meta }) {
           </div>
         </div>
       </header>
+      <div id="main-content" tabIndex={-1}>
       {favoritesError && <div className="container" role="alert"><p className="account-error">{t(`saved.error.${favoritesError}`)}</p></div>}
       {favoritesLoadError && <div className="container" role="alert"><p className="account-error">{t('saved.error.load')}</p><button type="button" className="btn secondary" onClick={() => setFavoritesAttempt(value => value + 1)}>{t('nav.retry')}</button></div>}
       {meta.loading && <div className="load-status container" role="status">{t('nav.loading')}</div>}
@@ -245,6 +247,7 @@ function Shell({ meta }) {
       {page === 'budget' && <Budget />}
       {['privacy', 'terms', 'support'].includes(page) && <ServiceInfo section={page} />}
 
+      </div>
       <footer className="footer">
         <div className="container footer-top">
           <div><Logo go={go} /><p>{t('footer.tagline')}</p></div>

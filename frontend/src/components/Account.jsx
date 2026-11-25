@@ -220,29 +220,29 @@ export default function Account({ onSignOut = () => {}, onSignIn = () => {}, onO
       ) : (
         <section className="account-panel">
           <div className="account-bar"><p>{ar ? 'تم تسجيل الدخول بالبريد' : 'Signed in as'} <strong>{session.user.email}</strong></p><button className="btn secondary" onClick={signOut}>{ar ? 'تسجيل الخروج' : 'Sign out'}</button></div>
-          <h2>Save the itinerary from My Trip Planner</h2>
-          <p>{currentPlan ? `${currentPlan.days.length}-day itinerary available to save.` : 'Create and save an itinerary in the Planner first, then return here.'}</p>
-          <label>Trip title<input maxLength={120} minLength={2} value={title} onChange={e => setTitle(e.target.value)} /></label>
-          <button className="btn primary" disabled={!currentPlan || busy || title.length < 2} onClick={saveCloud}>Save to my account</button>
-          <h2>My saved trips</h2>
-          {trips.length ? <div className="account-trip-list">{trips.map(trip => <div className="account-trip" key={trip.id}><strong>{trip.title}</strong><small>{new Date(trip.updated_at).toLocaleDateString()}</small><button className="btn secondary" onClick={() => openTrip(trip.id)}>View</button><button className="btn secondary" onClick={() => removeTrip(trip.id)}>Delete</button></div>)}</div> : <p>No saved trips yet.</p>}
-          {selected && <div className="account-trip-preview"><h3>{selected.title}</h3>{selected.itinerary.days.map(day => <p key={day.day}><strong>Day {day.day} — {day.city}:</strong> {(day.stops || []).map(s => s.place?.name).filter(Boolean).join(', ') || day.note || 'Flexible day'}</p>)}
-            <p>To edit, open this saved itinerary in the planner. After generating or revising a new draft, return here, select the saved trip, and explicitly update it. Another device's newer changes are protected.</p>
-            <button className="btn secondary" disabled={busy} onClick={openTripInPlanner}>Open in planner to edit</button>
-            <button className="btn primary" disabled={busy || !currentPlan} onClick={replaceSavedTrip}>Replace with my current planner itinerary</button>
-            <button className="btn secondary" onClick={() => setSelected(null)}>Close</button></div>}
+          <h2>{ar ? 'احفظ رحلتك في حسابك' : 'Save the itinerary from My Trip Planner'}</h2>
+          <p>{currentPlan ? (ar ? `خطة ${currentPlan.days.length} أيام جاهزة للحفظ.` : `${currentPlan.days.length}-day itinerary available to save.`) : (ar ? 'جهّز خطة في الشات أو مخطط الرحلات، ثم ارجع هنا لحفظها في حسابك.' : 'Create and save an itinerary in the Planner first, then return here.')}</p>
+          <label>{ar ? 'اسم الرحلة' : 'Trip title'}<input maxLength={120} minLength={2} value={title} onChange={e => setTitle(e.target.value)} /></label>
+          <button className="btn primary" disabled={!currentPlan || busy || title.length < 2} onClick={saveCloud}>{ar ? 'احفظ في حسابي' : 'Save to my account'}</button>
+          <h2>{ar ? 'رحلاتي المحفوظة' : 'My saved trips'}</h2>
+          {trips.length ? <div className="account-trip-list">{trips.map(trip => <div className="account-trip" key={trip.id}><strong>{trip.title}</strong><small>{new Date(trip.updated_at).toLocaleDateString()}</small><button className="btn secondary" onClick={() => openTrip(trip.id)}>{ar ? 'عرض' : 'View'}</button><button className="btn secondary" onClick={() => removeTrip(trip.id)}>{ar ? 'حذف' : 'Delete'}</button></div>)}</div> : <p className="account-empty">{ar ? 'لسه مفيش رحلات محفوظة. ابدأ بخطة من الشات أو مخطط الرحلات، ثم احفظها هنا.' : 'No saved trips yet.'}</p>}
+          {selected && <div className="account-trip-preview"><h3>{selected.title}</h3>{selected.itinerary.days.map(day => <p key={day.day}><strong>{ar ? 'اليوم' : 'Day'} {day.day} — {day.city}:</strong> {(day.stops || []).map(s => s.place?.name).filter(Boolean).join(', ') || day.note || (ar ? 'يوم مرن' : 'Flexible day')}</p>)}
+            <p>{ar ? 'افتح الرحلة في المخطط لتعديلها، ثم ارجع هنا واختر تحديث الرحلة المحفوظة. التعديلات الأحدث من أجهزتك الأخرى محمية من الاستبدال.' : "To edit, open this saved itinerary in the planner. After generating or revising a new draft, return here, select the saved trip, and explicitly update it. Another device's newer changes are protected."}</p>
+            <button className="btn secondary" disabled={busy} onClick={openTripInPlanner}>{ar ? 'افتح في المخطط للتعديل' : 'Open in planner to edit'}</button>
+            <button className="btn primary" disabled={busy || !currentPlan} onClick={replaceSavedTrip}>{ar ? 'حدّث الرحلة بالخطة الحالية' : 'Replace with my current planner itinerary'}</button>
+            <button className="btn secondary" onClick={() => setSelected(null)}>{ar ? 'إغلاق' : 'Close'}</button></div>}
           <section className="account-delete-section" aria-label="Delete account">
-            <h2>Account privacy</h2>
-            <p>Download a JSON copy of your saved trips, favorites, AI conversations, ratings, and comments. This export does not contain passwords or session tokens.</p>
-            <button type="button" className="btn secondary" disabled={busy} onClick={exportMyData}>Download my account data</button>
-            <p>Deleting your account permanently removes your saved trips, conversations, sessions, ratings, and comments. Partner inquiries submitted separately are not linked to this account.</p>
-            {!deletionOpen ? <button type="button" className="btn secondary" onClick={() => setDeletionOpen(true)}>Delete my account</button> : (
+            <h2>{ar ? 'خصوصية حسابك' : 'Account privacy'}</h2>
+            <p>{ar ? 'نزّل نسخة من رحلاتك ومفضلتك ومحادثاتك وتقييماتك وتعليقاتك. النسخة لا تتضمن كلمات المرور أو رموز الدخول.' : 'Download a JSON copy of your saved trips, favorites, AI conversations, ratings, and comments. This export does not contain passwords or session tokens.'}</p>
+            <button type="button" className="btn secondary" disabled={busy} onClick={exportMyData}>{ar ? 'تنزيل بيانات حسابي' : 'Download my account data'}</button>
+            <p>{ar ? 'حذف الحساب يمسح رحلاتك ومحادثاتك وجلساتك وتقييماتك وتعليقاتك نهائيًا. طلبات الشراكة المنفصلة غير مرتبطة بالحساب.' : 'Deleting your account permanently removes your saved trips, conversations, sessions, ratings, and comments. Partner inquiries submitted separately are not linked to this account.'}</p>
+            {!deletionOpen ? <button type="button" className="btn secondary" onClick={() => setDeletionOpen(true)}>{ar ? 'حذف حسابي' : 'Delete my account'}</button> : (
               <form onSubmit={deleteMyAccount}>
-                {hasPassword && <label>Confirm with your current password<input required={!googleProof} type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>}
+                {hasPassword && <label>{ar ? 'أكّد بكلمة المرور الحالية' : 'Confirm with your current password'}<input required={!googleProof} type="password" autoComplete="current-password" minLength={12} maxLength={128} value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} /></label>}
                 {googleProof && <p role="status">{ar ? 'تم تأكيد هويتك. أكّد الحذف خلال خمس دقائق.' : 'Identity confirmed. Confirm deletion within five minutes.'}</p>}
                 {session.auth_methods?.google && !googleProof && <GoogleSignIn purpose="delete" token={session.token} disabled={busy} onBusyChange={setBusy} onSuccess={data => { setGoogleProof(data.google_proof); setDeletionPassword('') }} />}
-                <button className="btn secondary" type="submit" disabled={busy || (!deletionPassword && !googleProof)}>{busy ? 'Deleting…' : 'Permanently delete account'}</button>
-                <button className="btn secondary" type="button" disabled={busy} onClick={() => { setDeletionOpen(false); setDeletionPassword(''); setGoogleProof('') }}>Cancel</button>
+                <button className="btn secondary" type="submit" disabled={busy || (!deletionPassword && !googleProof)}>{busy ? (ar ? 'جارٍ الحذف…' : 'Deleting…') : (ar ? 'حذف الحساب نهائيًا' : 'Permanently delete account')}</button>
+                <button className="btn secondary" type="button" disabled={busy} onClick={() => { setDeletionOpen(false); setDeletionPassword(''); setGoogleProof('') }}>{ar ? 'إلغاء' : 'Cancel'}</button>
               </form>
             )}
           </section>
