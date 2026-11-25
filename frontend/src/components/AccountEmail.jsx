@@ -13,6 +13,7 @@ export default function AccountEmail({ session, onPasswordReset }) {
   })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [finished, setFinished] = useState(false)
@@ -29,7 +30,7 @@ export default function AccountEmail({ session, onPasswordReset }) {
     try {
       await api(`/auth/${path}`, { method: 'POST', body, token: session?.token })
       if (path === 'password-reset/confirm') {
-        setPassword(''); setFinished(true); onPasswordReset?.()
+        setPassword(''); setConfirmation(''); setFinished(true); onPasswordReset?.()
         setMessage(ar ? 'تم تغيير كلمة المرور وإنهاء جلسات الدخول القديمة. سجّل الدخول مجددًا.' : 'Password changed. Old sessions ended. Sign in again.')
       } else if (path === 'email-verification/confirm') {
         setVerified(true); setFinished(true)
@@ -43,8 +44,16 @@ export default function AccountEmail({ session, onPasswordReset }) {
   }
   return <section className="account-panel" aria-label={ar ? 'أمان البريد والحساب' : 'Email and account security'}>
     <h2>{ar ? 'أمان حسابك' : 'Account security'}</h2>
-    {link.token && !finished && link.action === 'reset' && <form onSubmit={event => { event.preventDefault(); perform('password-reset/confirm', { token: link.token, password }) }}>
+    {link.token && !finished && link.action === 'reset' && <form onSubmit={event => {
+      event.preventDefault()
+      if (password !== confirmation) {
+        setMessage(ar ? 'كلمتا المرور غير متطابقتين.' : 'Passwords do not match.')
+        return
+      }
+      perform('password-reset/confirm', { token: link.token, password })
+    }}>
       <label>{ar ? 'كلمة المرور الجديدة' : 'New password'}<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label>
+      <label>{ar ? 'تأكيد كلمة المرور الجديدة' : 'Confirm new password'}<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>
       <button type="submit" disabled={busy}>{ar ? 'حفظ كلمة المرور الجديدة' : 'Set new password'}</button>
     </form>}
     {link.token && !finished && link.action === 'verify' && <button type="button" disabled={busy} onClick={() => perform('email-verification/confirm', { token: link.token })}>{ar ? 'تأكيد البريد' : 'Confirm email'}</button>}
