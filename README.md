@@ -1,30 +1,57 @@
-# Masr Guide AI
+# Masr Guide AI 🇪🇬
 
-**Explore Egypt and build an editable, day-by-day trip plan.** Search for places such as the Pyramids of Giza or Karnak Temple, ask the travel guide for suggestions in Arabic, English, or French, and organize your chosen places into a multi-day itinerary.
+### Discover Egypt. Plan your trip. Keep the conversation going.
 
-[Hosted preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/) · [دليل التشغيل بالعربية](START_LOCAL_FIRST_AR.md) · [Quick start](#quick-start)
+Masr Guide AI is a full-stack travel discovery and conversational trip-planning platform focused on Egypt. It helps travelers explore attractions, discover coastal destinations, and create personalized itineraries through a multilingual travel assistant.
 
-## What you can do
+[Open the hosted preview](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/) · [Quick start](#quick-start) · [دليل التشغيل بالعربية](START_LOCAL_FIRST_AR.md)
 
-- **Explore destinations.** Browse Egyptian cities, historical sites, and beaches. Search the catalogue and use maps and travel information to decide where to go.
-- **Plan a trip.** Pick your destinations and trip length to build a day-by-day itinerary. Adjust it as your plans change.
-- **Ask the guide.** Request places to visit or ask a follow-up in Arabic, English, or French. The guide can use the local catalogue when its optional AI provider is unavailable.
+The platform combines a curated, source-linked tourism catalog with a structured itinerary engine and optional Gemini or OpenAI integration. The app validates trip edits and preserves unrelated trip details.
 
-### Try this example
+## Key Features
 
-Explore Cairo and Luxor, then ask the guide: **“What should I visit in Luxor if I like ancient Egyptian history?”** Build a five-day trip across the two cities. Open the itinerary to see which places are scheduled each day, then use the planner to adjust it.
+- **Multilingual travel assistant:** Arabic, English, and French, with conversation context and follow-up recommendations.
+- **Conversational itinerary planning:** Create and revise trips of 1–30 days, including city allocations and day-specific changes.
+- **Family-aware planning:** Activity limits, rest allowances, and approximate intercity transfer estimates.
+- **Destination discovery:** Searchable attractions, museums, heritage sites, and coastal destinations with reference sources.
+- **Traveler accounts:** Email and password sign-in, optional Google sign-in, saved trips, and account data controls.
+- **Traveler community:** Posts, replies, likes, ratings, comments, and reporting tools, subject to moderation configuration.
+- **Transparent AI behavior:** The app distinguishes model-generated answers, local planning, and fallback responses.
 
-> **بالعربي:** اكتشف أماكن ومعالم في مصر، واسأل المساعد عن اقتراحات، واعمل برنامج رحلة يوم بيوم تقدر تعدّله.
+## Technology Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React, Vite, JavaScript, CSS |
+| Backend | Python, FastAPI, Pydantic |
+| Storage | SQLite for local development, PostgreSQL support |
+| AI | Optional Gemini and OpenAI integrations |
+| Delivery | Docker, GitHub Actions, Render |
+| Testing | pytest, Vitest, React Testing Library, Chromium E2E |
+
+## Project Status
+
+Masr Guide AI is an actively developed TravelTech MVP with a hosted preview. Feature availability depends on the deployed version and service configuration. Google sign-in, transactional email, AI providers, and community publishing each require setup.
+
+The app supports trip discovery and planning. Bookings and payments are outside its scope. Travel times are estimates. Verify prices, opening hours, transport schedules, and availability with official providers.
+
+## Live Preview
+
+[Open Masr Guide AI](https://masr-guide-ai-customer-tested-foreign-8aro.onrender.com/). The Render service may take a moment to start.
+
+**Try this example.** Ask, “What should I visit in Luxor if I like ancient Egyptian history?” Then build a five-day trip across Cairo and Luxor and revise one day in the planner.
 
 <p align="center">
   <img src="frontend/public/assets/brand/social-preview.png" alt="Masr Guide AI project preview" width="780">
 </p>
 
-## How it works
+## Engineering Approach
 
-React provides the traveller interface and FastAPI serves the catalogue and trip planner. An optional Gemini or OpenAI integration helps answer guide questions. The itinerary validator checks trip edits and keeps the saved plan consistent.
-
-This portfolio preview is for discovery and itinerary planning. Bookings and payments are outside its scope. The hosted preview can take time to start, and account features depend on its storage configuration.
+- Validated, structured trip state
+- Regression tests for multilingual planning and trip edits
+- Account authorization and data-isolation checks
+- Automated frontend, backend, and browser testing
+- Explicit handling of unavailable external services
 
 ## Architecture
 
@@ -48,17 +75,6 @@ FastAPI
 SQLite for local development
 PostgreSQL-compatible configuration for durable deployments
 ```
-
-## Technology stack
-
-| Layer | Technology |
-| --- | --- |
-| Frontend | React 18, Vite, Vitest, Testing Library, ESLint |
-| Backend | Python 3.12, FastAPI, Pydantic, Uvicorn |
-| Data | SQLite for local development, PostgreSQL support for deployment |
-| AI | Optional Gemini or OpenAI, plus catalogue-based fallback |
-| Quality | Pytest, contract tests, planner stress tests, Chromium desktop/mobile E2E |
-| Delivery | Docker, Docker Compose, GitHub Actions, Render blueprint |
 
 ## Quick start
 
