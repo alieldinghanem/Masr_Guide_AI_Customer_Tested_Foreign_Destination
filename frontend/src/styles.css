@@ -1010,3 +1010,84 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .social-place-preview small { display:block; font-size:10px; margin-top:5px; color:#6b6059; }
 @media(min-width:1000px) { .social-composer { position:sticky; top:100px; } }
 @media(max-width:800px) { .social-layout { grid-template-columns:minmax(0,1fr); } .social-filters { grid-template-columns:minmax(0,1fr); } .social-composer,.social-post,.social-filters { padding:16px; } }
+
+/* Community discovery and quiet, final footer utility links. */
+
+
+
+
+.community-shell{background:#faf9f6;border-top:1px solid var(--mg-line);padding-top:24px}
+.community-shell .social-tabs{padding-block:0;gap:4px;justify-content:flex-start}
+.social-tabs button{border:0;border-radius:10px;padding:13px 20px;color:#635c56;background:transparent;font-size:14px}
+.social-tabs button[aria-pressed=true]{background:#fff;color:var(--mg-primary);box-shadow:0 2px 9px #3624140c;outline:1px solid #e9ddd3}
+.social-community{padding-top:30px;padding-bottom:64px}
+.social-hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:44px;align-items:center;margin-bottom:28px}
+.social-hero-icon{display:inline-flex;padding:11px;border-radius:14px;background:#fff0e4;color:var(--mg-primary);margin-inline-end:12px;vertical-align:middle}
+.social-hero h1{font-size:clamp(32px,4.3vw,54px);letter-spacing:-.04em;line-height:1.2;margin-block:20px 16px;max-width:700px}
+.social-hero-copy>p{max-width:620px;color:var(--mg-muted);line-height:1.9;font-size:16px}
+.social-hero-note{border-inline-start:1px solid #e4d6c8;padding-inline-start:28px}
+.social-hero-note>span{font-size:11px;font-weight:800;letter-spacing:.09em;color:#986346}
+.social-hero-note h2{font-size:24px;line-height:1.5;margin-block:10px}
+.social-hero-note p{color:var(--mg-muted);font-size:14px;line-height:1.85}
+.social-topic-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.social-topic-preview span{background:#fff;border:1px solid #e7ded6;border-radius:7px;padding:6px 11px;font-size:12px;color:#6e5444}
+.social-disclosure{border:1px solid #eadfd4;border-radius:10px;background:#fffaf5;font-size:12px;margin-block:0 24px;line-height:1.7}
+.social-layout{grid-template-columns:minmax(0,1fr) 300px;gap:24px}
+.social-composer{grid-column:2;grid-row:1;box-shadow:0 4px 20px #38281605}
+.social-feed{grid-column:1;grid-row:1}
+.social-filters{border-radius:14px;background:#fff;padding:20px;box-shadow:0 3px 12px #38281604}
+.social-filters button{border-radius:8px;font-size:12px;font-weight:650;min-height:40px}
+.social-post{box-shadow:0 4px 18px #38281606;border-color:#e7e1da}
+.social-empty{padding:48px 24px;border-style:dashed;background:#fff}
+.social-empty h2{font-size:23px;margin-block:18px 8px}
+.social-empty p{font-size:14px;line-height:1.8;color:var(--mg-muted)}
+[dir=rtl] .social-hero h1{letter-spacing:0;line-height:1.5}
+@media(max-width:900px){.social-hero{grid-template-columns:minmax(0,1fr);gap:20px}.social-hero-note{border-inline-start:0;border-top:1px solid #e4d6c8;padding-inline-start:0;padding-top:20px}.social-layout{grid-template-columns:minmax(0,1fr)}.social-composer,.social-feed{grid-column:1;grid-row:auto}.social-composer{position:static}.social-hero h1{font-size:34px}.social-tabs button{flex:1;font-size:12px;padding:12px}}
+
+/* Shared interface rhythm, legibility and accessible interactions. */
+:root{--ui-radius:16px;--ui-shadow:0 8px 28px #39230f08;--ui-focus:#963b08}
+body{line-height:1.65}
+.skip-to-content{position:fixed;inset-block-start:8px;inset-inline-start:16px;z-index:1000;background:var(--mg-primary);color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;transform:translateY(-180%);font-weight:700}
+.skip-to-content:focus{transform:translateY(0)}
+#main-content:focus{outline:none}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--ui-focus);outline-offset:3px}
+.site-header{box-shadow:0 3px 20px #39230f05}
+.navigation button{transition:background .16s,color .16s}
+.navigation button.active{box-shadow:inset 0 -2px 0 var(--mg-primary)}
+.btn{min-height:46px;border-radius:10px;white-space:normal;text-align:center;line-height:1.45}
+.btn:hover:not(:disabled){transform:none}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.page-intro p,.mg-category-hero p{font-size:15px;line-height:1.85}
+.mg-place-card,.mg-coastal-guide,.v3-destination-card,.day-card,.place-full-grid section{border-radius:var(--ui-radius);box-shadow:var(--ui-shadow)}
+.mg-place-content{padding:20px}
+.mg-place-content h2{font-size:20px;line-height:1.45}
+.mg-place-content p{font-size:14px;line-height:1.8;min-height:0}
+.mg-place-actions{padding-top:12px;border-top:1px solid var(--mg-line)}
+.mg-place-actions button,.mg-place-actions button:last-child{min-height:44px;min-width:44px}
+.mg-category-search:focus-within{border-color:var(--mg-primary);box-shadow:0 0 0 3px #c34a0814}
+.account-page{max-width:860px;padding-block:44px 64px}
+.account-page .page-intro{max-width:680px;margin-inline:auto;margin-bottom:28px}
+.account-panel,.google-signin{max-width:680px;margin:18px auto;padding:clamp(20px,3vw,32px);background:#fff;border:1px solid var(--mg-line);border-radius:var(--ui-radius);box-shadow:var(--ui-shadow)}
+.account-panel h2{font-size:23px;line-height:1.5;margin-block:0 14px}
+.account-panel p{line-height:1.85;color:var(--mg-muted)}
+.account-panel label,.google-signin label{display:grid;gap:8px;font-size:14px;font-weight:650;margin-block:18px}
+.account-panel input,.account-panel select,.google-signin input{width:100%;min-height:48px;border:1px solid #d9ccc2;border-radius:10px;padding:12px 14px;background:#fff;color:var(--mg-ink);font:inherit;font-size:16px}
+.account-panel small{display:block;color:var(--mg-muted);line-height:1.8;margin-block:10px 20px}
+.account-panel>.btn{margin-block:6px;margin-inline-end:8px}
+.account-empty{background:#faf8f5;border:1px dashed #e1d6cc;border-radius:12px;padding:20px;margin-block:16px}
+.account-delete-section{border-top:1px solid var(--mg-line);margin-top:32px;padding-top:24px}
+.account-trip{padding:16px;border:1px solid var(--mg-line);border-radius:12px;gap:12px;flex-wrap:wrap}
+.mg-chat-home .msg-text{font-size:15px;line-height:1.85}
+.mg-chat-home .guide-welcome p{font-size:14px;line-height:1.85}
+.mg-chat-home .chat-compose>small{font-size:12px;line-height:1.75}
+.mg-chat-home .chat-panel{box-shadow:0 12px 45px #39230f0a}
+.mg-mobile-tabs button{min-height:52px}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.mg-place-card:hover,.v3-destination-card:hover{box-shadow:0 12px 32px #39230f10;border-color:#dac4b2}}
+@media(max-width:620px){.account-page{padding-block:28px 40px}.account-panel,.google-signin{padding:20px}.page-intro p,.mg-category-hero p{font-size:14px}.mg-place-content{padding:18px}.mg-place-content h2{font-size:19px}.mg-chat-home .msg-text{font-size:14px}.mg-chat-home .guide-welcome p{font-size:13px}.mg-chat-home .chat-compose>small{font-size:11px}.nav-saved,.lang-toggle,.mobile-toggle,.nav-safety{min-height:44px;min-width:44px}.account-bar{gap:12px;flex-wrap:wrap}.account-bar strong{overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+/* Use the shared footer link styling and an explicit disclosure chevron. */
+.mg-footer-more summary{display:flex;align-items:center;gap:6px;list-style:none;min-height:44px}
+.mg-footer-more summary::marker{content:''}
+.mg-footer-more summary::-webkit-details-marker{display:none}
+.mg-footer-more summary svg{flex-shrink:0;transition:transform .16s}
+.mg-footer-more[open] summary svg{transform:rotate(180deg)}

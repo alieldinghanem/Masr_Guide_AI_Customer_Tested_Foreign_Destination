@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Bookmark, Menu, X, MessageCircle, Compass, UsersRound, ShieldCheck, Waves, Landmark } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, Bookmark, Menu, X, MessageCircle, Compass, UsersRound, ShieldCheck, Waves, Landmark } from 'lucide-react'
 import { api } from './api'
 import { I18nProvider, errorText, useI18n } from './i18n'
 import { ErrorNote, Logo } from './components/Common'
@@ -193,6 +193,7 @@ function Shell({ meta }) {
 
   return (
     <div className="app-shell">
+      <a className="skip-to-content" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>{lang === 'ar' ? 'انتقل إلى المحتوى' : 'Skip to content'}</a>
       <header className="site-header">
         <div className="nav-wrap container">
           <Logo go={go} />
@@ -215,6 +216,7 @@ function Shell({ meta }) {
           </div>
         </div>
       </header>
+      <div id="main-content" tabIndex={-1}>
       {favoritesError && <div className="container" role="alert"><p className="account-error">{t(`saved.error.${favoritesError}`)}</p></div>}
       {favoritesLoadError && <div className="container" role="alert"><p className="account-error">{t('saved.error.load')}</p><button type="button" className="btn secondary" onClick={() => setFavoritesAttempt(value => value + 1)}>{t('nav.retry')}</button></div>}
       {meta.loading && <div className="load-status container" role="status">{t('nav.loading')}</div>}
@@ -245,8 +247,8 @@ function Shell({ meta }) {
       {page === 'budget' && <Budget />}
       {['privacy', 'terms', 'support'].includes(page) && <ServiceInfo section={page} />}
 
+      </div>
       <footer className="footer">
-        <nav className="container" aria-label={lang === 'ar' ? 'الخصوصية والمساعدة' : 'Privacy and help'}>{[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}</nav>
         <div className="container footer-top">
           <div><Logo go={go} /><p>{t('footer.tagline')}</p></div>
           <div className="footer-links">
@@ -255,7 +257,8 @@ function Shell({ meta }) {
             <button onClick={() => go('coast')}>{lang === 'ar' ? 'الشواطئ' : 'Beaches'}</button>
             <button onClick={() => go('destinations')}>{t('footer.destinations')}</button>
             <button onClick={() => go('essentials')}>{t('nav.essentials')}</button>
-            <details className="mg-footer-more"><summary>{lang === 'ar' ? 'روابط إضافية' : 'More links'}</summary><div>
+            {[['privacy', lang === 'ar' ? 'الخصوصية' : 'Privacy'], ['terms', lang === 'ar' ? 'شروط الاستخدام' : 'Terms'], ['support', lang === 'ar' ? 'التواصل والمساعدة' : 'Contact & help']].map(([route, label]) => <button type="button" key={route} onClick={() => go(route)}>{label}</button>)}
+            <details className="mg-footer-more"><summary>{lang === 'ar' ? 'روابط إضافية' : 'More links'}<ChevronDown size={14} aria-hidden="true" /></summary><div>
               {[[ 'planner', t('footer.plan') ], ['saved', t('nav.saved')], ['account', lang === 'ar' ? 'حسابي' : 'My account'], ['experiences', t('nav.experiences')], ['stories', lang === 'ar' ? 'المجلة' : 'Journal'], ['offers', lang === 'ar' ? 'عروض الشركاء' : 'Partner offers'], ['budget', lang === 'ar' ? 'الميزانية' : 'Budget'], ['partners', lang === 'ar' ? 'انضم كشريك' : 'Partner enquiry'], ['project', lang === 'ar' ? 'عن المشروع' : 'Project case study'], ['staff', lang === 'ar' ? 'الإدارة' : 'Staff']].map(([route, label]) => <button key={route} type="button" onClick={() => go(route)}>{label}</button>)}
             </div></details>
           </div>
