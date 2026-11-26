@@ -22,12 +22,14 @@ The platform combines a curated, source-linked tourism catalog with a structured
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React, Vite, JavaScript, CSS |
-| Backend | Python, FastAPI, Pydantic |
+| Frontend | React 18, Vite 5, JavaScript, CSS |
+| Backend | Python 3.11–3.12, FastAPI 0.115+, Pydantic 2.7+ |
 | Storage | SQLite for local development, PostgreSQL support |
 | AI | Optional Gemini and OpenAI integrations |
 | Delivery | Docker, GitHub Actions, Render |
-| Testing | pytest, Vitest, React Testing Library, Chromium E2E |
+| Testing | pytest, Vitest 2, React Testing Library 16, Chromium E2E |
+
+Frontend versions are resolved by [package-lock.json](frontend/package-lock.json). Supported backend ranges are in [requirements.txt](backend/requirements.txt), with test dependencies in [requirements-dev.txt](backend/requirements-dev.txt).
 
 ## Project Status
 
@@ -135,11 +137,18 @@ Open:
 
 Windows users can follow [START_LOCAL_FIRST_AR.md](START_LOCAL_FIRST_AR.md) and use the included setup and launcher scripts.
 
-### Optional AI provider
+### Environment variables
 
-The catalogue and deterministic planner work without a live AI key. To enable an AI provider, copy `backend/.env.example` to `backend/.env`, configure the provider and model, and add a private server-side API key.
+The default local setup runs the destination catalogue and itinerary planner without credentials. For optional integrations, copy [backend/.env.example](backend/.env.example) to `backend/.env` and configure only the features you want to try.
 
-Never place an API key in frontend code or commit `.env` files.
+| Feature | Configuration |
+| --- | --- |
+| Local guide | Set `AI_PROVIDER=offline` to use local planning without contacting an AI provider |
+| Gemini | Set `AI_PROVIDER=gemini` and add a private `GEMINI_API_KEY`. Use `GEMINI_MODEL` to choose a model |
+| OpenAI | Set `AI_PROVIDER=openai` and add a private `OPENAI_API_KEY`. Use `OPENAI_MODEL` to choose a model |
+| Email and Google sign-in | Optional email settings are documented in the environment example. See the [Google sign-in setup](docs/GOOGLE_SIGNIN_SETUP.md) for OAuth configuration |
+
+Keep keys and credentials server-side. Commit only the example file.
 
 ## Tests and quality gates
 
