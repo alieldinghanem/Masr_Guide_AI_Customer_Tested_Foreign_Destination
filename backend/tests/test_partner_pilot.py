@@ -104,3 +104,51 @@ def test_disabled_and_expired_offers_do_not_create_referrals(pilot):
         c.execute("UPDATE pilot_contracts SET expires_at='2020-01-01T00:00:00+00:00'")
     assert client.get('/api/go/' + ident, follow_redirects=False).status_code == 409
     assert client.get('/api/admin/pilot/report', headers=headers).json()['agreements'][0]['referrals'] == 0
+
+
+def test_itinerary_offer_publication_and_click_attribution(pilot):
+    client, headers = pilot
+    target = 'https://example.com/experience?campaign=masr-family#book'
+    draft = {
+        'title': 'Synthetic Giza tour', 'city': 'Giza', 'partner': 'Test agency',
+        'description': 'A synthetic listing for the itinerary workflow.',
+        'target_url': target, 'itinerary_place_id': 'giza-pyramids', 'enabled': False,
+    }
+    def create(**changes):
+        return client.post('/api/admin/offers', headers=headers, json={**draft, **changes})
+
+    assert create(city='Luxor').status_code == 422
+    assert create(itinerary_place_id='missing-attraction').status_code == 422
+    assert create(itinerary_place_id='').status_code == 422
+    created = create()
+    assert created.status_code == 201, created.text
+    ident = created.json()['id']
+    unplaced = create(itinerary_place_id=None, enabled=True).json()['id']
+    day_offers = '/api/partner-offers?itinerary_only=true'
+    route = f'/api/go/{ident}'
+    admin_route = f'/api/admin/offers/{ident}'
+
+    assert client.get(day_offers).json()['offers'] == []
+    assert client.get(route + '?from_itinerary=true', follow_redirects=False).status_code == 404
+    assert client.get(f'/api/go/{unplaced}?from_itinerary=true', follow_redirects=False).status_code == 404
+    assert client.put(admin_route, headers=headers, json={**draft, 'enabled': True}).status_code == 200
+    [public] = client.get(day_offers).json()['offers']
+    assert public['itinerary_place_id'] == 'giza-pyramids'
+    assert public['id'] == ident and 'target_url' not in public
+    for path in (route, route + '?from_itinerary=true'):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers['location'] == target
+    row = next(o for o in client.get('/api/admin/offers', headers=headers).json()['offers'] if o['id'] == ident)
+    assert (row['outbound_clicks'], row['itinerary_clicks']) == (2, 1)
+
+    assert contract(client, headers, ident).status_code == 201
+    assert client.put(admin_route, headers=headers, json={
+        **draft, 'enabled': True, 'target_url': 'https://example.com/replacement',
+    }).status_code == 200
+    assert client.get(day_offers).json()['offers'] == []
+    assert client.get(route + '?from_itinerary=true', follow_redirects=False).status_code == 409
+    assert client.put(admin_route, headers=headers, json={
+        **draft, 'enabled': True, 'itinerary_place_id': None,
+    }).status_code == 200
+    assert client.get(route + '?from_itinerary=true', follow_redirects=False).status_code == 404

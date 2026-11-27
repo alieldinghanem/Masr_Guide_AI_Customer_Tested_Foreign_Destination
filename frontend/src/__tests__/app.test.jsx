@@ -349,6 +349,36 @@ describe('Guide', () => {
 
 
 describe('AI consultant v2', () => {
+  it('shows a disclosed referral only next to a matching visit and sends no trip data to the partner', async () => {
+    const offer = {
+      id: 'demo-sphinx', title: 'Private Sphinx visit', partner: 'Demo provider',
+      itinerary_place_id: 'great-sphinx', description: 'Ask the provider which visit options are available.',
+      disclosure: 'Booking is handled by the provider.',
+    }
+    const { user, calls } = await setup({
+      itineraryOffers: [offer, { ...offer, id: 'demo-beach', title: 'Beach experience', itinerary_place_id: 'dahab-lagoon' },
+        { ...offer, id: 'demo-karnak', title: 'Karnak experience', itinerary_place_id: 'karnak' }],
+      chat: {
+        answer: 'Here is your travel itinerary.', mode: 'local-planner', sources: [],
+        trip_state: { days: 2, phases: [{ kind: 'history', days: 2, cities: ['Giza', 'Luxor'], interests: ['history'] }], pace: 'balanced', family: false },
+        itinerary: planFor({ pace: 'balanced', language: 'en' }),
+      },
+    })
+    await user.type(screen.getByLabelText('Ask the tour guide'), 'Plan two days in Giza and Luxor')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+    await user.click(await screen.findByText(/Day 1 — Giza/))
+    await user.click(screen.getByText(/Day 2 — Luxor/))
+    const link = await screen.findByRole('link', { name: 'View details with partner' })
+    const day = within(link.closest('details'))
+    expect(day.getByText(/Day 1 — Giza/)).toBeInTheDocument()
+    expect(day.getByText(/We may earn a commission/)).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/api/go/demo-sphinx?from_itinerary=true')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer sponsored')
+    expect(screen.queryByText('Beach experience')).not.toBeInTheDocument()
+    expect(screen.queryByText('Karnak experience')).not.toBeInTheDocument()
+    expect(calls.find(call => call.path === '/partner-offers?itinerary_only=true')).toMatchObject({ method: 'GET', body: undefined })
+  })
+
   it('keeps an English trip and its source titles in English when the site is Arabic', async () => {
     const plan = planFor({ pace: 'balanced', language: 'en' })
     const { user } = await setup({ lang: 'ar', chat: {

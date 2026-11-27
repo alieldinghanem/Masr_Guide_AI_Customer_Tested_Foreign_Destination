@@ -1,4 +1,5 @@
 import PhotoHelper from './PhotoHelper'
+import ItineraryOffer from './ItineraryOffer'
 import React, { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Bot, ChevronDown, ExternalLink, Globe2, LoaderCircle, MessageCircle, SendHorizontal, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { api } from '../api'
@@ -48,6 +49,31 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
   const [restored] = useState(restoredConsultation)
   const [tripState, setTripState] = useState(restored.state)
   const [itinerary, setItinerary] = useState(restored.plan)
+  const [partnerOffers, setPartnerOffers] = useState([])
+  const hasItinerary = Boolean(itinerary)
+  useEffect(() => {
+    if (!hasItinerary) return
+    let active = true
+    api('/partner-offers?itinerary_only=true')
+      .then(data => { if (active) setPartnerOffers(data.offers || []) })
+      .catch(() => { if (active) setPartnerOffers([]) })
+    return () => { active = false }
+  }, [hasItinerary])
+  // Match only explicit catalogue placements, once per trip. The planner data stays independent.
+  const firstVisit = new Map()
+  for (const day of itinerary?.days || []) {
+    if (day.travel) continue
+    for (const { place } of day.stops) {
+      if (!firstVisit.has(place.id)) firstVisit.set(place.id, day.day)
+    }
+  }
+  const offersByDay = new Map()
+  for (const offer of partnerOffers) {
+    const day = firstVisit.get(offer.itinerary_place_id)
+    if (day === undefined) continue
+    const offers = offersByDay.get(day) || []
+    if (offers.length < 2) offersByDay.set(day, [...offers, offer])
+  }
   const messagesRef = useRef(null)
   const promptInputRef = useRef(null)
   useEffect(() => {
@@ -309,6 +335,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
                 {day.rest_minutes > 0 && <p>{answerArabic ? `وقت راحة مقترح: ${day.rest_minutes} دقيقة` : `Suggested rest: ${day.rest_minutes} minutes`}</p>}
                 {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
                   : <div><p>{day.note || (answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits')}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
+                {offersByDay.get(day.day)?.map(offer => <ItineraryOffer key={offer.id} offer={offer} arabic={answerArabic} />)}
               </details>)}
             </div>
             {tripState?.accessibility_needs && (
