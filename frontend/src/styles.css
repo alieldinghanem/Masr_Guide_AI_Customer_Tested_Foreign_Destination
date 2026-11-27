@@ -61,6 +61,7 @@
 .consult-day summary{cursor:pointer;font-weight:700;color:#36535a;line-height:1.8}
 .consult-day ul{padding:8px 20px;margin:0;color:#51686b}.consult-day li{margin:5px 0}
 .consult-day p{color:#647779;font-size:11px;margin:8px 0 0}
+.consult-map{display:inline-flex;align-items:center;gap:4px;margin-inline-start:8px;padding-block:4px;color:#8e3b09;font-weight:700;text-decoration:underline}
 .consult-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .consult-actions button{border:0;background:#23454e;color:white;border-radius:7px;padding:10px 12px;font-weight:700;font-size:11px;cursor:pointer}
 .consult-actions button+button{color:#23454e;background:white;border:1px solid #b9ccc9}

@@ -8,6 +8,7 @@ import { getSession } from './Account'
 import { likelyPaymentNumber, scrubPaymentNumber } from '../paymentSafety'
 import { isCompatibleTripPlan } from '../tripValidation'
 import { conversationLanguage, inferChatLanguage } from '../chatLanguage'
+import { attractionMapUrl, downloadItinerary, itineraryDayPurpose } from '../itineraryExport'
 
 function restoredConsultation() {
   // The pair must be validated together before the app shows restored days.
@@ -214,18 +215,7 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
     }
   }
   const exportTrip = () => {
-    if (!itinerary) return
-    const lines = ['MASR GUIDE AI — SAMPLE ITINERARY', `${itinerary.days.length} days`, '']
-    for (const d of itinerary.days) {
-      lines.push(`Day ${d.day} — ${d.city}`)
-      for (const s of d.stops) lines.push(` - ${s.place.name}`)
-      if (!d.stops.length) lines.push(d.note || ' - Free day / no matching curated activity')
-      lines.push('')
-    }
-    lines.push(itinerary.disclaimer)
-    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' }))
-    const a = document.createElement('a'); a.href = url; a.download = 'masr-guide-trip.txt'; a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    if (itinerary) downloadItinerary(itinerary, { arabic: answerArabic, cityName: answerCity, dayOverrides: tripState?.day_overrides })
   }
 
   return (
@@ -304,10 +294,19 @@ export default function Guide({ prompt, setPrompt, composeFocusKey = 0, messages
             {tripState?.traveler_profile && <p className="consult-help">{answerArabic ? 'تفاصيل المسافرين: ' : 'Traveler details: '}{tripState.traveler_profile.adults ? `${tripState.traveler_profile.adults} ${answerArabic ? 'بالغين' : 'adults'} · ` : ''}{tripState.traveler_profile.children_ages?.length ? `${answerArabic ? 'أعمار الأطفال' : 'Children ages'}: ${tripState.traveler_profile.children_ages.join(', ')} · ` : ''}{tripState.traveler_profile.food_preferences?.map(value => answerArabic ? ({ vegetarian: 'نباتي', vegan: 'نباتي صرف', halal: 'حلال' }[value]) : value).join(', ') || (answerArabic ? 'أخبرني بالأعمار وأي احتياجات خاصة.' : 'Tell me ages and any specific needs.')}</p>}
             <div className="consult-days">
               {itinerary.days.map(day => <details key={day.day} className="consult-day">
-                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : day.travel ? (answerArabic ? 'انتقال وراحة' : 'Transfer & rest') : day.swimming_day ? (answerArabic ? 'سباحة واسترخاء' : 'Swimming & beach time') : tripState?.day_overrides?.[day.day]?.max_stops === 0 ? (answerArabic ? 'وصول أو راحة بلا زيارات' : 'Arrival / rest — no visits') : (answerArabic ? 'وقت حر — بدون زيارات مجدولة' : 'Free time — no scheduled visits')}</summary>
-                {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} min)</p>}
+                <summary>{answerArabic ? 'اليوم' : 'Day'} {day.day} — {answerCity(day.city)} · {day.stops.length ? `${day.stops.length} ${answerArabic ? (day.stops.length === 1 ? 'زيارة' : 'زيارات') : (day.stops.length === 1 ? 'stop' : 'stops')}` : itineraryDayPurpose(day, tripState?.day_overrides?.[day.day]?.max_stops === 0, answerArabic)}</summary>
+                {day.travel && <p>{answerArabic ? 'انتقال تقريبي' : 'Approximate transfer'}: {answerCity(day.travel.from_city)} → {answerCity(day.city)} ({day.travel.minutes} {answerArabic ? 'دقيقة' : 'min'})</p>}
                 {day.rest_minutes > 0 && <p>{answerArabic ? `وقت راحة مقترح: ${day.rest_minutes} دقيقة` : `Suggested rest: ${day.rest_minutes} minutes`}</p>}
-                {day.stops.length ? <ul>{day.stops.map(stop => <li key={stop.place.id}>{answerArabic ? stop.place.name_ar : stop.place.name}</li>)}</ul>
+                {day.stops.length ? <ul>{day.stops.map(stop => {
+                  const title = (answerArabic && stop.place.name_ar) || stop.place.name
+                  const map = attractionMapUrl(stop.place)
+                  return <li key={stop.place.id}>
+                    <bdi>{title}</bdi>
+                    {stop.suggested_visit_minutes > 0 && <span> · {stop.suggested_visit_minutes} {answerArabic ? 'دقيقة' : 'min'}</span>}
+                    {map && <a className="consult-map" href={map} target="_blank" rel="noopener noreferrer"
+                      aria-label={answerArabic ? `خريطة ${title}` : `Map of ${title}`}>{answerArabic ? 'الخريطة' : 'Map'} <ExternalLink size={12} aria-hidden="true" /></a>}
+                  </li>
+                })}</ul>
                   : <div><p>{day.note || (answerArabic ? 'يوم حر / لا توجد زيارات موثقة أخرى في الكتالوج' : 'Free day / no additional curated visits')}</p>{(day.activity_ideas||[]).map((idea,i)=><p key={i} className="planner-idea">{answerArabic?'فكرة اختيارية غير محجوزة: ':'Optional unbooked idea: '}{idea}</p>)}</div>}
               </details>)}
             </div>
