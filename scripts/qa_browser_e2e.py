@@ -219,6 +219,20 @@ def test_react(browser, label, width, height):
                     (day['city'], [stop['place']['id'] for stop in day['stops']])
                     for i, day in enumerate(before_edit['days']) if i != 2]
         print(f'PASS {label}: day-three edit persists and preserves other days')
+        edited_day = page.locator('.consult-days > .consult-day').nth(2)
+        edited_day.locator('summary').click()
+        place = after_edit['days'][2]['stops'][0]['place']
+        map_link = edited_day.get_by_role('link', name=f"خريطة {place['name_ar']}")
+        expect(map_link).to_have_attribute('href', re.compile(r'^https://www\.openstreetmap\.org/\?mlat='))
+        with page.expect_download() as download_info:
+            page.get_by_role('button', name='Download itinerary', exact=True).click()
+        download = download_info.value
+        assert download.suggested_filename == 'masr-guide-itinerary-ar.txt'
+        exported = download.path().read_text(encoding='utf-8')
+        assert 'مصر جايد — برنامج الرحلة' in exported
+        assert place['name_ar'] in exported and 'راحة مقترحة' in exported
+        assert 'انتقال تقريبي' in exported and map_link.get_attribute('href') in exported
+        print(f'PASS {label}: Arabic download retains stops, rest, transfer and map links')
         page.locator('.chat-clear').click()
         expect(page.locator('.consult-days > .consult-day')).to_have_count(0)
         print(f'PASS {label}: preferences survive duration follow-up in the real chat')

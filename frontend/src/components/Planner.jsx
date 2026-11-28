@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { api } from '../api'
 import { isValidPlannerPlan } from '../tripValidation'
+import { downloadItinerary } from '../itineraryExport'
 import { errorText, useI18n } from '../i18n'
 import { ErrorNote } from './Common'
 
@@ -98,24 +99,11 @@ export default function Planner({ cities, interests, openPlace }) {
   }
   const download = () => {
     if (!plan) return
-    const lines = [t('results.exportTitle'), t('results.summary', { days: plan.days.length, stops: plan.total_places, pace: t(`pace.${plan.pace}`) }), '']
-    for (const day of plan.days) {
-      lines.push(`${t('day.label', { n: String(day.day).padStart(2, '0') })} — ${cityName(day.city)}`)
-      if (day.travel) lines.push(t('day.travel', { from: cityName(day.travel.from_city), d: duration(day.travel.minutes), mode: t(String(day.travel.mode || '').startsWith('flight') ? 'mode.flight' : 'mode.road') }))
-      if (day.rest_minutes > 0) lines.push(t('day.rest', { d: duration(day.rest_minutes) }))
-      for (const stop of day.stops) lines.push(`- ${placeName(stop.place)} (${duration(stop.suggested_visit_minutes)})`)
-      if (!day.stops.length) { lines.push(day.note || t('day.empty')); (day.activity_ideas || []).forEach(idea => lines.push(`  Idea (not booked): ${idea}`)) }
-      lines.push('')
-    }
-    lines.push(...(plan.warnings || []), plan.disclaimer || '')
-    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `masr-guide-itinerary-${lang}.txt`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    downloadItinerary(plan, {
+      arabic: lang === 'ar',
+      cityName,
+      summary: t('results.summary', { days: plan.days.length, stops: plan.total_places, pace: t(`pace.${plan.pace}`) }),
+    })
   }
   const listSep = lang === 'ar' ? '، ' : ', '
   const why = s => s.matched

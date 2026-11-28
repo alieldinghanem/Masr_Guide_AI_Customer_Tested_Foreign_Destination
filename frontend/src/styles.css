@@ -1102,3 +1102,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .support-faq{max-width:800px;margin-block:24px 36px}.support-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}.support-faq details{border:1px solid var(--mg-line);border-radius:12px;background:#fff;padding:16px 20px;margin:12px 0}.support-faq summary{cursor:pointer;font-weight:700;min-height:32px}.support-faq p{line-height:1.85;color:var(--mg-muted)}
 
 .photo-helper input[type=checkbox]{width:18px;height:18px;min-height:18px;max-width:18px;flex:0 0 18px;padding:0;border-radius:3px}
+
+.consult-map{display:inline-flex;align-items:center;gap:4px;margin-inline-start:8px;min-height:28px;color:#8e3b09;font-weight:700;text-decoration:underline}
