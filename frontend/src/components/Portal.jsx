@@ -49,10 +49,28 @@ export function Partners() {
 }
 
 const emptyArticle={slug:'',title:'',summary:'',body:'',category:'Travel Guide',source_url:'',published:false}
-const emptyOffer={title:'',city:'',description:'',partner:'',target_url:'',disclosure:'External provider. Booking is handled by the provider.',enabled:false}
+const emptyOffer={title:'',city:'',description:'',partner:'',target_url:'',disclosure:'External provider. Booking is handled by the provider.',enabled:false,itinerary_place_id:null}
 
 export function Staff() {
   const [key,setKey]=useState(''),[authenticated,setAuthenticated]=useState(false),[tab,setTab]=useState('articles'),[articles,setArticles]=useState([]),[offers,setOffers]=useState([]),[applications,setApplications]=useState([]),[stats,setStats]=useState({}),[article,setArticle]=useState(emptyArticle),[offer,setOffer]=useState(emptyOffer),[editId,setEditId]=useState(null),[message,setMessage]=useState(''),[busy,setBusy]=useState(false)
+  const [catalogue, setCatalogue] = useState([])
+  const [catalogueError, setCatalogueError] = useState(false)
+  useEffect(() => {
+    if (!authenticated || tab !== 'offers') return
+    let active = true
+    request('/places')
+      .then(data => { if (active) { setCatalogue(data.places || []); setCatalogueError(false) } })
+      .catch(() => { if (active) setCatalogueError(true) })
+    return () => { active = false }
+  }, [authenticated, tab])
+  function editOffer(row) {
+    setOffer({ ...Object.fromEntries(Object.keys(emptyOffer).map(field => [field, row[field] ?? emptyOffer[field]])), enabled: Boolean(row.enabled) })
+    setEditId(row.id)
+  }
+  function selectOfferPlace(event) {
+    const place = catalogue.find(entry => entry.id === event.target.value)
+    setOffer(previous => ({ ...previous, itinerary_place_id: place?.id ?? null, city: place?.city ?? previous.city }))
+  }
   async function load(token=key){const [a,o,p,s]=await Promise.all([request('/admin/articles','GET',undefined,token),request('/admin/offers','GET',undefined,token),request('/admin/partner-applications','GET',undefined,token),request('/admin/overview','GET',undefined,token)]);setArticles(a.articles);setOffers(o.offers);setApplications(p.applications);setStats(s.counts)}
   async function connect(e){e.preventDefault();setMessage('');try{await load(key);setAuthenticated(true)}catch(e){setMessage(e.message)}}
   async function save(kind){setBusy(true);setMessage('');try{const body=kind==='articles'?article:offer;const path=`/admin/${kind}${editId?`/${editId}`:''}`;await request(path,editId?'PUT':'POST',body,key);setArticle(emptyArticle);setOffer(emptyOffer);setEditId(null);await load();setMessage('Saved')}catch(e){setMessage(e.message)}finally{setBusy(false)}}
@@ -61,7 +79,42 @@ export function Staff() {
   return <main className="portal-page"><PageHeader kicker="PRIVATE OPERATIONS" title="Content & partnerships studio" subtitle="Staff-only content editing, referral offers and enquiries. No direct sales or payment processing."/><div className="container portal-content">{!authenticated?<form onSubmit={connect} className="portal-form"><LockKeyhole/><h2>Staff access</h2><p>Set ADMIN_API_TOKEN in your backend environment. This is not a traveler password.</p><label>Staff token<input type="password" required autoComplete="off" value={key} onChange={e=>setKey(e.target.value)}/></label><button className="btn primary">Unlock dashboard</button>{message&&<p role="alert" className="portal-alert">{message}</p>}</form>:<div className="staff-layout"><aside className="staff-sidebar"><strong>Masr Guide Studio</strong>{['articles','offers','applications','overview'].map(x=><button key={x} className={tab===x?'selected':''} onClick={()=>{setTab(x);setEditId(null);setMessage('')}}>{x[0].toUpperCase()+x.slice(1)}</button>)}<button onClick={()=>{setAuthenticated(false);setKey('');setTab('articles')}}>Lock studio</button></aside><section className="staff-main"><h2>{tab[0].toUpperCase()+tab.slice(1)}</h2>{message&&<p role="status" className="portal-alert">{message}</p>}
     {tab==='overview'&&<div className="staff-stat-grid">{Object.entries(stats).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k.replaceAll('_',' ')}</span></div>)}</div>}
     {tab==='articles'&&<><div className="staff-rows">{articles.map(a=><div key={a.id}><span><strong>{a.title}</strong><small>{a.published?'Published':'Draft'}</small></span><button onClick={()=>{setArticle({slug:a.slug,title:a.title,summary:a.summary,body:a.body,category:a.category,source_url:a.source_url||'',published:!!a.published});setEditId(a.id)}}>Edit</button><button onClick={()=>remove('articles',a.id)}>Delete</button></div>)}</div><h3>{editId?'Edit article':'New article'}</h3><div className="portal-form staff-edit">{['slug','title','summary','category','source_url'].map(x=><label key={x}>{x}<input value={article[x]} onChange={e=>setArticle(a=>({...a,[x]:e.target.value}))}/></label>)}<label>Body<textarea rows={7} value={article.body} onChange={e=>setArticle(a=>({...a,body:e.target.value}))}/></label><label className="staff-check"><input type="checkbox" checked={article.published} onChange={e=>setArticle(a=>({...a,published:e.target.checked}))}/> Published</label><div className="portal-actions"><button disabled={busy} className="btn primary" onClick={()=>save('articles')}>Save article</button><button className="btn secondary" onClick={()=>{setEditId(null);setArticle(emptyArticle)}}>Clear form</button></div></div></>}
-    {tab==='offers'&&<><div className="staff-rows">{offers.map(o=><div key={o.id}><span><strong>{o.title}</strong><small>{o.partner} · {o.enabled?'Visible':'Hidden'}</small></span><button onClick={()=>{setOffer({title:o.title,city:o.city,description:o.description,partner:o.partner,target_url:o.target_url,disclosure:o.disclosure,enabled:!!o.enabled});setEditId(o.id)}}>Edit</button><button onClick={()=>remove('offers',o.id)}>Delete</button></div>)}</div><h3>{editId?'Edit partner offer':'New partner offer'}</h3><div className="portal-form staff-edit">{['title','city','partner','target_url','disclosure'].map(x=><label key={x}>{x}<input value={offer[x]} onChange={e=>setOffer(o=>({...o,[x]:e.target.value}))}/></label>)}<label>Description<textarea rows={4} value={offer.description} onChange={e=>setOffer(o=>({...o,description:e.target.value}))}/></label><label className="staff-check"><input type="checkbox" checked={offer.enabled} onChange={e=>setOffer(o=>({...o,enabled:e.target.checked}))}/> Published / active link (use only contracted providers)</label><div className="portal-actions"><button className="btn primary" disabled={busy} onClick={()=>save('offers')}>Save offer</button><button className="btn secondary" onClick={()=>{setEditId(null);setOffer(emptyOffer)}}>Clear form</button></div></div></>}
+    {tab === 'offers' && <>
+      <div className="staff-rows">{offers.map(row => <div key={row.id}>
+        <span>
+          <strong>{row.title}</strong>
+          <small>{row.partner} · {row.enabled ? 'Published' : 'Draft'}</small>
+          <small>{row.outbound_clicks} outbound clicks · {row.itinerary_clicks} from itinerary links</small>
+        </span>
+        <button onClick={() => editOffer(row)}>Edit</button>
+        <button onClick={() => remove('offers', row.id)}>Delete</button>
+      </div>)}</div>
+      <h3>{editId ? 'Edit partner offer' : 'New partner offer'}</h3>
+      <div className="portal-form staff-edit">
+        {['title', 'city', 'partner', 'target_url', 'disclosure'].map(field => <label key={field}>
+          {field === 'target_url' ? 'Approved booking or affiliate link (HTTPS)' : field}
+          <input value={offer[field]} onChange={event => setOffer(previous => ({ ...previous, [field]: event.target.value }))} />
+        </label>)}
+        <label>Description<textarea rows={4} value={offer.description} onChange={event => setOffer(previous => ({ ...previous, description: event.target.value }))} /></label>
+        <label>Show in itinerary next to
+          <select className="offer-placement-select" value={offer.itinerary_place_id || ''} onChange={selectOfferPlace}>
+            <option value="">No itinerary placement</option>
+            {offer.itinerary_place_id && !catalogue.some(place => place.id === offer.itinerary_place_id) &&
+              <option value={offer.itinerary_place_id}>{offer.itinerary_place_id}</option>}
+            {catalogue.map(place => <option key={place.id} value={place.id}>{place.city} · {place.name}</option>)}
+          </select>
+        </label>
+        {catalogueError && <p role="status">The attraction list could not load. Reopen Offers to retry.</p>}
+        <label className="staff-check">
+          <input type="checkbox" checked={offer.enabled} onChange={event => setOffer(previous => ({ ...previous, enabled: event.target.checked }))} />
+          Publish reviewed offer
+        </label>
+        <div className="portal-actions">
+          <button className="btn primary" disabled={busy} onClick={() => save('offers')}>Save offer</button>
+          <button className="btn secondary" onClick={() => { setEditId(null); setOffer(emptyOffer) }}>Clear form</button>
+        </div>
+      </div>
+    </>}
     {tab==='applications'&&<div className="staff-rows">{applications.map(a=><div key={a.id}><span><strong>{a.company}</strong><small>{a.email} · {a.city||'Egypt'} · {a.status}</small><p>{a.description}</p></span><select aria-label={`Review ${a.company}`} value={a.status} onChange={e=>review(a.id,e.target.value)}>{['new','reviewing','contacted','rejected'].map(s=><option key={s}>{s}</option>)}</select></div>)}{!applications.length&&<p>No partner enquiries.</p>}</div>}
     <CommunityModeration staffKey={key} />
     <PartnerOperations staffKey={key} />

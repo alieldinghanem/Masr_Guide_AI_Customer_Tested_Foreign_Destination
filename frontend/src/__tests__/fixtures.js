@@ -37,7 +37,7 @@ export const planFor = (body, extra = {}) => ({
 })
 
 /** Stub window.fetch with an in-memory API. Returns the list of recorded calls. */
-export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrationEnabled = true, guideMode = 'offline-preview' } = {}) {
+export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrationEnabled = true, guideMode = 'offline-preview', itineraryOffers = [] } = {}) {
   const calls = []
   const ratingVotes = new Map()
   const visitorComments = new Map()
@@ -49,6 +49,7 @@ export function mockApi({ chat, chatStatus = 200, failNetwork = false, registrat
     const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data })
     if (path === '/cities') return reply({ cities: CITIES, interests: INTERESTS, city_names_ar: CITY_NAMES_AR, interest_names_ar: {} })
     if (path === '/places') return reply({ places: PLACES })
+    if (path === '/partner-offers?itinerary_only=true') return reply({ offers: itineraryOffers })
     if (path === '/health') return reply({ status: 'ok', guide_mode: guideMode, registration_enabled: registrationEnabled })
     if (path === '/ratings' && (!opts.method || opts.method === 'GET')) {
       const ratings = {}
