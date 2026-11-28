@@ -26,20 +26,35 @@ def test_real_visitor_compound_arrival_pyramids_and_swimming():
     assert result['trip_state']['traveler_profile']['children_ages'] == [4, 9]
 
 
-@pytest.mark.parametrize('message', [
-    'Day 1 must be arrival and rest only. Please fix it.',
-    'خلي اليوم الأول وصول وراحة فقط بدون زيارات',
+@pytest.mark.parametrize('message,day_number', [
+    ('Day 1 must be arrival and rest only. Please fix it.', 1),
+    ('خلي اليوم الأول وصول وراحة فقط بدون زيارات', 1),
+    ('خلي اليوم التاني راحة فقط بدون زيارات', 2),
+    ('خلي تالت يوم راحة فقط بدون زيارات', 3),
+    ('خلي اليوم الرابع راحة فقط بدون زيارات', 4),
 ])
-def test_rest_edit_persists_without_moving_other_days(message):
+def test_rest_edit_persists_without_moving_other_days(message, day_number):
     start = ask('Plan 5 days in Cairo for history with children')
-    edited = ask(message, start['trip_state'])
+    language = 'Arabic' if message.startswith('خلي') else 'English'
+    edited = consult_travel(ConsultRequest(message=message, trip_state=start['trip_state'], language=language))
     assert edited['itinerary'], edited['answer']
-    assert edited['trip_state']['day_overrides'][1]['max_stops'] == 0
-    assert not edited['itinerary']['days'][0]['stops']
-    assert [[s['place']['id'] for s in d['stops']] for d in edited['itinerary']['days'][1:]] == [
-        [s['place']['id'] for s in d['stops']] for d in start['itinerary']['days'][1:]]
-    restored = ask('Explain day 1', edited['trip_state'])
-    assert 'Al-Azhar' not in restored['answer']
+    assert edited['trip_state']['day_overrides'][day_number]['max_stops'] == 0
+    assert not edited['itinerary']['days'][day_number - 1]['stops']
+    def other_visits(response):
+        return [(d['city'], [s['place']['id'] for s in d['stops']])
+                for d in response['itinerary']['days'] if d['day'] != day_number]
+    assert other_visits(edited) == other_visits(start)
+    restored = ask(f'Explain day {day_number}', edited['trip_state'])
+    assert restored['answer'].startswith(f'Day {day_number} in Cairo:')
+    assert restored['sources'] == []
+
+
+def test_ambiguous_arabic_ordinal_and_overlong_day_number_do_not_change_the_trip():
+    start = ask('Plan 5 days in Cairo for history with children')
+    for message in ('خلي يوم تاني راحة فقط بدون زيارات', 'خلي اليوم 200 راحة فقط بدون زيارات'):
+        result = ask(message, start['trip_state'])
+        assert result['mode'] == 'needs-clarification'
+        assert result['trip_state'] == start['trip_state']
 
 
 def test_compound_correction_asks_before_reallocating_cities():
