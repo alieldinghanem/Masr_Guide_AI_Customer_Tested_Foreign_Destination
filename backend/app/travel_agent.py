@@ -817,25 +817,29 @@ def _requested_day(message: str) -> int | None:
     return _day_number(text)
 
 
+_ARABIC_DAY_ORDINALS = {
+    'أول': 1, 'اول': 1, 'ثاني': 2, 'تاني': 2, 'ثالث': 3, 'تالت': 3, 'رابع': 4,
+    'خامس': 5, 'سادس': 6, 'سابع': 7, 'ثامن': 8, 'تامن': 8, 'تاسع': 9, 'عاشر': 10,
+}
+_ARABIC_ORDINAL_PATTERN = '|'.join(_ARABIC_DAY_ORDINALS)
+_ENGLISH_DAY_ORDINALS = {'one': 1, 'first': 1, 'two': 2, 'second': 2, 'three': 3, 'third': 3}
+_DAY_REFERENCE = re.compile(
+    r'\b(?:اليوم|يوم)\s*(?:رقم\s*)?(\d{1,2})\b|'
+    rf'\b(?:اليوم|يوم)\s+ال({_ARABIC_ORDINAL_PATTERN})\b|'
+    rf'\b(?:ال)?({_ARABIC_ORDINAL_PATTERN})\s+يوم\b|'
+    r'\bday\s*(\d{1,2}|one|two|three|first|second|third)\b|'
+    r'\b(first|second|third)\s+day\b'
+)
+
+
 def _day_number(text: str) -> int | None:
-    text = _digits(text.lower()).strip(' .!?؟')
-    match = re.search(r'(?:اليوم|يوم)\s*(?:رقم\s*)?(\d{1,2}|الأول|الاول|الثاني|الثالث)|'
-                      r'(?:أول|اول|ثاني|ثالث)\s+يوم|\bday\s*(\d{1,2}|one|two|three|first|second|third)\b|'
-                      r'\b(first|second|third)\s+day\b', text)
+    match = _DAY_REFERENCE.search(_digits(text.lower()))
     if not match:
         return None
-    if match.group(0).startswith(('أول', 'اول', 'first')):
-        return 1
-    if match.group(0).startswith(('ثاني', 'second')):
-        return 2
-    if match.group(0).startswith(('ثالث', 'third')):
-        return 3
-    value = next((part for part in match.groups() if part), '')
-    return int(value) if value.isdigit() else {
-        'الأول': 1, 'الاول': 1, 'one': 1, 'first': 1,
-        'الثاني': 2, 'two': 2, 'second': 2,
-        'الثالث': 3, 'three': 3, 'third': 3,
-    }.get(value)
+    value = next(part for part in match.groups() if part)
+    if value.isdigit():
+        return int(value)
+    return _ARABIC_DAY_ORDINALS.get(value) or _ENGLISH_DAY_ORDINALS.get(value)
 
 
 def _single_activity_day_edit(message: str) -> int | None:
